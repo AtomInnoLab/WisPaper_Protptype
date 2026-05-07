@@ -186,10 +186,32 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
     });
   };
 
-  const handlePaperTextSelection = (selectedText: string) => {
+  const handlePaperTextSelection = (selectedText: string | null) => {
     setSelectedExcerpt(selectedText);
-    setRightSidebarCollapsed(false);
+    if (selectedText) {
+      setRightSidebarCollapsed(false);
+    }
   };
+
+  useEffect(() => {
+    if (!selectedExcerpt) {
+      return;
+    }
+
+    const handleSelectionChange = () => {
+      const selectedText = window.getSelection()?.toString().trim() ?? '';
+
+      if (!selectedText) {
+        setSelectedExcerpt(null);
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, [selectedExcerpt]);
 
   const rightSidebarActions =
     rightSidebarTab === 'chat' || rightSidebarTab === 'history' ? (
@@ -772,6 +794,8 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
         >
           <CommentsPanel
             paperId={paperId}
+            paperTitle={paper.title}
+            paperCategories={paper.categories}
             activeTab={rightSidebarTab}
             activeCitationId={paperHighlightTarget?.citationId ?? null}
             onSelectSummaryCitation={handleSummaryCitationSelect}

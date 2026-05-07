@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Quote, Copy, FlaskConical, History } from 'lucide-react';
+import { MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Copy, FlaskConical, History } from 'lucide-react';
 
 interface SummaryCitation {
   citationId: string;
@@ -9,6 +9,8 @@ interface SummaryCitation {
 
 interface CommentsPanelProps {
   paperId: string;
+  paperTitle?: string;
+  paperCategories?: string[];
   activeTab: 'home' | 'info' | 'comments' | 'notes' | 'chat' | 'history';
   activeCitationId?: string | null;
   onSelectSummaryCitation?: (citation: SummaryCitation) => void;
@@ -19,6 +21,8 @@ interface CommentsPanelProps {
 
 export function CommentsPanel({
   paperId,
+  paperTitle,
+  paperCategories = [],
   activeTab,
   activeCitationId = null,
   onSelectSummaryCitation,
@@ -34,6 +38,7 @@ export function CommentsPanel({
   const [savedNotes, setSavedNotes] = useState<Array<{ id: string; content: string; timestamp: string; color: string }>>([]);
   const [savedNoteFeedback, setSavedNoteFeedback] = useState<'summary' | 'selection-answer' | null>(null);
   const [copiedResponse, setCopiedResponse] = useState<'summary' | 'selection-answer' | null>(null);
+  const [relatedPaperSearchQuery, setRelatedPaperSearchQuery] = useState('');
   const [responseFeedback, setResponseFeedback] = useState<Record<'summary' | 'selection-answer', 'up' | 'down' | null>>({
     summary: null,
     'selection-answer': null,
@@ -114,6 +119,17 @@ export function CommentsPanel({
     'How does Transformer improve parallel training compared with RNN-based systems?',
     'Why is self-attention enough to model long-range dependencies in this paper?',
   ];
+  const relatedPaperQueries = [
+    '查找最近一年关于解决流式语音合成中文本与语音对齐问题的 SOTA 论文。',
+    '哪篇论文最早提出了 Thinker-Talker 双模型架构，Qwen3.5-Omni 在此基础上有哪些本质改进？',
+    '调研目前哪些研究正在探索 “Audio-Visual Vibe Coding” 即基于视觉和音频输入直接生成代码的方向。',
+  ];
+  const filteredRelatedPaperQueries = relatedPaperQueries.filter((example) =>
+    example.toLowerCase().includes(relatedPaperSearchQuery.trim().toLowerCase()),
+  );
+  const primaryCategory = paperCategories[0] || 'this topic';
+  const ideaCtaCopy = `围绕 ${primaryCategory} 继续挖掘后续问题、交叉方向与潜在研究空白。`;
+  const reproductionCtaCopy = `基于当前方法路线生成复现实验步骤、环境配置与验证计划。`;
 
   const submitChatPrompt = (prompt: string) => {
     const submittedPrompt = prompt.trim();
@@ -478,128 +494,120 @@ export function CommentsPanel({
           </div>
         ) : isHomeTab ? (
           <div className="space-y-4">
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="px-4 pb-4 pt-4">
-                <div className="flex min-h-[210px] flex-col justify-between">
-                  <div className="flex flex-1 flex-col items-start justify-center pb-4 text-left">
-                    <div className="max-w-[340px]">
-                      <p className="text-sm font-medium leading-6 text-slate-800">
-                        Ask about this paper or any selected passage.
-                      </p>
-                    </div>
+            <div className="relative">
+              {selectedExcerpt ? (
+                <div className="relative z-0 -mb-4 rounded-t-[1.2rem] border border-gray-200 bg-gray-100 px-4 pb-6 pt-3 animate-in fade-in slide-in-from-bottom-3 duration-200">
+                  <div className="flex items-start gap-3">
+                    <p className="min-w-0 flex-1 line-clamp-3 text-sm leading-5 text-gray-700">
+                      {selectedExcerpt}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onClearSelectedExcerpt}
+                      className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700"
+                      aria-label="Clear selected text"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
+                </div>
+              ) : null}
 
-                  <div className="space-y-2.5">
-                    {selectedExcerpt ? (
-                      <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2.5">
-                        <div className="mt-0.5 rounded-md bg-white p-1.5 text-blue-600 shadow-sm">
-                          <Quote className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-3 text-sm leading-5 text-gray-700">
-                            {selectedExcerpt}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={onClearSelectedExcerpt}
-                          className="rounded p-1 text-gray-400 transition-colors hover:bg-white hover:text-gray-600"
-                          aria-label="Clear selected text"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : null}
+              <div className="relative z-10 rounded-[1.2rem] border border-gray-200 bg-white p-4 shadow-sm">
+                <textarea
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                  placeholder={
+                    selectedExcerpt
+                      ? 'Ask about the selected text...'
+                      : 'What do you want to do with this paper?'
+                  }
+                  className="min-h-[76px] w-full resize-none bg-transparent text-[15px] leading-6 text-gray-900 outline-none placeholder:text-gray-500"
+                  rows={3}
+                />
 
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
-                      <textarea
-                        value={newContent}
-                        onChange={(e) => setNewContent(e.target.value)}
-                        placeholder={
-                          selectedExcerpt
-                            ? 'Ask about the selected text...'
-                            : `Ask anything about paper ${paperId || ''}...`
-                        }
-                        className="w-full resize-none bg-transparent px-1 py-0.5 text-sm leading-6 text-slate-800 outline-none placeholder:text-slate-400"
-                        rows={2}
-                      />
-                      <div className="mt-2 flex items-center justify-end">
-                        <button
-                          type="button"
-                          onClick={handleAdd}
-                          disabled={!newContent.trim()}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                          aria-label="Send"
-                        >
-                          <SendHorizontal className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                <div className="mt-3 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={handleAdd}
+                    disabled={!newContent.trim()}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-950 text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                    aria-label="Send"
+                  >
+                    <SendHorizontal className="h-4 w-4" />
+                  </button>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
+              <button
+                type="button"
+                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-xs leading-5 text-slate-600">
+                      {ideaCtaCopy}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-xs font-medium text-slate-950">
+                    发现灵感
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-xs leading-5 text-slate-600">
+                      {reproductionCtaCopy}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-xs font-medium text-slate-950">
+                    开始复现
+                  </p>
+                </div>
+              </button>
+
               <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div className="px-4 py-4">
                   <h3 className="text-[15px] font-semibold text-slate-900">更多相关论文</h3>
+                  <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <Search className="h-4 w-4 flex-shrink-0 text-slate-400" />
+                    <input
+                      type="text"
+                      value={relatedPaperSearchQuery}
+                      onChange={(event) => setRelatedPaperSearchQuery(event.target.value)}
+                      placeholder="搜索相关论文方向..."
+                      className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                    />
+                  </div>
                   <div className="mt-4 divide-y divide-slate-200">
-                    {[
-                      '查找最近一年关于解决流式语音合成中文本与语音对齐问题的 SOTA 论文。',
-                      '哪篇论文最早提出了 Thinker-Talker 双模型架构，Qwen3.5-Omni 在此基础上有哪些本质改进？',
-                      '调研目前哪些研究正在探索 “Audio-Visual Vibe Coding” 即基于视觉和音频输入直接生成代码的方向。',
-                    ].map((example) => (
-                      <button
-                        key={example}
-                        type="button"
-                        className="flex w-full items-center gap-4 py-4 text-left transition-colors hover:bg-slate-50"
-                      >
-                        <p className="min-w-0 flex-1 text-sm leading-6 text-slate-800">
-                          {example}
-                        </p>
-                        <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                          <Search className="h-4 w-4" />
-                        </span>
-                      </button>
-                    ))}
+                    {filteredRelatedPaperQueries.length > 0 ? (
+                      filteredRelatedPaperQueries.map((example) => (
+                        <button
+                          key={example}
+                          type="button"
+                          className="flex w-full items-center gap-4 py-4 text-left transition-colors hover:bg-slate-50"
+                        >
+                          <p className="min-w-0 flex-1 text-sm leading-6 text-slate-800">
+                            {example}
+                          </p>
+                          <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                            <Search className="h-4 w-4" />
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="py-4 text-sm text-slate-500">暂无匹配的相关论文方向。</p>
+                    )}
                   </div>
                 </div>
               </div>
-
-              <button
-                type="button"
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50"
-              >
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold text-slate-950">灵感发现</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Discover follow-up questions, related directions, and potential research gaps from this paper.
-                  </p>
-                  <div className="mt-4">
-                    <span className="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-xs font-medium text-white">
-                      发现灵感
-                    </span>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className="w-full rounded-lg border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50"
-              >
-                <div className="min-w-0">
-                  <p className="text-[15px] font-semibold text-slate-950">论文复现</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    Turn this paper into an experiment-ready plan, with implementation steps and environment setup guidance.
-                  </p>
-                  <div className="mt-4">
-                    <span className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-medium text-white">
-                      开始复现
-                    </span>
-                  </div>
-                </div>
-              </button>
             </div>
           </div>
         ) : (
@@ -834,30 +842,27 @@ export function CommentsPanel({
 
       {/* Chat Input */}
       {isChatTab ? (
-        <div className="border-t border-slate-200 bg-white/95 p-4 flex-shrink-0 shadow-[0_-8px_24px_rgba(15,23,42,0.04)]">
-          <div className="space-y-3">
+        <div className="border-t border-gray-200 bg-white/95 p-4 flex-shrink-0 shadow-[0_-8px_24px_rgba(15,23,42,0.04)]">
+          <div className="relative">
             {selectedExcerpt ? (
-              <div className="flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="mt-0.5 rounded-md bg-white p-1.5 text-blue-600 shadow-sm">
-                  <Quote className="h-3.5 w-3.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-3 text-sm leading-6 text-slate-700">
+              <div className="relative z-0 -mb-4 rounded-t-[1.2rem] border border-gray-200 bg-gray-100 px-4 pb-6 pt-3 animate-in fade-in slide-in-from-bottom-3 duration-200">
+                <div className="flex items-start gap-3">
+                  <p className="min-w-0 flex-1 line-clamp-3 text-sm leading-5 text-gray-700">
                     {selectedExcerpt}
                   </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onClearSelectedExcerpt}
-                  className="rounded p-1 text-gray-400 transition-colors hover:bg-white hover:text-gray-600"
-                  aria-label="Clear selected text"
-                >
+                  <button
+                    type="button"
+                    onClick={onClearSelectedExcerpt}
+                    className="rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700"
+                    aria-label="Clear selected text"
+                  >
                   <X className="h-4 w-4" />
                 </button>
               </div>
+              </div>
             ) : null}
 
-            <div className="relative">
+            <div className="relative z-10 rounded-[1.2rem] border border-gray-200 bg-white p-4 shadow-sm">
               <textarea
                 ref={chatInputRef}
                 value={newContent}
@@ -865,19 +870,22 @@ export function CommentsPanel({
                 placeholder={
                   selectedExcerpt
                     ? 'Ask about the selected text...'
-                    : `Ask anything about paper ${paperId || ''}...`
+                    : 'What do you want to do with this paper?'
                 }
-                className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 pb-12 text-sm leading-6 text-slate-800 focus:border-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="min-h-[76px] w-full resize-none bg-transparent text-[15px] leading-6 text-gray-900 outline-none placeholder:text-gray-500"
                 rows={3}
               />
-              <button
-                onClick={handleAdd}
-                disabled={!newContent.trim()}
-                className="absolute bottom-3 right-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
-                aria-label="Send"
-              >
-                <SendHorizontal className="h-4 w-4" />
-              </button>
+
+              <div className="mt-3 flex items-center justify-end">
+                <button
+                  onClick={handleAdd}
+                  disabled={!newContent.trim()}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-950 text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-300"
+                  aria-label="Send"
+                >
+                  <SendHorizontal className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

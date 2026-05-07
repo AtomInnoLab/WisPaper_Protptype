@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, FileText, ExternalLink } from 'lucide-react';
+import React from 'react';
+import { Check, Copy, ExternalLink, FileText } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface TableData {
@@ -83,7 +83,8 @@ const LoadingRow = () => (
 );
 
 export function TableMode({ question, papers = mockPapers }: TableModeProps) {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
+  const [copied, setCopied] = React.useState(false);
   
   // 获取资源类型标签
   const getResourceTypeLabel = (type?: string) => {
@@ -106,6 +107,30 @@ export function TableMode({ question, papers = mockPapers }: TableModeProps) {
   const getResourceTypeStyle = (type?: string) => {
     const baseStyle = "inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0";
     return `${baseStyle} bg-gray-100 text-gray-700 border border-gray-300`;
+  };
+
+  const handleCopyTable = async () => {
+    const rows = [
+      ['Title', 'Year', 'Source', 'Authors', 'Citations', 'Type', question],
+      ...papers.map((paper) => [
+        paper.title,
+        paper.year,
+        paper.source,
+        paper.authors || '',
+        paper.citations ? String(paper.citations) : '',
+        getResourceTypeLabel(paper.type),
+        paper.answer,
+      ]),
+    ];
+    const tableText = rows.map((row) => row.join('\t')).join('\n');
+
+    try {
+      await navigator.clipboard.writeText(tableText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch (error) {
+      console.error('Failed to copy table answer', error);
+    }
   };
 
   return (
@@ -192,11 +217,21 @@ export function TableMode({ question, papers = mockPapers }: TableModeProps) {
       </div>
 
       {/* Table Info Footer */}
-      <div className="mt-3 flex items-center justify-between text-xs text-gray-500 px-1">
-        <span>显示 {papers.length} 篇相关文献</span>
-        <button className="text-blue-600 hover:text-blue-700 font-medium transition-colors">
-          导出为CSV
-        </button>
+      <div className="mt-3 flex items-center justify-between px-1 text-xs">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleCopyTable}
+            className="inline-flex items-center gap-1.5 font-medium text-gray-500 transition-colors hover:text-gray-900"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+            <span>{copied ? '已复制' : '复制'}</span>
+          </button>
+          <button className="font-medium text-blue-600 transition-colors hover:text-blue-700">
+            导出xlsx
+          </button>
+        </div>
+        <span className="text-gray-500">显示 {papers.length} 篇相关文献</span>
       </div>
     </div>
   );

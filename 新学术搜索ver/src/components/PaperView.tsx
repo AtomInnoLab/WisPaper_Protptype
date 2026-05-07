@@ -13,7 +13,7 @@ interface PaperViewProps {
     trigger: number;
   } | null;
   onClearHighlight?: () => void;
-  onTextSelect?: (selectedText: string) => void;
+  onTextSelect?: (selectedText: string | null) => void;
 }
 
 export function PaperView({ paper, currentPage, pdfScale, highlightTarget = null, onClearHighlight, onTextSelect }: PaperViewProps) {
@@ -66,9 +66,7 @@ export function PaperView({ paper, currentPage, pdfScale, highlightTarget = null
       return;
     }
 
-    if (text) {
-      onTextSelect?.(text);
-    }
+    onTextSelect?.(text || null);
   }, [onTextSelect]);
 
   return (

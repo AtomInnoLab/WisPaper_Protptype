@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { SearchBar } from "./components/SearchBar";
 import { SearchResults } from "./components/SearchResults";
+import { SearchThinkingPanel } from "./components/SearchThinkingPanel";
 import { LeftSidebar } from "./components/LeftSidebar";
 import { RightPanel } from "./components/RightPanel";
 import { PaperDetail } from "./components/PaperDetail";
@@ -11,6 +12,7 @@ import { ScholarQA } from "./components/ScholarQA";
 import { PaperReproduction } from "./components/PaperReproduction";
 import { IdeaDiscovery } from "./components/IdeaDiscovery";
 import { AllFeedsWorkspace } from "./components/AllFeedsWorkspace";
+import { FudanCollectionResults } from "./components/FudanCollectionResults";
 import { FloatingTaskButton } from "./components/FloatingTaskButton";
 import { SearchMoreButton } from "./components/SearchMoreButton";
 import { NewbieTasksModal } from "./components/NewbieTasksModal";
@@ -52,7 +54,7 @@ export default function App() {
   const [selectedPaper, setSelectedPaper] =
     useState<Paper | null>(null);
   const [viewMode, setViewMode] = useState<
-    "home" | "list" | "detail" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery"
+    "home" | "list" | "detail" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search"
   >("home");
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -204,7 +206,7 @@ export default function App() {
     <LanguageProvider>
       <div className={isReaderView ? "h-screen overflow-hidden bg-white flex" : "min-h-screen bg-white flex"}>
         {/* Left Sidebar - Only show in list view, library view, and scholar-qa view */}
-        {(viewMode === "list" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery") && (
+        {(viewMode === "list" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search") && (
           <LeftSidebar
             onNavigate={(view) => setViewMode(view as any)}
             onOpenInvite={() => setShowInviteModal(true)}
@@ -227,6 +229,23 @@ export default function App() {
               onOpenPricing={() => setShowPaywallModal(true)}
               onStartSearch={handleStartSearchFromHome}
             />
+          ) : viewMode === "fudan-collection-search" ? (
+            !hasSearched ? (
+              <ScholarSearchHome
+                onSearch={handleSearch}
+                showDeepSearchTooltip={showDeepSearchTooltip}
+                onTooltipDismiss={() => setShowDeepSearchTooltip(false)}
+              />
+            ) : (
+              <FudanCollectionResults
+                papers={filteredPapers}
+                searchQuery={searchQuery}
+                onSearchChange={(query) => {
+                  setSearchQuery(query);
+                  setHasSearched(Boolean(query.trim()));
+                }}
+              />
+            )
           ) : viewMode === "list" ? (
             !hasSearched ? (
               // Show Scholar Search Home when no search has been performed
@@ -246,6 +265,8 @@ export default function App() {
                     onFiltersChange={setFilters}
                   />
                 </div>
+
+                <SearchThinkingPanel query={searchQuery} />
 
                 <div className="flex-1 overflow-hidden">
                   <SearchResults

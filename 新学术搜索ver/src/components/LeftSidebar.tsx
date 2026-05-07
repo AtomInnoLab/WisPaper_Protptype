@@ -81,6 +81,9 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
     } else if (currentView === 'idea-discovery') {
       setActiveNav('idea-discovery');
       setShowMoreMenu(true);
+    } else if (currentView === 'fudan-collection-search') {
+      setActiveNav('fudan-collection-search');
+      setShowMoreMenu(true);
     } else if (currentView === 'list') {
       setActiveNav('scholar-search');
       setShowMoreMenu(true);
@@ -134,6 +137,11 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
         onNavigate('idea-discovery');
       } else if (itemId === 'truecite') {
         onNavigate('truecite');
+      } else if (itemId === 'fudan-collection-search') {
+        if (onResetSearch) {
+          onResetSearch();
+        }
+        onNavigate('fudan-collection-search');
       }
     }
   };
@@ -308,7 +316,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             <button
               onClick={() => { if (!isCollapsed) setShowMoreMenu(!showMoreMenu); }}
               className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${
-                showMoreMenu || ['scholar-qa', 'idea-discovery', 'truecite', 'scholar-search'].includes(activeNav)
+                showMoreMenu || ['scholar-qa', 'idea-discovery', 'truecite', 'scholar-search', 'fudan-collection-search'].includes(activeNav)
                   ? 'bg-gray-100 text-gray-900 font-medium'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
@@ -374,6 +382,18 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
                   <Search className="w-4 h-4" />
                   <span>{t('nav.scholarSearch')}</span>
                 </button>
+
+                <button
+                  onClick={() => { handleNavClick('fudan-collection-search'); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-sm ${
+                    activeNav === 'fudan-collection-search'
+                      ? 'bg-gray-100 text-gray-900 font-medium'
+                      : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>{t('nav.fudanCollectionSearch')}</span>
+                </button>
               </div>
             )}
 
@@ -436,6 +456,18 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
                       >
                         <Search className="w-4 h-4" />
                         <span>{t('nav.scholarSearch')}</span>
+                      </button>
+
+                      <button
+                        onClick={() => { handleNavClick('fudan-collection-search'); setShowMoreMenu(false); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                          activeNav === 'fudan-collection-search'
+                            ? 'bg-gray-100 text-gray-900 font-medium'
+                            : 'text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <GraduationCap className="w-4 h-4" />
+                        <span>{t('nav.fudanCollectionSearch')}</span>
                       </button>
                 </div>
               </div>
