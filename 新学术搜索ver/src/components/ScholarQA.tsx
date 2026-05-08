@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Send, HelpCircle, Database, Sparkles, Globe2, ChevronDown, Check } from 'lucide-react';
+import { Send, HelpCircle, Database, Sparkles, Globe2, ChevronDown, Check, Search } from 'lucide-react';
 import { ScholarQAResults } from './ScholarQAResults';
 import { ResourcesPanel } from './ResourcesPanel';
+import { useLanguage } from '../contexts/LanguageContext';
+
+type KnowledgeSource = 'my-library' | 'academic-search' | 'web-search';
 
 interface ScholarQAProps {
   papersCount?: number;
@@ -9,14 +12,21 @@ interface ScholarQAProps {
 }
 
 export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [question, setQuestion] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [hasResults, setHasResults] = useState(false);
   const [submittedQuestion, setSubmittedQuestion] = useState('');
-  const [selectedKnowledgeSources, setSelectedKnowledgeSources] = useState<Array<'library' | 'public'>>(['library', 'public']);
+  const [selectedKnowledgeSources, setSelectedKnowledgeSources] = useState<KnowledgeSource[]>(['my-library', 'academic-search']);
   const [showKnowledgeMenu, setShowKnowledgeMenu] = useState(false);
+  const knowledgeSourceOptions: Array<{ id: KnowledgeSource; label: string; icon: React.ReactNode }> = [
+    { id: 'my-library', label: isZh ? '我的知识库' : 'My Library', icon: <Database className="h-4 w-4 text-gray-500" /> },
+    { id: 'academic-search', label: isZh ? '学术搜索' : 'Scholar Search', icon: <Search className="h-4 w-4 text-gray-500" /> },
+    { id: 'web-search', label: isZh ? '网页检索' : 'Web Search', icon: <Globe2 className="h-4 w-4 text-gray-500" /> },
+  ];
 
-  const toggleKnowledgeSource = (source: 'library' | 'public') => {
+  const toggleKnowledgeSource = (source: KnowledgeSource) => {
     setSelectedKnowledgeSources((prev) => {
       if (prev.includes(source)) {
         const nextSources = prev.filter((item) => item !== source);
@@ -28,11 +38,11 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
   };
 
   const knowledgeSourceLabel =
-    selectedKnowledgeSources.length === 2
-      ? 'Your Library + Public Library'
-      : selectedKnowledgeSources.includes('library')
-        ? `Your Library (${papersCount})`
-        : 'Public Library';
+    selectedKnowledgeSources.length === knowledgeSourceOptions.length
+      ? isZh ? '全部来源' : 'All Sources'
+      : selectedKnowledgeSources.length === 1
+        ? knowledgeSourceOptions.find((option) => option.id === selectedKnowledgeSources[0])?.label ?? (isZh ? '选择来源' : 'Select Source')
+        : isZh ? `${selectedKnowledgeSources.length} 个来源` : `${selectedKnowledgeSources.length} Sources`;
 
   const handleSubmit = () => {
     if (question.trim()) {
@@ -124,29 +134,25 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
                   <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showKnowledgeMenu ? 'rotate-180' : ''}`} />
                 </button>
                 {showKnowledgeMenu ? (
-                  <div className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-                    <button
-                      type="button"
-                      onClick={() => toggleKnowledgeSource('library')}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
-                    >
-                      <span className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
-                        {selectedKnowledgeSources.includes('library') ? <Check className="h-3 w-3 text-gray-900" /> : null}
-                      </span>
-                      <Database className="h-4 w-4 text-gray-500" />
-                      <span>Your Library ({papersCount} papers)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => toggleKnowledgeSource('public')}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
-                    >
-                      <span className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
-                        {selectedKnowledgeSources.includes('public') ? <Check className="h-3 w-3 text-gray-900" /> : null}
-                      </span>
-                      <Globe2 className="h-4 w-4 text-gray-500" />
-                      <span>Public Library</span>
-                    </button>
+                  <div className="absolute bottom-full left-0 mb-2 w-52 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                    {knowledgeSourceOptions.map((option) => {
+                      const isSelected = selectedKnowledgeSources.includes(option.id);
+
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => toggleKnowledgeSource(option.id)}
+                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                        >
+                          <span className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                            {isSelected ? <Check className="h-3 w-3 text-gray-900" /> : null}
+                          </span>
+                          {option.icon}
+                          <span>{option.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>

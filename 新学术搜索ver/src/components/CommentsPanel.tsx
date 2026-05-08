@@ -1,10 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Copy, FlaskConical, History } from 'lucide-react';
+import { Check, ChevronDown, Database, FileText, Globe2, MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Copy, FlaskConical, History } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface SummaryCitation {
   citationId: string;
   elementId: string;
   page: number;
+}
+
+type KnowledgeSource = 'current-paper' | 'my-library' | 'academic-search' | 'web-library';
+type ChatResponseMode = 'summary' | 'selection-answer';
+
+interface ChatHistoryItem {
+  id: string;
+  title: string;
+  preview: string;
+  timestamp: string;
+  responseMode: ChatResponseMode | null;
+  excerpt?: string | null;
 }
 
 interface CommentsPanelProps {
@@ -30,15 +43,45 @@ export function CommentsPanel({
   onClearSelectedExcerpt,
   onChangeTab,
 }: CommentsPanelProps) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [newContent, setNewContent] = useState('Summarize this paper');
   const [chatWorkflow, setChatWorkflow] = useState<'idle' | 'thinking' | 'summary' | 'selection-answer'>('idle');
   const [chatUserPrompt, setChatUserPrompt] = useState<string | null>(null);
   const [chatSubmittedExcerpt, setChatSubmittedExcerpt] = useState<string | null>(null);
-  const [chatResponseMode, setChatResponseMode] = useState<'summary' | 'selection-answer' | null>(null);
+  const [chatResponseMode, setChatResponseMode] = useState<ChatResponseMode | null>(null);
   const [savedNotes, setSavedNotes] = useState<Array<{ id: string; content: string; timestamp: string; color: string }>>([]);
   const [savedNoteFeedback, setSavedNoteFeedback] = useState<'summary' | 'selection-answer' | null>(null);
   const [copiedResponse, setCopiedResponse] = useState<'summary' | 'selection-answer' | null>(null);
   const [relatedPaperSearchQuery, setRelatedPaperSearchQuery] = useState('');
+  const [showKnowledgeSourceMenu, setShowKnowledgeSourceMenu] = useState(false);
+  const [selectedKnowledgeSources, setSelectedKnowledgeSources] = useState<KnowledgeSource[]>(['current-paper']);
+  const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([
+    {
+      id: 'summary',
+      title: 'Summarize this paper',
+      preview: 'Section-by-section summary with references to the original paper.',
+      timestamp: 'Just now',
+      responseMode: 'summary',
+      excerpt: null,
+    },
+    {
+      id: 'parallel-training',
+      title: 'How does Transformer improve parallel training?',
+      preview: 'Restores an answer grounded in the architecture discussion.',
+      timestamp: '2 hours ago',
+      responseMode: 'selection-answer',
+      excerpt: 'The Transformer allows significantly more parallelization and reduces the sequential computation constraints found in recurrent models.',
+    },
+    {
+      id: 'attention-dependencies',
+      title: 'Why is self-attention enough for long-range dependencies?',
+      preview: 'Restores an answer about attention routing and global context.',
+      timestamp: 'Yesterday',
+      responseMode: 'selection-answer',
+      excerpt: 'Self-attention connects every position to every other position directly, shortening the path length for modeling long-range dependencies.',
+    },
+  ]);
   const [responseFeedback, setResponseFeedback] = useState<Record<'summary' | 'selection-answer', 'up' | 'down' | null>>({
     summary: null,
     'selection-answer': null,
@@ -92,26 +135,6 @@ export function CommentsPanel({
       color: 'blue',
     },
   ];
-  const mockChatHistory = [
-    {
-      id: 'summary',
-      title: 'Summarize this paper',
-      preview: 'Section-by-section summary with references to the original paper.',
-      timestamp: 'Just now',
-    },
-    {
-      id: 'parallel-training',
-      title: 'How does Transformer improve parallel training?',
-      preview: 'Explains why removing recurrence improves computation over long sequences.',
-      timestamp: '2 hours ago',
-    },
-    {
-      id: 'attention-dependencies',
-      title: 'Why is self-attention enough for long-range dependencies?',
-      preview: 'Connects attention routing, encoder-decoder structure, and global context.',
-      timestamp: 'Yesterday',
-    },
-  ];
   const selectionAnswerText = 'This selected passage is describing the paper\'s core claim: Transformer removes recurrence and relies on attention as the main routing mechanism. In the context of your question, the important implication is that dependency modeling is no longer constrained by sequential recurrence, which is why the model can train more efficiently while still capturing long-range structure.';
   const notesList = [...savedNotes, ...mockNotes];
   const quickQuestions = [
@@ -130,6 +153,91 @@ export function CommentsPanel({
   const primaryCategory = paperCategories[0] || 'this topic';
   const ideaCtaCopy = `围绕 ${primaryCategory} 继续挖掘后续问题、交叉方向与潜在研究空白。`;
   const reproductionCtaCopy = `基于当前方法路线生成复现实验步骤、环境配置与验证计划。`;
+  const knowledgeSourceOptions: Array<{ id: KnowledgeSource; label: string; icon: React.ReactNode }> = [
+    { id: 'current-paper', label: isZh ? '当前文章' : 'Current Paper', icon: <FileText className="h-4 w-4 text-gray-500" /> },
+    { id: 'my-library', label: isZh ? '我的知识库' : 'My Library', icon: <Database className="h-4 w-4 text-gray-500" /> },
+    { id: 'academic-search', label: isZh ? '学术搜索' : 'Scholar Search', icon: <Database className="h-4 w-4 text-gray-500" /> },
+    { id: 'web-library', label: isZh ? '网页检索' : 'Web Search', icon: <Globe2 className="h-4 w-4 text-gray-500" /> },
+  ];
+  const knowledgeSourceLabel =
+    selectedKnowledgeSources.length === knowledgeSourceOptions.length
+      ? isZh ? '全部来源' : 'All Sources'
+      : selectedKnowledgeSources.length === 1
+        ? knowledgeSourceOptions.find((option) => option.id === selectedKnowledgeSources[0])?.label ?? (isZh ? '选择来源' : 'Select Source')
+        : isZh ? `${selectedKnowledgeSources.length} 个来源` : `${selectedKnowledgeSources.length} Sources`;
+
+  const toggleKnowledgeSource = (source: KnowledgeSource) => {
+    setSelectedKnowledgeSources((current) => {
+      if (current.includes(source)) {
+        const nextSources = current.filter((item) => item !== source);
+        return nextSources.length > 0 ? nextSources : current;
+      }
+
+      return [...current, source];
+    });
+  };
+
+  const renderKnowledgeSourcePicker = (placement: 'top' | 'bottom' = 'top') => (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setShowKnowledgeSourceMenu((current) => !current)}
+        className="inline-flex max-w-[13rem] items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-950"
+      >
+        <Database className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{knowledgeSourceLabel}</span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${showKnowledgeSourceMenu ? 'rotate-180' : ''}`} />
+      </button>
+
+      {showKnowledgeSourceMenu ? (
+        <div className={`absolute left-0 z-30 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg ${
+          placement === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'
+        }`}>
+          {knowledgeSourceOptions.map((option) => {
+            const isSelected = selectedKnowledgeSources.includes(option.id);
+
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => toggleKnowledgeSource(option.id)}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+              >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-300 bg-white">
+                  {isSelected ? <Check className="h-3 w-3 text-gray-950" /> : null}
+                </span>
+                {option.icon}
+                <span>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const getHistoryPreview = (mode: ChatResponseMode | null, excerpt: string | null) => {
+    if (mode === 'summary') {
+      return 'Section-by-section summary with references to the original paper.';
+    }
+
+    if (mode === 'selection-answer') {
+      return excerpt
+        ? `Answer grounded in selected text: ${excerpt}`
+        : 'Answer grounded in the current paper context.';
+    }
+
+    return 'Question saved for this paper.';
+  };
+
+  const restoreChatHistoryItem = (item: ChatHistoryItem) => {
+    onChangeTab?.('chat');
+    setChatUserPrompt(item.title);
+    setChatSubmittedExcerpt(item.excerpt ?? null);
+    setChatResponseMode(item.responseMode);
+    setChatWorkflow(item.responseMode ?? 'idle');
+    setNewContent('');
+  };
 
   const submitChatPrompt = (prompt: string) => {
     const submittedPrompt = prompt.trim();
@@ -150,6 +258,17 @@ export function CommentsPanel({
     setChatSubmittedExcerpt(selectedExcerpt);
     setChatResponseMode(nextMode);
     setChatWorkflow(nextMode ? 'thinking' : 'idle');
+    setChatHistory((current) => [
+      {
+        id: `chat-${Date.now()}`,
+        title: submittedPrompt,
+        preview: getHistoryPreview(nextMode, selectedExcerpt),
+        timestamp: 'Just now',
+        responseMode: nextMode,
+        excerpt: selectedExcerpt,
+      },
+      ...current.filter((item) => item.title !== submittedPrompt),
+    ]);
     setNewContent('');
   };
 
@@ -454,32 +573,17 @@ export function CommentsPanel({
           </div>
         ) : isHistoryTab ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2">
-                <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <History className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">Chat History</p>
-                  <p className="text-xs text-slate-500">Recent conversations about this paper</p>
-                </div>
-              </div>
-            </div>
-
             <div className="space-y-2.5">
-              {mockChatHistory.map((item) => (
+              {chatHistory.map((item) => (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => {
-                    onChangeTab?.('chat');
-                    setChatUserPrompt(item.title);
-                    setChatSubmittedExcerpt(null);
-                    setChatResponseMode(item.id === 'summary' ? 'summary' : null);
-                    setChatWorkflow(item.id === 'summary' ? 'summary' : 'idle');
-                    setNewContent('');
-                  }}
-                  className="w-full rounded-lg border border-slate-200 bg-white p-3.5 text-left shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50"
+                  onClick={() => restoreChatHistoryItem(item)}
+                  className={`w-full rounded-lg border bg-white p-3.5 text-left shadow-sm transition-colors ${
+                    chatUserPrompt === item.title
+                      ? 'border-slate-900 bg-slate-50'
+                      : 'border-slate-200 hover:border-blue-200 hover:bg-blue-50'
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -526,7 +630,8 @@ export function CommentsPanel({
                   rows={3}
                 />
 
-                <div className="mt-3 flex items-center justify-end">
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  {renderKnowledgeSourcePicker('bottom')}
                   <button
                     type="button"
                     onClick={handleAdd}
@@ -876,7 +981,8 @@ export function CommentsPanel({
                 rows={3}
               />
 
-              <div className="mt-3 flex items-center justify-end">
+              <div className="mt-3 flex items-center justify-between gap-3">
+                {renderKnowledgeSourcePicker('top')}
                 <button
                   onClick={handleAdd}
                   disabled={!newContent.trim()}
