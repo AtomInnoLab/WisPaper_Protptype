@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, BookmarkPlus, ExternalLink, GraduationCap, Library, Quote, Search } from 'lucide-react';
+import { BookmarkPlus, ExternalLink, Quote, Search } from 'lucide-react';
 import { Paper } from '../types';
 import { SearchThinkingPanel } from './SearchThinkingPanel';
 
@@ -9,21 +9,16 @@ interface FudanCollectionResultsProps {
   onSearchChange: (query: string) => void;
 }
 
-type FudanTab = 'library' | 'research';
+type FudanTab = 'books' | 'theses' | 'humanities-data' | 'special';
 
-const resourceTypeLabels: Record<string, string> = {
-  book: '图书',
-  thesis: '本校学位论文',
-  special: '特藏资料',
-  paper: '论文',
-  dataset: '数据集',
-};
+const mockSearches = [
+  { label: '综合检索', query: '深度学习' },
+  { label: '只看学位论文', query: '学位论文 深度学习' },
+  { label: '只看特藏资源', query: '特藏资源 科举' },
+  { label: '只看人文社科数据', query: '人文社科数据 传播' },
+];
 
-function getResourceTypeLabel(type?: Paper['type']) {
-  return resourceTypeLabels[type || 'paper'] || '论文';
-}
-
-function FudanResultCard({ paper }: { paper: Paper }) {
+function FudanResultCard({ paper, tagLabel }: { paper: Paper; tagLabel: string }) {
   const isPaper = paper.type === 'paper' || paper.type === 'dataset';
   const linkLabel = isPaper ? '复旦大学图书馆全文链接' : '馆藏链接';
 
@@ -31,7 +26,7 @@ function FudanResultCard({ paper }: { paper: Paper }) {
     <article className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
       <div className="flex items-start gap-2">
         <span className="mt-0.5 inline-flex shrink-0 items-center rounded-md border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700">
-          {getResourceTypeLabel(paper.type)}
+          {tagLabel}
         </span>
         <h3 className="text-sm font-semibold leading-6 text-blue-600">
           {paper.title}
@@ -72,31 +67,56 @@ export function FudanCollectionResults({
   searchQuery,
   onSearchChange,
 }: FudanCollectionResultsProps) {
-  const [activeTab, setActiveTab] = React.useState<FudanTab>('library');
-  const libraryResources = papers.filter((paper) =>
-    paper.type === 'book' || paper.type === 'special' || paper.type === 'thesis' || paper.venue.includes('复旦'),
-  );
-  const researchOutputs = papers.filter((paper) =>
-    paper.type === 'thesis' || paper.venue.includes('复旦'),
-  );
-  const displayResults = activeTab === 'library'
-    ? [...libraryResources, ...papers.filter((paper) => paper.type === 'paper').slice(0, 8)]
-    : researchOutputs;
+  const [activeTab, setActiveTab] = React.useState<FudanTab>('books');
+  const normalizedQuery = (searchQuery || '深度学习').trim().toLowerCase();
+  const sourceBooks = papers.filter((paper) => paper.type === 'book' || paper.type === 'paper').slice(0, 10);
+  const sourceTheses = papers.filter((paper) => paper.type === 'thesis' || paper.venue.includes('复旦')).slice(0, 10);
+  const sourceHumanitiesData = papers.filter((paper) =>
+    paper.type === 'dataset' || paper.categories.some((category) => ['History', 'Education', 'Chinese Culture', 'Communication', 'Social Media'].includes(category)),
+  ).slice(0, 10);
+  const sourceSpecialResources = papers.filter((paper) => paper.type === 'special');
+  const isThesisSearch = normalizedQuery.includes('学位') || normalizedQuery.includes('论文') || normalizedQuery.includes('thesis');
+  const isSpecialSearch = normalizedQuery.includes('特藏') || normalizedQuery.includes('科举') || normalizedQuery.includes('special');
+  const isHumanitiesSearch = normalizedQuery.includes('人文') || normalizedQuery.includes('社科') || normalizedQuery.includes('传播') || normalizedQuery.includes('data');
+  const isSingleTypeMockSearch = isThesisSearch || isSpecialSearch || isHumanitiesSearch;
+  const books = isSingleTypeMockSearch ? [] : sourceBooks;
+  const theses = isThesisSearch ? sourceTheses : isSingleTypeMockSearch ? [] : sourceTheses;
+  const humanitiesData = isHumanitiesSearch ? sourceHumanitiesData : isSingleTypeMockSearch ? [] : sourceHumanitiesData;
+  const specialResources = isSpecialSearch ? sourceSpecialResources : isSingleTypeMockSearch ? [] : sourceSpecialResources;
 
-  const tabs = [
+  const baseTabs = [
     {
-      id: 'library' as const,
-      label: '复旦大学馆藏资源',
-      count: 49,
-      icon: Library,
+      id: 'books' as const,
+      label: '书刊',
+      count: books.length,
+      results: books,
     },
     {
-      id: 'research' as const,
-      label: '复旦大学学术成果',
-      count: 10,
-      icon: Award,
+      id: 'theses' as const,
+      label: '学位论文',
+      count: theses.length,
+      results: theses,
+    },
+    {
+      id: 'humanities-data' as const,
+      label: '人文社科数据',
+      count: humanitiesData.length,
+      results: humanitiesData,
+    },
+    {
+      id: 'special' as const,
+      label: '特藏资源',
+      results: specialResources,
     },
   ];
+
+  const tabs = React.useMemo(
+    () => [...baseTabs].sort((left, right) => Number(right.results.length > 0) - Number(left.results.length > 0)),
+    [books, theses, humanitiesData, specialResources],
+  );
+  const activeTabConfig = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
+  const displayResults = activeTabConfig?.results ?? [];
+  const activeTabLabel = activeTabConfig?.label ?? '书刊';
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-slate-50">
@@ -105,7 +125,7 @@ export function FudanCollectionResults({
           <Search className="h-4 w-4 shrink-0 text-slate-500" />
           <input
             type="text"
-            value={searchQuery || '1'}
+            value={searchQuery || '深度学习'}
             onChange={(event) => onSearchChange(event.target.value)}
             className="h-8 flex-1 bg-transparent text-sm text-slate-900 outline-none"
           />
@@ -116,6 +136,26 @@ export function FudanCollectionResults({
             <Search className="h-4 w-4" />
           </button>
         </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {mockSearches.map((item) => {
+            const isActive = normalizedQuery === item.query.toLowerCase();
+
+            return (
+              <button
+                key={item.query}
+                type="button"
+                onClick={() => onSearchChange(item.query)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  isActive
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-950'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <SearchThinkingPanel query={searchQuery} className="border-b border-slate-200" />
@@ -123,7 +163,6 @@ export function FudanCollectionResults({
       <div className="border-b border-slate-200 bg-white px-6">
         <div className="flex gap-7">
           {tabs.map((tab) => {
-            const Icon = tab.icon;
             const isActive = activeTab === tab.id;
 
             return (
@@ -131,19 +170,20 @@ export function FudanCollectionResults({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 border-b-2 px-3 py-4 text-sm font-semibold transition ${
+                className={`flex items-center gap-3 border-b-2 px-3 py-4 text-lg font-semibold transition ${
                   isActive
                     ? 'border-slate-950 text-slate-950'
                     : 'border-transparent text-slate-500 hover:text-slate-900'
                 }`}
               >
-                {tab.id === 'library' ? <Icon className="h-4 w-4" /> : <GraduationCap className="h-4 w-4" />}
                 <span>{tab.label}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${
-                  isActive ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {tab.count}
-                </span>
+                {typeof tab.count === 'number' ? (
+                  <span className={`rounded-full px-2.5 py-1 text-sm ${
+                    isActive ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {tab.count}
+                  </span>
+                ) : null}
               </button>
             );
           })}
@@ -151,11 +191,20 @@ export function FudanCollectionResults({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-        <div className="space-y-3">
-          {displayResults.map((paper) => (
-            <FudanResultCard key={paper.id} paper={paper} />
-          ))}
-        </div>
+        {displayResults.length > 0 ? (
+          <div className="space-y-3">
+            {displayResults.map((paper) => (
+              <FudanResultCard key={paper.id} paper={paper} tagLabel={activeTabLabel} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex min-h-[18rem] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white">
+            <div className="text-center">
+              <p className="text-sm font-semibold text-slate-900">暂无搜索结果</p>
+              <p className="mt-2 text-sm text-slate-500">该类型当前没有匹配数据，可切换到其他结果类型查看。</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

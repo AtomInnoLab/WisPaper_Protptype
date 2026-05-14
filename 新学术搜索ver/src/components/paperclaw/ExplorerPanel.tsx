@@ -18,6 +18,7 @@ export function ExplorerPanel({}: ExplorerPanelProps) {
   const [selectedItem, setSelectedItem] = useState<string | null>('paper-1');
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<TreeNode[]>([]);
+  const [showUploadMenu, setShowUploadMenu] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement>(null);
 
   const toggleFolder = (folderId: string) => {
@@ -86,6 +87,31 @@ export function ExplorerPanel({}: ExplorerPanelProps) {
       processFiles(e.target.files);
       e.target.value = '';
     }
+  };
+
+  const handleUploadSource = (source: 'local' | 'google-drive' | 'baidu-drive') => {
+    setShowUploadMenu(false);
+
+    if (source === 'local') {
+      uploadInputRef.current?.click();
+      return;
+    }
+
+    const name = source === 'google-drive'
+      ? 'Google Drive 导入文件.pdf'
+      : '百度网盘导入文件.pdf';
+
+    setUploadedFiles((prev) => [
+      ...prev,
+      {
+        id: `imported-${source}-${Date.now()}`,
+        name,
+        type: 'file',
+        size: 'Mock',
+        date: new Date().toISOString().split('T')[0],
+      },
+    ]);
+    setExpandedFolders((prev) => new Set(prev).add('uploads'));
   };
 
   const handleRemoveUploaded = (id: string) => {
@@ -404,14 +430,39 @@ export function ExplorerPanel({}: ExplorerPanelProps) {
         )}
 
         {/* Upload button */}
-        <div className="px-3 pt-3 pb-1">
+        <div className="relative px-3 pt-3 pb-1">
           <button
-            onClick={() => uploadInputRef.current?.click()}
+            onClick={() => setShowUploadMenu((prev) => !prev)}
             className="w-full flex items-center justify-center gap-1.5 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
             上传文件
           </button>
+          {showUploadMenu ? (
+            <div className="absolute left-3 right-3 bottom-full mb-2 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 text-xs shadow-lg z-20">
+              <button
+                type="button"
+                onClick={() => handleUploadSource('local')}
+                className="block w-full px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+              >
+                添加本地文件
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUploadSource('google-drive')}
+                className="block w-full px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+              >
+                从 Google Drive 导入
+              </button>
+              <button
+                type="button"
+                onClick={() => handleUploadSource('baidu-drive')}
+                className="block w-full px-3 py-2.5 text-left text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+              >
+                从百度网盘导入
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 

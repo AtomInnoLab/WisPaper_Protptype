@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Send, HelpCircle, Database, Sparkles, Globe2, ChevronDown, Check, Search } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Send, HelpCircle, Database, Sparkles, Globe2, ChevronDown, Check, Search, Plus, X } from 'lucide-react';
 import { ScholarQAResults } from './ScholarQAResults';
 import { ResourcesPanel } from './ResourcesPanel';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -20,6 +20,9 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
   const [submittedQuestion, setSubmittedQuestion] = useState('');
   const [selectedKnowledgeSources, setSelectedKnowledgeSources] = useState<KnowledgeSource[]>(['my-library', 'academic-search']);
   const [showKnowledgeMenu, setShowKnowledgeMenu] = useState(false);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const knowledgeSourceOptions: Array<{ id: KnowledgeSource; label: string; icon: React.ReactNode }> = [
     { id: 'my-library', label: isZh ? '我的知识库' : 'My Library', icon: <Database className="h-4 w-4 text-gray-500" /> },
     { id: 'academic-search', label: isZh ? '学术搜索' : 'Scholar Search', icon: <Search className="h-4 w-4 text-gray-500" /> },
@@ -50,6 +53,31 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
       setHasResults(true);
       console.log('Question submitted:', question);
     }
+  };
+
+  const handleLocalAttachmentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+
+    if (files.length > 0) {
+      setAttachments((current) => [...current, ...files.map((file) => file.name)]);
+    }
+
+    event.target.value = '';
+  };
+
+  const handleAttachmentOption = (type: 'local' | 'google-drive' | 'baidu-drive') => {
+    setShowAttachmentMenu(false);
+
+    if (type === 'local') {
+      attachmentInputRef.current?.click();
+      return;
+    }
+
+    const importedFile = type === 'google-drive'
+      ? isZh ? 'Google Drive 导入文件' : 'Google Drive import'
+      : isZh ? '百度网盘导入文件' : 'Baidu Netdisk import';
+
+    setAttachments((current) => [...current, importedFile]);
   };
 
   const handleReset = () => {
@@ -124,38 +152,105 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
                 className="block w-full px-5 pt-4 pb-12 pr-16 text-base border-0 rounded-lg resize-none focus:outline-none placeholder:text-gray-400"
               />
               <div className="absolute left-5 bottom-4 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setShowKnowledgeMenu((prev) => !prev)}
-                  className="flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-1 text-gray-900 transition-colors hover:bg-gray-200"
-                >
-                  <Database className="w-4 h-4" />
-                  <span>{knowledgeSourceLabel}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showKnowledgeMenu ? 'rotate-180' : ''}`} />
-                </button>
-                {showKnowledgeMenu ? (
-                  <div className="absolute bottom-full left-0 mb-2 w-52 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
-                    {knowledgeSourceOptions.map((option) => {
-                      const isSelected = selectedKnowledgeSources.includes(option.id);
-
-                      return (
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAttachmentMenu((prev) => !prev);
+                        setShowKnowledgeMenu(false);
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-gray-900 transition-colors hover:bg-gray-200"
+                      aria-label={isZh ? '添加文件' : 'Add file'}
+                      title={isZh ? '添加文件' : 'Add file'}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                    {showAttachmentMenu ? (
+                      <div className="absolute bottom-full left-0 mb-2 w-52 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
                         <button
-                          key={option.id}
                           type="button"
-                          onClick={() => toggleKnowledgeSource(option.id)}
-                          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                          onClick={() => handleAttachmentOption('local')}
+                          className="block w-full px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
                         >
-                          <span className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
-                            {isSelected ? <Check className="h-3 w-3 text-gray-900" /> : null}
-                          </span>
-                          {option.icon}
-                          <span>{option.label}</span>
+                          {isZh ? '添加本地文件' : 'Add local file'}
                         </button>
-                      );
-                    })}
+                        <button
+                          type="button"
+                          onClick={() => handleAttachmentOption('google-drive')}
+                          className="block w-full px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+                        >
+                          {isZh ? '从 Google Drive 导入' : 'Import from Google Drive'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAttachmentOption('baidu-drive')}
+                          className="block w-full px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+                        >
+                          {isZh ? '从百度网盘导入' : 'Import from Baidu Netdisk'}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowKnowledgeMenu((prev) => !prev);
+                        setShowAttachmentMenu(false);
+                      }}
+                      className="flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-1 text-gray-900 transition-colors hover:bg-gray-200"
+                    >
+                      <Database className="w-4 h-4" />
+                      <span>{knowledgeSourceLabel}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showKnowledgeMenu ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showKnowledgeMenu ? (
+                      <div className="absolute bottom-full left-0 mb-2 w-52 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg">
+                        {knowledgeSourceOptions.map((option) => {
+                          const isSelected = selectedKnowledgeSources.includes(option.id);
+
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => toggleKnowledgeSource(option.id)}
+                              className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                            >
+                              <span className="flex h-4 w-4 items-center justify-center rounded border border-gray-300">
+                                {isSelected ? <Check className="h-3 w-3 text-gray-900" /> : null}
+                              </span>
+                              {option.icon}
+                              <span>{option.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               </div>
+              {attachments.length > 0 ? (
+                <div className="absolute left-5 right-16 bottom-14 flex flex-wrap gap-2">
+                  {attachments.map((attachment, index) => (
+                    <span
+                      key={`${attachment}-${index}`}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                    >
+                      <span className="truncate">{attachment}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                        className="text-gray-400 transition-colors hover:text-gray-800"
+                        aria-label={isZh ? '移除文件' : 'Remove file'}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <button
                 onClick={handleSubmit}
                 disabled={!question.trim()}
@@ -164,6 +259,13 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
                 <Send className="w-4 h-4" />
               </button>
             </div>
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleLocalAttachmentChange}
+            />
           </div>
         </div>
       </div>

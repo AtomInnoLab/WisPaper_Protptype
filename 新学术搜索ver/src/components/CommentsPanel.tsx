@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Database, FileText, Globe2, MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Copy, FlaskConical, History } from 'lucide-react';
+import { Check, ChevronDown, Database, FileText, Globe2, MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Copy, FlaskConical, History, Plus } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface SummaryCitation {
@@ -51,10 +51,11 @@ export function CommentsPanel({
   const [chatSubmittedExcerpt, setChatSubmittedExcerpt] = useState<string | null>(null);
   const [chatResponseMode, setChatResponseMode] = useState<ChatResponseMode | null>(null);
   const [savedNotes, setSavedNotes] = useState<Array<{ id: string; content: string; timestamp: string; color: string }>>([]);
-  const [savedNoteFeedback, setSavedNoteFeedback] = useState<'summary' | 'selection-answer' | null>(null);
   const [copiedResponse, setCopiedResponse] = useState<'summary' | 'selection-answer' | null>(null);
   const [relatedPaperSearchQuery, setRelatedPaperSearchQuery] = useState('');
   const [showKnowledgeSourceMenu, setShowKnowledgeSourceMenu] = useState(false);
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const [chatAttachments, setChatAttachments] = useState<string[]>([]);
   const [selectedKnowledgeSources, setSelectedKnowledgeSources] = useState<KnowledgeSource[]>(['current-paper']);
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([
     {
@@ -87,6 +88,7 @@ export function CommentsPanel({
     'selection-answer': null,
   });
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   const mockComments = [
     {
@@ -177,11 +179,86 @@ export function CommentsPanel({
     });
   };
 
+  const handleLocalAttachmentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+
+    if (files.length > 0) {
+      setChatAttachments((current) => [...current, ...files.map((file) => file.name)]);
+    }
+
+    event.target.value = '';
+  };
+
+  const handleAttachmentOption = (type: 'local' | 'google-drive' | 'baidu-drive') => {
+    setShowAttachmentMenu(false);
+
+    if (type === 'local') {
+      attachmentInputRef.current?.click();
+      return;
+    }
+
+    const importedFile = type === 'google-drive'
+      ? isZh ? 'Google Drive 导入文件' : 'Google Drive import'
+      : isZh ? '百度网盘导入文件' : 'Baidu Netdisk import';
+
+    setChatAttachments((current) => [...current, importedFile]);
+  };
+
+  const renderAttachmentPicker = (placement: 'top' | 'bottom' = 'top') => (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          setShowAttachmentMenu((current) => !current);
+          setShowKnowledgeSourceMenu(false);
+        }}
+        className={`inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-950 ${
+          showAttachmentMenu ? 'invisible' : ''
+        }`}
+        aria-label={isZh ? '添加文件' : 'Add file'}
+        title={isZh ? '添加文件' : 'Add file'}
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+
+      {showAttachmentMenu ? (
+        <div className={`absolute left-0 z-40 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg ${
+          placement === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2'
+        }`}>
+          <button
+            type="button"
+            onClick={() => handleAttachmentOption('local')}
+            className="block w-full px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+          >
+            {isZh ? '添加本地文件' : 'Add local file'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAttachmentOption('google-drive')}
+            className="block w-full px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+          >
+            {isZh ? '从 Google Drive 导入' : 'Import from Google Drive'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAttachmentOption('baidu-drive')}
+            className="block w-full px-3 py-2.5 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 hover:text-gray-950"
+          >
+            {isZh ? '从百度网盘导入' : 'Import from Baidu Netdisk'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+
   const renderKnowledgeSourcePicker = (placement: 'top' | 'bottom' = 'top') => (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setShowKnowledgeSourceMenu((current) => !current)}
+        onClick={() => {
+          setShowKnowledgeSourceMenu((current) => !current);
+          setShowAttachmentMenu(false);
+        }}
         className="inline-flex max-w-[13rem] items-center gap-1.5 rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 hover:text-gray-950"
       >
         <Database className="h-3.5 w-3.5 shrink-0" />
@@ -366,18 +443,6 @@ export function CommentsPanel({
   }, [chatResponseMode, chatWorkflow]);
 
   useEffect(() => {
-    if (!savedNoteFeedback) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setSavedNoteFeedback(null);
-    }, 1600);
-
-    return () => window.clearTimeout(timer);
-  }, [savedNoteFeedback]);
-
-  useEffect(() => {
     if (!copiedResponse) {
       return;
     }
@@ -421,26 +486,6 @@ export function CommentsPanel({
       {citation.citationId}
     </button>
   );
-
-  const saveAgentResponseToNotes = (mode: 'summary' | 'selection-answer') => {
-    const content =
-      mode === 'summary'
-        ? summarySections
-            .map((section) => `${section.title}: ${section.items.map((item) => item.text).join(' ')}`)
-            .join('\n\n')
-        : `${chatSubmittedExcerpt ? `Focused passage: "${chatSubmittedExcerpt}"\n\n` : ''}${selectionAnswerText}`;
-
-    setSavedNotes((prev) => [
-      {
-        id: `saved-note-${Date.now()}`,
-        content,
-        timestamp: 'Just now',
-        color: 'blue',
-      },
-      ...prev,
-    ]);
-    setSavedNoteFeedback(mode);
-  };
 
   const getAgentResponseText = (mode: 'summary' | 'selection-answer') =>
     mode === 'summary'
@@ -630,8 +675,32 @@ export function CommentsPanel({
                   rows={3}
                 />
 
+                {chatAttachments.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {chatAttachments.map((attachment, index) => (
+                      <span
+                        key={`${attachment}-${index}`}
+                        className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                      >
+                        <span className="truncate">{attachment}</span>
+                        <button
+                          type="button"
+                          onClick={() => setChatAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                          className="text-gray-400 transition-colors hover:text-gray-800"
+                          aria-label={isZh ? '移除文件' : 'Remove file'}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+
                 <div className="mt-3 flex items-center justify-between gap-3">
-                  {renderKnowledgeSourcePicker('bottom')}
+                  <div className="flex min-w-0 items-center gap-2">
+                    {renderAttachmentPicker('bottom')}
+                    {renderKnowledgeSourcePicker('bottom')}
+                  </div>
                   <button
                     type="button"
                     onClick={handleAdd}
@@ -825,14 +894,6 @@ export function CommentsPanel({
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={() => saveAgentResponseToNotes('summary')}
-                      className={actionButtonClass()}
-                    >
-                      <StickyNote className="h-4 w-4" />
-                      <span>Save to Notes</span>
-                    </button>
-                    <button
-                      type="button"
                       onClick={() => copyAgentResponse('summary')}
                       className={iconActionButtonClass(copiedResponse === 'summary')}
                       aria-label={copiedResponse === 'summary' ? 'Copied' : 'Copy'}
@@ -868,9 +929,6 @@ export function CommentsPanel({
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </button>
-                    {savedNoteFeedback === 'summary' ? (
-                      <span className="text-xs font-medium text-blue-700">Saved to Notes</span>
-                    ) : null}
                   </div>
                 </div>
               </div>
@@ -889,14 +947,6 @@ export function CommentsPanel({
                     {selectionAnswerText}
                   </p>
                   <div className="mt-4 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => saveAgentResponseToNotes('selection-answer')}
-                      className={actionButtonClass()}
-                    >
-                      <StickyNote className="h-4 w-4" />
-                      <span>Save to Notes</span>
-                    </button>
                     <button
                       type="button"
                       onClick={() => copyAgentResponse('selection-answer')}
@@ -934,9 +984,6 @@ export function CommentsPanel({
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </button>
-                    {savedNoteFeedback === 'selection-answer' ? (
-                      <span className="text-xs font-medium text-blue-700">Saved to Notes</span>
-                    ) : null}
                   </div>
                 </div>
               </div>
@@ -981,8 +1028,32 @@ export function CommentsPanel({
                 rows={3}
               />
 
+              {chatAttachments.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {chatAttachments.map((attachment, index) => (
+                    <span
+                      key={`${attachment}-${index}`}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                    >
+                      <span className="truncate">{attachment}</span>
+                      <button
+                        type="button"
+                        onClick={() => setChatAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                        className="text-gray-400 transition-colors hover:text-gray-800"
+                        aria-label={isZh ? '移除文件' : 'Remove file'}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+
               <div className="mt-3 flex items-center justify-between gap-3">
-                {renderKnowledgeSourcePicker('top')}
+                <div className="flex min-w-0 items-center gap-2">
+                  {renderAttachmentPicker('top')}
+                  {renderKnowledgeSourcePicker('top')}
+                </div>
                 <button
                   onClick={handleAdd}
                   disabled={!newContent.trim()}
@@ -996,6 +1067,13 @@ export function CommentsPanel({
           </div>
         </div>
       ) : null}
+      <input
+        ref={attachmentInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={handleLocalAttachmentChange}
+      />
     </div>
   );
 }
