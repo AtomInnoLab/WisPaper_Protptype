@@ -10,6 +10,7 @@ import { HomeFaqSection } from './HomeFaqSection';
 import { HomeSearchLanding } from './HomeSearchLanding';
 import { LogoLoop } from './LogoLoop';
 import { MarketingSeoPage } from './MarketingSeoPage';
+import { PricingPage } from './PricingPage';
 import { TranslationLandingPage } from './TranslationLandingPage';
 import { cn } from './ui/utils';
 
@@ -87,6 +88,36 @@ const footerSections = {
   pricing: [{ key: 'pricing' as const, label: 'Pricing' }],
 };
 
+const marketingPageKeys: MarketingPageKey[] = [
+  'home',
+  'search',
+  'pricing',
+  'privacy-policy',
+  'scholar-qa',
+  'agent',
+  'library',
+  'paperclaw',
+  'idea-discovery',
+  'projects',
+  'truecite',
+  'ai-feeds',
+  'ai-survey',
+  'surveys',
+  'blog',
+  'terms-of-use',
+  'translation',
+  'faq',
+];
+
+const getInitialMarketingPage = (): MarketingPageKey => {
+  if (typeof window === 'undefined') {
+    return 'home';
+  }
+
+  const hashPage = window.location.hash.replace('#', '') as MarketingPageKey;
+  return marketingPageKeys.includes(hashPage) ? hashPage : 'home';
+};
+
 function HomeCtaBanner({
   isZh,
   onStartSearch,
@@ -124,7 +155,7 @@ function HomeCtaBanner({
 }
 
 export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onStartSearch }: HomePageProps) {
-  const [activePage, setActivePage] = React.useState<MarketingPageKey>('home');
+  const [activePage, setActivePage] = React.useState<MarketingPageKey>(getInitialMarketingPage);
   const [language, setLanguage] = React.useState<'zh' | 'en'>('zh');
   const isZh = language === 'zh';
   const isHomePage = activePage === 'home';
@@ -179,6 +210,10 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onS
           onPrimaryAction={onNavigateToWorkspace}
         />
       );
+    }
+
+    if (page === 'pricing') {
+      return <PricingPage />;
     }
 
     const configMap: Record<Exclude<MarketingPageKey, 'home'>, PageConfig> = {
