@@ -227,6 +227,7 @@ export default function App() {
               onNavigateToWorkspace={() => setViewMode("all-feeds")}
               onNavigate={(view) => setViewMode(view as any)}
               onOpenPricing={() => setShowPaywallModal(true)}
+              onOpenRecharge={() => setShowRechargeModal(true)}
               onStartSearch={handleStartSearchFromHome}
             />
           ) : viewMode === "fudan-collection-search" ? (

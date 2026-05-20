@@ -47,6 +47,7 @@ interface HomePageProps {
   onNavigateToWorkspace: () => void;
   onNavigate?: (view: ViewMode) => void;
   onOpenPricing?: () => void;
+  onOpenRecharge?: () => void;
   onStartSearch?: (query?: string) => void;
 }
 
@@ -154,7 +155,7 @@ function HomeCtaBanner({
   );
 }
 
-export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onStartSearch }: HomePageProps) {
+export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onOpenRecharge, onStartSearch }: HomePageProps) {
   const [activePage, setActivePage] = React.useState<MarketingPageKey>(getInitialMarketingPage);
   const [language, setLanguage] = React.useState<'zh' | 'en'>('zh');
   const isZh = language === 'zh';
@@ -213,7 +214,7 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onS
     }
 
     if (page === 'pricing') {
-      return <PricingPage />;
+      return <PricingPage onOpenRecharge={onOpenRecharge} />;
     }
 
     const configMap: Record<Exclude<MarketingPageKey, 'home'>, PageConfig> = {
