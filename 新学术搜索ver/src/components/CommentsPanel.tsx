@@ -20,11 +20,21 @@ interface ChatHistoryItem {
   excerpt?: string | null;
 }
 
+export interface PaperComment {
+  id: string;
+  author: string;
+  avatar: string;
+  content: string;
+  timestamp: string;
+  likes: number;
+}
+
 interface CommentsPanelProps {
   paperId: string;
   paperTitle?: string;
   paperCategories?: string[];
   activeTab: 'home' | 'info' | 'comments' | 'notes' | 'chat' | 'history';
+  comments?: PaperComment[];
   activeCitationId?: string | null;
   onSelectSummaryCitation?: (citation: SummaryCitation) => void;
   selectedExcerpt?: string | null;
@@ -37,6 +47,7 @@ export function CommentsPanel({
   paperTitle,
   paperCategories = [],
   activeTab,
+  comments = [],
   activeCitationId = null,
   onSelectSummaryCitation,
   selectedExcerpt = null,
@@ -90,7 +101,7 @@ export function CommentsPanel({
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
-  const mockComments = [
+  const mockComments: PaperComment[] = [
     {
       id: '1',
       author: '张涵',
@@ -116,6 +127,7 @@ export function CommentsPanel({
       likes: 2,
     },
   ];
+  const commentsList = [...comments, ...mockComments];
 
   const mockNotes = [
     {
@@ -548,14 +560,14 @@ export function CommentsPanel({
           </div>
         ) : activeTab === 'comments' ? (
           <div className="space-y-4">
-            {mockComments.length === 0 ? (
+            {commentsList.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <MessageSquare className="w-12 h-12 text-gray-300 mb-3" />
                 <p className="text-sm text-gray-500">No comments yet</p>
                 <p className="text-xs text-gray-400 mt-1">Be the first to comment</p>
               </div>
             ) : (
-              mockComments.map((comment) => (
+              commentsList.map((comment) => (
                 <div key={comment.id} className="rounded-lg border border-slate-200 bg-white p-3.5 shadow-sm transition-colors hover:border-slate-300">
                   <div className="flex items-start gap-3 mb-2">
                     <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-medium flex-shrink-0">

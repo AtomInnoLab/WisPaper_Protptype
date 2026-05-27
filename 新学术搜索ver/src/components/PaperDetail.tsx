@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info } from 'lucide-react';
+import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal } from 'lucide-react';
 import { Paper } from '../types';
 import { TableOfContents } from './TableOfContents';
 import { PageThumbnails } from './PageThumbnails';
 import { BlogView } from './BlogView';
 import { PaperView } from './PaperView';
 import { TranslationView } from './TranslationView';
-import { CommentsPanel } from './CommentsPanel';
+import { CommentsPanel, PaperComment } from './CommentsPanel';
 import { UserPanel } from './UserPanel';
 import { ParsingStatus } from './ParsingStatus';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface PaperDetailProps {
   paper: Paper;
@@ -26,7 +27,25 @@ type PaperHighlightTarget = {
   trigger: number;
 };
 
+const defaultShareCommentsZh = [
+  '这篇文章很有启发，分享给大家一起看看。',
+  '读完很有收获，推荐给关注这个话题的朋友。',
+  '文章观点清晰，值得花几分钟阅读。',
+  '这篇内容让我对这个问题有了新的理解。',
+  '分享一篇不错的文章，欢迎一起讨论。',
+];
+
+const defaultShareCommentsEn = [
+  'This article is insightful. Sharing it for everyone to read.',
+  'I learned a lot from this article. Recommended for anyone interested in this topic.',
+  'The article presents clear ideas and is worth a few minutes of your time.',
+  'This piece gave me a new perspective on the issue.',
+  'Sharing a good read. Feel free to join the discussion.',
+];
+
 export function PaperDetail({ paper, onBack }: PaperDetailProps) {
+  const { language } = useLanguage();
+  const isZh = language === 'zh';
   const [activeTab, setActiveTab] = useState<TabType>('blog');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('preview');
   const [pdfScale, setPdfScale] = useState(0.75);
@@ -49,11 +68,19 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
   const [readerTool, setReaderTool] = useState<ReaderTool>('click');
   const [paperHighlightTarget, setPaperHighlightTarget] = useState<PaperHighlightTarget | null>(null);
   const [selectedExcerpt, setSelectedExcerpt] = useState<string | null>(null);
+  const [showBlogShareModal, setShowBlogShareModal] = useState(false);
+  const [shareComment, setShareComment] = useState('');
+  const [defaultShareComment, setDefaultShareComment] = useState('');
+  const [shareToComments, setShareToComments] = useState(true);
+  const [defaultShareCommentIndex, setDefaultShareCommentIndex] = useState(-1);
+  const [shareToastVisible, setShareToastVisible] = useState(false);
+  const [paperComments, setPaperComments] = useState<Record<string, PaperComment[]>>({});
   const mainContentRef = useRef<HTMLDivElement | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingRightSidebarWidthRef = useRef(rightSidebarWidth);
 
   const paperId = paper?.id;
+  const defaultShareComments = isZh ? defaultShareCommentsZh : defaultShareCommentsEn;
 
   // Simulate parsing process for 10 seconds on first load (only for Translation tab)
   useEffect(() => {
@@ -67,7 +94,24 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
   // Track first visit to paper for Blog tab
   useEffect(() => {
     setIsFirstBlogVisit(true);
+    setShowBlogShareModal(false);
+    setShareComment('');
+    setDefaultShareComment('');
+    setShareToComments(true);
+    setShareToastVisible(false);
   }, [paperId]);
+
+  useEffect(() => {
+    if (!shareToastVisible) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShareToastVisible(false);
+    }, 1800);
+
+    return () => window.clearTimeout(timer);
+  }, [shareToastVisible]);
 
   useEffect(() => {
     if (!isResizingRightSidebar) {
@@ -156,7 +200,6 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
     'translation-only': '仅显示译文',
     'dual-horizontal': '左右对照',
   };
-
   const handleSidebarTabToggle = (tab: SidebarTab) => {
     if (!leftSidebarCollapsed && sidebarTab === tab) {
       setLeftSidebarCollapsed(true);
@@ -191,6 +234,65 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
     if (selectedText) {
       setRightSidebarCollapsed(false);
     }
+  };
+
+  const handleOpenBlogShare = () => {
+    if (activeTab !== 'blog') {
+      return;
+    }
+
+    const nextIndex = (defaultShareCommentIndex + 1) % defaultShareComments.length;
+    const nextComment = defaultShareComments[nextIndex];
+    setDefaultShareCommentIndex(nextIndex);
+    setDefaultShareComment(nextComment);
+    setShareComment(nextComment);
+    setShareToComments(true);
+    setShowBlogShareModal(true);
+  };
+
+  const handleSubmitBlogShare = async (commentOverride?: string, templateIndex?: number) => {
+    const content = (commentOverride ?? shareComment).trim();
+
+    if (!content) {
+      return;
+    }
+
+    const matchedTemplateIndex = templateIndex ?? defaultShareComments.findIndex((comment) => comment === content);
+
+    if (matchedTemplateIndex >= 0) {
+      setDefaultShareCommentIndex(matchedTemplateIndex);
+    }
+
+    const isCustomComment = content !== defaultShareComment;
+
+    if (!isCustomComment || shareToComments) {
+      const nextComment: PaperComment = {
+        id: `blog-share-${Date.now()}`,
+        author: 'You',
+        avatar: '你',
+        content,
+        timestamp: isZh ? '刚刚' : 'Just now',
+        likes: 0,
+      };
+
+      setPaperComments((current) => ({
+        ...current,
+        [paperId]: [nextComment, ...(current[paperId] ?? [])],
+      }));
+      setRightSidebarCollapsed(false);
+      setRightSidebarTab('comments');
+    }
+
+    setShareComment('');
+    setDefaultShareComment('');
+    setShareToComments(true);
+    setShowBlogShareModal(false);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      // Clipboard may be unavailable in some browser contexts; keep the share flow non-blocking.
+    }
+    setShareToastVisible(true);
   };
 
   useEffect(() => {
@@ -704,7 +806,16 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
             <button className="text-gray-700 hover:text-gray-900"><Bookmark className="h-4 w-4" /></button>
             <button className="text-gray-700 hover:text-gray-900"><Download className="h-4 w-4" /></button>
             <button className="text-gray-700 hover:text-gray-900"><Maximize className="h-4 w-4" /></button>
-            <button className="text-gray-700 hover:text-gray-900"><Share2 className="h-4 w-4" /></button>
+            <button
+              type="button"
+              onClick={handleOpenBlogShare}
+              className="text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={activeTab !== 'blog'}
+              title={activeTab === 'blog' ? (isZh ? '分享 Blog' : 'Share blog') : (isZh ? '切换到 Blog 后分享' : 'Switch to Blog to share')}
+              aria-label={activeTab === 'blog' ? (isZh ? '分享 Blog' : 'Share blog') : (isZh ? '切换到 Blog 后分享' : 'Switch to Blog to share')}
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -797,6 +908,7 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
             paperTitle={paper.title}
             paperCategories={paper.categories}
             activeTab={rightSidebarTab}
+            comments={paperComments[paperId] ?? []}
             activeCitationId={paperHighlightTarget?.citationId ?? null}
             onSelectSummaryCitation={handleSummaryCitationSelect}
             selectedExcerpt={selectedExcerpt}
@@ -805,6 +917,76 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
           />
         </div>
       </div>
+
+      {showBlogShareModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4">
+          <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">{isZh ? '分享 Blog' : 'Share blog'}</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBlogShareModal(false)}
+                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label={isZh ? '关闭分享弹窗' : 'Close share dialog'}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="px-5 py-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                <p className="line-clamp-2 text-sm font-medium leading-6 text-slate-800">{paper.title}</p>
+              </div>
+              <textarea
+                value={shareComment}
+                onChange={(event) => setShareComment(event.target.value)}
+                placeholder={isZh ? '写下你的评论...' : 'Add your comment...'}
+                rows={5}
+                className="mt-4 block w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                autoFocus
+              />
+              {shareComment.trim() && shareComment.trim() !== defaultShareComment ? (
+                <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={shareToComments}
+                    onChange={(event) => setShareToComments(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>{isZh ? '分享到评论区' : 'Share to comments'}</span>
+                </label>
+              ) : null}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setShowBlogShareModal(false)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                {isZh ? '取消' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitBlogShare}
+                disabled={!shareComment.trim()}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                <SendHorizontal className="h-4 w-4" />
+                <span>{isZh ? '复制' : 'Copy'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {shareToastVisible ? (
+        <div className="fixed right-5 top-5 z-[60] rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-xl">
+          {isZh ? '已复制到粘贴板' : 'Copied to clipboard'}
+        </div>
+      ) : null}
     </div>
   );
 }
