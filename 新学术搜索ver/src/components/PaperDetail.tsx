@@ -263,9 +263,7 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
       setDefaultShareCommentIndex(matchedTemplateIndex);
     }
 
-    const isCustomComment = content !== defaultShareComment;
-
-    if (!isCustomComment || shareToComments) {
+    if (shareToComments) {
       const nextComment: PaperComment = {
         id: `blog-share-${Date.now()}`,
         author: 'You',
@@ -947,17 +945,15 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
                 className="mt-4 block w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 autoFocus
               />
-              {shareComment.trim() && shareComment.trim() !== defaultShareComment ? (
-                <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={shareToComments}
-                    onChange={(event) => setShareToComments(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span>{isZh ? '分享到评论区' : 'Share to comments'}</span>
-                </label>
-              ) : null}
+              <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={shareToComments}
+                  onChange={(event) => setShareToComments(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span>{isZh ? '分享到评论区' : 'Share to comments'}</span>
+              </label>
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
