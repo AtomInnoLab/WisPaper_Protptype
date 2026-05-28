@@ -9,7 +9,6 @@ import {
   Database,
   FileSearch,
   Filter,
-  FolderKanban,
   Globe,
   Layers3,
   ListFilter,
@@ -196,8 +195,11 @@ const featureOverviewCards = [
     enTitle: 'Scholar Search',
     zhBody: '支持自然语言提问与全文检索的 AI 学术搜索，帮助你快速锁定高质量论文与相关研究。',
     enBody: 'An AI academic search engine with natural-language and full-text retrieval to surface high-quality papers fast.',
+    zhDetail: '适合从问题出发做文献发现、快速筛选核心论文，并通过 Deep Search 处理复杂条件、排除逻辑和跨领域语义检索。',
+    enDetail: 'Start from a research question, filter core papers quickly, and use Deep Search for complex criteria, exclusions, and cross-domain semantic retrieval.',
     accent: 'bg-cyan-100 text-cyan-700',
     border: 'border-cyan-200/70',
+    surface: 'hover:bg-cyan-50/95 focus-visible:bg-cyan-50/95',
   },
   {
     key: 'library' as const,
@@ -206,28 +208,11 @@ const featureOverviewCards = [
     enTitle: 'Library',
     zhBody: '搭建可云端同步的研究知识库，自动识别 Meta 信息，持续沉淀你的学术数字资产。',
     enBody: 'Build a synced research library with automatic metadata extraction and preserve your academic knowledge base.',
+    zhDetail: '统一管理论文、笔记和项目资料，自动补全题录信息，让检索结果、阅读记录与后续问答都能沉淀为可复用资产。',
+    enDetail: 'Manage papers, notes, and project materials in one place, enrich metadata automatically, and turn search and reading history into reusable assets.',
     accent: 'bg-indigo-100 text-indigo-700',
     border: 'border-indigo-200/70',
-  },
-  {
-    key: 'idea-discovery' as const,
-    icon: Sparkles,
-    zhTitle: 'Idea Discovery',
-    enTitle: 'Idea Discovery',
-    zhBody: '通过 Agent 多轮提问逐步明确研究方向，再结合搜索与 PDF 解析能力，帮助你发现研究缺口和科研灵感。',
-    enBody: 'Use a multi-turn agent to clarify research direction, then combine search and PDF analysis to uncover gaps and generate research ideas.',
-    accent: 'bg-emerald-100 text-emerald-700',
-    border: 'border-emerald-200/70',
-  },
-  {
-    key: 'paperclaw' as const,
-    icon: FolderKanban,
-    zhTitle: 'PaperClaw',
-    enTitle: 'PaperClaw',
-    zhBody: '面向论文复现与实验验证的 AI 助手，帮助你快速搭建实验路径、验证假设，并推进二次创新。',
-    enBody: 'An AI assistant for paper reproduction and experiment validation that helps you build workflows faster, test hypotheses, and move toward follow-on innovation.',
-    accent: 'bg-cyan-50 text-cyan-800',
-    border: 'border-cyan-200/70',
+    surface: 'hover:bg-indigo-50/95 focus-visible:bg-indigo-50/95',
   },
   {
     key: 'ai-survey' as const,
@@ -236,8 +221,11 @@ const featureOverviewCards = [
     enTitle: 'AI Survey',
     zhBody: '自动生成即时综述与知识导图，帮你在不下载全文的情况下快速看清知识脉络。',
     enBody: 'Generate instant surveys and knowledge maps so you can understand the structure of search results without downloading full papers.',
+    zhDetail: '面向新领域调研、开题和 related work 梳理，自动提炼主题分类、代表论文、研究趋势与可继续深入的问题。',
+    enDetail: 'Useful for new-field scans, proposal work, and related work drafting by extracting topics, representative papers, trends, and follow-up questions.',
     accent: 'bg-teal-100 text-teal-700',
     border: 'border-teal-200/70',
+    surface: 'hover:bg-teal-50/95 focus-visible:bg-teal-50/95',
   },
   {
     key: 'ai-feeds' as const,
@@ -246,8 +234,11 @@ const featureOverviewCards = [
     enTitle: 'AI Feeds',
     zhBody: '持续追踪你所在方向的新论文、趋势与值得关注的研究信号，让信息输入从一次性搜索变成长期研究订阅。',
     enBody: 'Continuously track new papers, trends, and research signals in your area so discovery becomes an ongoing feed instead of a one-off search.',
+    zhDetail: '把关键词、作者、机构或研究方向配置成订阅源，减少重复搜索，持续接收与你课题相关的新进展。',
+    enDetail: 'Turn keywords, authors, institutions, or research directions into feeds so you spend less time repeating searches and more time reading relevant updates.',
     accent: 'bg-slate-100 text-slate-700',
     border: 'border-slate-200/80',
+    surface: 'hover:bg-slate-50/95 focus-visible:bg-slate-50/95',
   },
   {
     key: 'scholar-qa' as const,
@@ -256,8 +247,11 @@ const featureOverviewCards = [
     enTitle: 'Scholar QA',
     zhBody: '基于文献库做可溯源的学术问答，把复杂调研从冗长查阅缩短到分钟级。',
     enBody: 'Run traceable academic QA on top of your paper library and cut complex research lookup from hours to minutes.',
+    zhDetail: '围绕已收藏论文和检索结果提问，答案带引用来源，适合做方法对比、概念澄清、实验设置梳理和论文问答。',
+    enDetail: 'Ask questions over saved papers and search results with cited answers for method comparison, concept clarification, experiment setup review, and paper QA.',
     accent: 'bg-sky-100 text-sky-700',
     border: 'border-sky-200/70',
+    surface: 'hover:bg-sky-50/95 focus-visible:bg-sky-50/95',
   },
   {
     key: 'search' as const,
@@ -266,8 +260,11 @@ const featureOverviewCards = [
     enTitle: 'Explore More',
     zhBody: '继续探索实时追新、沉浸式阅读、翻译与更多学术工具工作流入口。',
     enBody: 'Explore more academic workflows including research feeds, immersive reading, translation, and beyond.',
+    zhDetail: '从阅读器、翻译、项目管理到更多 Agent 工具，按你的研究阶段组合成更完整的工作流。',
+    enDetail: 'Combine reader, translation, project management, and additional agent tools into a workflow that fits each stage of your research.',
     accent: 'bg-white/80 text-slate-700',
     border: 'border-slate-200/80',
+    surface: 'hover:bg-slate-50/95 focus-visible:bg-slate-50/95',
     isExplore: true,
   },
 ];
@@ -367,6 +364,9 @@ export function HomeSearchLanding({
 }: HomeSearchLandingProps) {
   const [landingSearchQuery, setLandingSearchQuery] = React.useState('');
   const [expandedSearchFaqIndexes, setExpandedSearchFaqIndexes] = React.useState<number[]>([0]);
+  const featureRailRef = React.useRef<HTMLDivElement | null>(null);
+  const featureDragRef = React.useRef({ active: false, moved: false, startX: 0, scrollLeft: 0 });
+  const suppressFeatureClickRef = React.useRef(false);
   const isZh = language === 'zh';
   const isSearchMode = mode === 'search';
   const homeTitle = 'WisPaper: Reshape your research workflow from discovery to experimentation';
@@ -377,6 +377,68 @@ export function HomeSearchLanding({
       onStartSearch(landingSearchQuery.trim());
     }
   }, [landingSearchQuery, onStartSearch]);
+
+  const handleFeatureRailPointerDown = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const rail = featureRailRef.current;
+    if (!rail) {
+      return;
+    }
+
+    featureDragRef.current = {
+      active: true,
+      moved: false,
+      startX: event.clientX,
+      scrollLeft: rail.scrollLeft,
+    };
+    rail.setPointerCapture(event.pointerId);
+  }, []);
+
+  const handleFeatureRailPointerMove = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const rail = featureRailRef.current;
+    const drag = featureDragRef.current;
+
+    if (!rail || !drag.active) {
+      return;
+    }
+
+    const deltaX = drag.startX - event.clientX;
+
+    if (Math.abs(deltaX) > 4) {
+      drag.moved = true;
+      event.preventDefault();
+    }
+
+    rail.scrollLeft = drag.scrollLeft + deltaX;
+  }, []);
+
+  const finishFeatureRailDrag = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const rail = featureRailRef.current;
+    const drag = featureDragRef.current;
+
+    if (drag.moved) {
+      suppressFeatureClickRef.current = true;
+    }
+
+    featureDragRef.current = { active: false, moved: false, startX: 0, scrollLeft: 0 };
+
+    if (rail?.hasPointerCapture(event.pointerId)) {
+      rail.releasePointerCapture(event.pointerId);
+    }
+  }, []);
+
+  const handleFeatureCardClick = React.useCallback((event: React.MouseEvent<HTMLButtonElement>, page: MarketingFeaturePage) => {
+    if (suppressFeatureClickRef.current) {
+      event.preventDefault();
+      suppressFeatureClickRef.current = false;
+      return;
+    }
+
+    onNavigateToMarketingPage(page);
+  }, [onNavigateToMarketingPage]);
 
   React.useEffect(() => {
     document.title = isSearchMode
@@ -534,48 +596,78 @@ export function HomeSearchLanding({
           </div>
 
           <div className="mx-auto mt-14 max-w-[88rem]">
-            <div className="mx-auto max-w-3xl text-center">
-              <h2 className="min-h-[4rem] text-3xl font-bold tracking-tight text-slate-950 md:min-h-[5rem] md:text-4xl">
-                {isZh ? 'All-in-one 科研工作流' : 'All-in-one AI workflow'}
-              </h2>
-              <p className="mt-4 min-h-[3.5rem] text-base leading-7 text-slate-600 md:min-h-[3.75rem]">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)] lg:items-start">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm">
+                  <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+                  <span>{isZh ? 'Research OS' : 'Research OS'}</span>
+                </div>
+                <h2 className="mt-4 max-w-xl text-4xl font-black leading-[1.05] tracking-tight text-slate-950 md:text-5xl">
+                  {isZh ? (
+                    <>
+                      编排你的
+                      <span className="block text-teal-700">科研工作流。</span>
+                    </>
+                  ) : (
+                    <>
+                      We orchestrate
+                      <span className="block text-teal-700">research intelligence.</span>
+                    </>
+                  )}
+                </h2>
+              </div>
+
+              <p className="max-w-2xl text-base leading-7 text-slate-600 lg:pt-9">
                 {isZh
-                  ? 'WisPaper提供多种工具和Agents，助您轻松识别研究缺口，优选科研路径。'
-                  : 'WisPaper offers a range of tools and agents to help you identify research gaps and choose stronger research paths with less effort.'}
+                  ? 'WisPaper 将检索、知识库、追新、问答、综述与更多学术工具串成一个连续工作台，帮助你更快识别研究缺口，优选科研路径。'
+                  : 'WisPaper connects search, library, feeds, QA, surveys, and more academic tools into one continuous workspace for faster research decisions.'}
               </p>
             </div>
 
-            <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-              {featureOverviewCards.map((card) => {
+            <div
+              ref={featureRailRef}
+              onPointerDown={handleFeatureRailPointerDown}
+              onPointerMove={handleFeatureRailPointerMove}
+              onPointerUp={finishFeatureRailDrag}
+              onPointerCancel={finishFeatureRailDrag}
+              className="mt-10 flex cursor-grab touch-pan-x select-none gap-4 overflow-x-auto overflow-y-visible pb-6 active:cursor-grabbing [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {featureOverviewCards.map((card, index) => {
                 const Icon = card.icon;
 
                 return (
                   <button
                     key={card.zhTitle}
                     type="button"
-                    onClick={() => onNavigateToMarketingPage(card.key)}
-                    className={`group relative rounded-[1.75rem] border bg-white/78 px-5 py-5 text-left shadow-[0_18px_50px_-42px_rgba(15,23,42,0.28)] backdrop-blur transition duration-300 hover:-translate-y-1 hover:bg-white/90 hover:shadow-[0_24px_60px_-42px_rgba(15,23,42,0.34)] ${card.border} ${card.isExplore ? 'overflow-hidden' : ''}`}
+                    onClick={(event) => handleFeatureCardClick(event, card.key)}
+                    className={`group relative h-[26rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.75rem] border bg-white/82 px-5 py-5 text-left shadow-[0_18px_55px_-45px_rgba(15,23,42,0.35)] backdrop-blur transition-[width,transform,background-color,box-shadow] duration-300 hover:w-[20rem] hover:-translate-y-1 hover:shadow-[0_30px_80px_-50px_rgba(15,23,42,0.48)] focus-visible:w-[20rem] focus:outline-none focus:ring-2 focus:ring-teal-200 md:h-[28rem] md:w-[13.5rem] md:hover:w-[21.5rem] md:focus-visible:w-[21.5rem] ${card.border} ${card.surface}`}
                   >
+                    <span className="pointer-events-none absolute bottom-5 left-5 select-none text-6xl font-black leading-none text-slate-950/[0.055] transition-colors duration-300 group-hover:text-teal-900/[0.08] group-focus-visible:text-teal-900/[0.08]">
+                      {String(index + 1).padStart(2, '0')}.
+                    </span>
+
                     {card.isExplore ? (
-                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.08),_transparent_30%),radial-gradient(circle_at_bottom_left,_rgba(34,211,238,0.08),_transparent_34%)]" />
+                      <div className="absolute inset-0 bg-[linear-gradient(135deg,_rgba(15,23,42,0.035),_transparent_38%),linear-gradient(315deg,_rgba(20,184,166,0.07),_transparent_34%)]" />
                     ) : null}
 
-                    <div className="relative flex min-h-[142px] flex-col">
-                      <div className="min-h-[3rem]">
-                      <div className="flex items-center gap-3">
-                        <div className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${card.accent} shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]`}>
-                          <Icon className="h-5 w-5" />
-                        </div>
-
-                        <h3 className="text-[0.98rem] font-semibold leading-tight tracking-tight text-slate-950 md:text-[1.02rem]">
-                          {isZh ? card.zhTitle : card.enTitle}
-                        </h3>
-                      </div>
+                    <div className="relative flex h-full flex-col">
+                      <div className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${card.accent} shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]`}>
+                        <Icon className="h-5 w-5" />
                       </div>
 
-                      <p className="mt-3 min-h-[5.25rem] max-w-[28ch] text-[0.9rem] leading-7 text-slate-600">
-                        {isZh ? card.zhBody : card.enBody}
-                      </p>
+                      <h3 className="mt-6 max-w-[9rem] text-xl font-black leading-tight tracking-tight text-slate-950 transition-[max-width] duration-300 group-hover:max-w-[16rem] group-focus-visible:max-w-[16rem] md:text-2xl">
+                        {isZh ? card.zhTitle : card.enTitle}
+                      </h3>
+
+                      <div className="mt-8 w-[16.5rem] translate-y-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 md:w-[18rem]">
+                        <p className="text-[0.95rem] leading-7 text-slate-600">
+                          {isZh ? card.zhBody : card.enBody}
+                        </p>
+
+                        <p className="mt-5 border-t border-slate-200/80 pt-5 text-[0.88rem] leading-6 text-slate-500">
+                          {isZh ? card.zhDetail : card.enDetail}
+                        </p>
+                      </div>
                     </div>
                   </button>
                 );
