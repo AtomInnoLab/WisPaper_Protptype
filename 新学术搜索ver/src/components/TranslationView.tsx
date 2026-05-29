@@ -71,7 +71,36 @@ export function TranslationView({
       
       // Start translation process
       startTranslation(parsedDoc.elements);
+      return;
     }
+
+    const fallbackElements: DocumentElement[] = [
+      {
+        id: `${paper.id}-title`,
+        type: 'title',
+        content: paper.title,
+      },
+      {
+        id: `${paper.id}-authors`,
+        type: 'author',
+        content: paper.authors.join(', '),
+      },
+      {
+        id: `${paper.id}-abstract-heading`,
+        type: 'heading',
+        level: 1,
+        content: 'Abstract',
+      },
+      {
+        id: `${paper.id}-abstract`,
+        type: 'paragraph',
+        content: paper.abstract || 'This local file is available in Paper view. Full structured parsing is not available in this prototype.',
+      },
+    ];
+
+    setElements(fallbackElements);
+    setLoading(false);
+    startTranslation(fallbackElements);
   };
 
   const startTranslation = async (elementsList: DocumentElement[]) => {

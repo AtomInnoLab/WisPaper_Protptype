@@ -80,7 +80,7 @@ export function BlogView({ paper, language = 'en', scale = 1, isFirstVisit = fal
     setIsGenerating(true);
     setGenerationProgress(0);
 
-    // Simulate progress over ~90 seconds (1.5 minutes)
+    // Fast mock for prototype demos: finish parsing in about 4 seconds.
     const interval = setInterval(() => {
       setGenerationProgress(prev => {
         if (prev >= 100) {
@@ -89,10 +89,9 @@ export function BlogView({ paper, language = 'en', scale = 1, isFirstVisit = fal
           setBlogGenerated(true);
           return 100;
         }
-        // Increment progress - 100% over 90 seconds = ~1.11% per second
-        return Math.min(100, prev + 1.5);
+        return Math.min(100, prev + 4);
       });
-    }, 1000); // Update every second
+    }, 160);
 
     // Cleanup on unmount
     return () => clearInterval(interval);

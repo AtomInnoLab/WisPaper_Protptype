@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Search, MessageSquare, Library, Rss, Clock, Plus, ChevronDown, ArrowRight, FlaskConical, GraduationCap, Lightbulb, PanelLeftClose, PanelLeftOpen, MoreHorizontal } from 'lucide-react';
+import { Search, MessageSquare, Library, Rss, Clock, Plus, ChevronDown, ArrowRight, FlaskConical, GraduationCap, Lightbulb, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Folder, Trash2 } from 'lucide-react';
 import { UserPanel } from './UserPanel';
 import { useLanguage } from '../contexts/LanguageContext';
 import { SettingsModal } from './SettingsModal';
@@ -475,7 +475,52 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
           </div>
         </div>
 
+        {activeNav === 'my-library' && !isCollapsed ? (
+          <div className="mt-8 space-y-1">
+            <div className="mb-3 flex items-center justify-between px-3 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <Library className="h-4 w-4" />
+                <span>{t('nav.myLibrary')}</span>
+              </div>
+              <button className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-1.5 font-medium text-blue-600 transition hover:bg-blue-100">
+                <span>新建</span>
+                <Plus className="h-4 w-4" />
+              </button>
+            </div>
+
+            {[
+              { label: 'Folder 1', depth: 0, expanded: false },
+              { label: 'Folder 2', depth: 0, expanded: false, chevron: true },
+              { label: 'Folder 3', depth: 0, expanded: true, chevron: true },
+              { label: 'Folder 3.1', depth: 1, expanded: true, chevron: true },
+              { label: 'Folder 3.1.1', depth: 2, expanded: true, chevron: true },
+              { label: 'Folder 3.1.1', depth: 3, expanded: true, chevron: true },
+            ].map((folder) => (
+              <button
+                key={`${folder.label}-${folder.depth}`}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 transition hover:bg-white/80 hover:text-gray-900"
+                style={{ paddingLeft: `${12 + folder.depth * 22}px` }}
+              >
+                {folder.chevron ? (
+                  <ChevronDown className={`h-4 w-4 text-gray-500 ${folder.expanded ? '' : '-rotate-90'}`} />
+                ) : (
+                  <span className="h-4 w-4" />
+                )}
+                <Folder className="h-4 w-4 text-blue-500" />
+                <span className="truncate">{folder.label}</span>
+              </button>
+            ))}
+
+            <button className="mt-56 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-600 transition hover:bg-white/80 hover:text-gray-900">
+              <Trash2 className="h-4 w-4" />
+              <span>Trash</span>
+            </button>
+          </div>
+        ) : null}
+
         {/* Divider + History Section */}
+        {activeNav !== 'my-library' ? (
+          <>
         <div className={`my-2 ${isCollapsed ? 'mx-1' : 'mx-1'} border-t border-gray-200`} />
         <div className="space-y-0.5">
           <div
@@ -543,6 +588,8 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             )}
           </div>
         </div>
+          </>
+        ) : null}
 
         {/* LLMs Section - Only show when Scholar QA is active */}
         {activeNav === 'scholar-qa' && !isCollapsed && (

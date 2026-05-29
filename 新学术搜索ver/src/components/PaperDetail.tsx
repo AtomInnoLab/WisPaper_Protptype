@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal } from 'lucide-react';
+import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal, Upload, FileText } from 'lucide-react';
 import { Paper } from '../types';
 import { TableOfContents } from './TableOfContents';
 import { PageThumbnails } from './PageThumbnails';
@@ -12,8 +12,9 @@ import { ParsingStatus } from './ParsingStatus';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface PaperDetailProps {
-  paper: Paper;
+  paper: Paper | null;
   onBack: () => void;
+  initialLocalFile?: File | null;
 }
 
 type TabType = 'blog' | 'paper' | 'translation';
@@ -43,7 +44,7 @@ const defaultShareCommentsEn = [
   'Sharing a good read. Feel free to join the discussion.',
 ];
 
-export function PaperDetail({ paper, onBack }: PaperDetailProps) {
+export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDetailProps) {
   const { language } = useLanguage();
   const isZh = language === 'zh';
   const [activeTab, setActiveTab] = useState<TabType>('blog');
@@ -75,11 +76,17 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
   const [defaultShareCommentIndex, setDefaultShareCommentIndex] = useState(-1);
   const [shareToastVisible, setShareToastVisible] = useState(false);
   const [paperComments, setPaperComments] = useState<Record<string, PaperComment[]>>({});
+  const [localPaper, setLocalPaper] = useState<Paper | null>(null);
   const mainContentRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const localFileUrlRef = useRef<string | null>(null);
+  const initialLocalFileRef = useRef<File | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
   const pendingRightSidebarWidthRef = useRef(rightSidebarWidth);
 
-  const paperId = paper?.id;
+  const activePaper = localPaper ?? paper;
+  const paperId = activePaper?.id ?? 'reader-empty';
+  const hasPaper = Boolean(activePaper);
   const defaultShareComments = isZh ? defaultShareCommentsZh : defaultShareCommentsEn;
 
   // Simulate parsing process for 10 seconds on first load (only for Translation tab)
@@ -100,6 +107,32 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
     setShareToComments(true);
     setShareToastVisible(false);
   }, [paperId]);
+
+  useEffect(() => {
+    return () => {
+      if (localFileUrlRef.current) {
+        URL.revokeObjectURL(localFileUrlRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!paper) {
+      return;
+    }
+
+    if (localFileUrlRef.current) {
+      URL.revokeObjectURL(localFileUrlRef.current);
+      localFileUrlRef.current = null;
+    }
+    setLocalPaper(null);
+  }, [paper?.id]);
+
+  useEffect(() => {
+    if (!paper && !localPaper) {
+      setActiveTab('paper');
+    }
+  }, [paper, localPaper]);
 
   useEffect(() => {
     if (!shareToastVisible) {
@@ -175,10 +208,6 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
     };
   }, [isResizingRightSidebar, leftSidebarCollapsed]);
 
-  if (!paper) {
-    return null;
-  }
-
   const languageLabels = {
     'en': 'English',
     'zh': '中文',
@@ -236,8 +265,57 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
     }
   };
 
+  const openLocalFile = (file: File) => {
+    if (localFileUrlRef.current) {
+      URL.revokeObjectURL(localFileUrlRef.current);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    const fileTitle = file.name.replace(/\.[^/.]+$/, '') || file.name;
+    localFileUrlRef.current = objectUrl;
+    setLocalPaper({
+      id: `local-reader-${Date.now()}`,
+      title: fileTitle,
+      authors: [isZh ? '本地文件' : 'Local file'],
+      abstract: isZh
+        ? '这是从本地上传并在阅读器中打开的文件。'
+        : 'This file was uploaded locally and opened in the reader.',
+      year: new Date().getFullYear(),
+      publishedDate: new Date().toISOString().slice(0, 10),
+      venue: isZh ? '本地上传' : 'Local Upload',
+      citations: 0,
+      categories: [isZh ? '本地文件' : 'Local File'],
+      pdfUrl: objectUrl,
+      type: 'paper',
+    });
+    setActiveTab('paper');
+    setCurrentPage(1);
+    setIsParsing(false);
+    setIsFirstBlogVisit(false);
+  };
+
+  const handleLocalFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    openLocalFile(file);
+    event.target.value = '';
+  };
+
+  useEffect(() => {
+    if (!initialLocalFile || initialLocalFileRef.current === initialLocalFile) {
+      return;
+    }
+
+    initialLocalFileRef.current = initialLocalFile;
+    openLocalFile(initialLocalFile);
+  }, [initialLocalFile]);
+
   const handleOpenBlogShare = () => {
-    if (activeTab !== 'blog') {
+    if (activeTab !== 'blog' || !activePaper) {
       return;
     }
 
@@ -440,8 +518,41 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
     },
   ];
 
+  const emptyReaderView = (
+    <div className="flex h-full items-center justify-center bg-gray-100 px-6">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+          <FileText className="h-7 w-7" />
+        </div>
+        <h2 className="mt-5 text-lg font-semibold text-gray-950">
+          {isZh ? '打开本地文件开始阅读' : 'Open a local file to start reading'}
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-gray-600">
+          {isZh
+            ? '上传 PDF 后，你可以使用和从知识库打开文章一致的阅读器、工具栏、翻译、笔记和评论区体验。'
+            : 'Upload a PDF to use the same reader, toolbar, translation, notes, and comments experience as papers opened from your library.'}
+        </p>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
+        >
+          <Upload className="h-4 w-4" />
+          <span>{isZh ? '上传本地 PDF' : 'Upload local PDF'}</span>
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative flex h-full flex-1 flex-col overflow-hidden bg-white">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="hidden"
+        onChange={handleLocalFileSelect}
+      />
       {!rightSidebarCollapsed ? (
         <div
           aria-hidden="true"
@@ -808,7 +919,7 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
               type="button"
               onClick={handleOpenBlogShare}
               className="text-gray-700 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
-              disabled={activeTab !== 'blog'}
+              disabled={activeTab !== 'blog' || !hasPaper}
               title={activeTab === 'blog' ? (isZh ? '分享 Blog' : 'Share blog') : (isZh ? '切换到 Blog 后分享' : 'Switch to Blog to share')}
               aria-label={activeTab === 'blog' ? (isZh ? '分享 Blog' : 'Share blog') : (isZh ? '切换到 Blog 后分享' : 'Switch to Blog to share')}
             >
@@ -828,16 +939,28 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
         <div className={`w-56 border-r border-gray-200 bg-gray-50 flex min-h-0 flex-col flex-shrink-0 transition-all duration-300 ${leftSidebarCollapsed ? 'hidden' : ''}`}>
           {/* Content */}
           <div className="flex-1 overflow-y-auto">
-            {sidebarTab === 'preview' && (
+            {hasPaper && sidebarTab === 'preview' && (
               <PageThumbnails 
                 currentPage={currentPage} 
                 totalPages={totalPages}
                 onPageClick={setCurrentPage}
               />
             )}
-            {sidebarTab === 'structure' && (
+            {hasPaper && sidebarTab === 'structure' && (
               <TableOfContents elements={[]} paperId={paperId} />
             )}
+            {!hasPaper ? (
+              <div className="p-4 text-sm text-gray-500">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex w-full flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white px-3 py-6 text-center transition hover:border-blue-300 hover:bg-blue-50/40"
+                >
+                  <Upload className="mb-2 h-5 w-5 text-gray-400" />
+                  <span>{isZh ? '上传 PDF 后显示预览' : 'Upload a PDF to show preview'}</span>
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {/* User Panel at Bottom */}
@@ -851,10 +974,11 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
             className="h-full min-h-0 flex-1 overflow-hidden bg-gray-100"
             style={{ transform: `translateX(${contentCenterOffset}px)` }}
           >
-            {activeTab === 'blog' && <BlogView paper={paper} language={blogLanguage} scale={blogScale} isFirstVisit={isFirstBlogVisit} />}
-            {activeTab === 'paper' && (
+            {!activePaper ? emptyReaderView : null}
+            {activePaper && activeTab === 'blog' && <BlogView paper={activePaper} language={blogLanguage} scale={blogScale} isFirstVisit={isFirstBlogVisit} />}
+            {activePaper && activeTab === 'paper' && (
               <PaperView
-                paper={paper}
+                paper={activePaper}
                 currentPage={currentPage}
                 pdfScale={pdfScale}
                 highlightTarget={paperHighlightTarget}
@@ -862,9 +986,9 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
                 onTextSelect={handlePaperTextSelection}
               />
             )}
-            {activeTab === 'translation' && (
+            {activePaper && activeTab === 'translation' && (
               <TranslationView
-                paper={paper}
+                paper={activePaper}
                 pdfScale={pdfScale}
                 isParsing={isParsing}
                 targetLanguage={translationLanguage}
@@ -901,22 +1025,28 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
           } ${isResizingRightSidebar ? '' : 'transition-all duration-300'}`}
           style={{ width: rightSidebarWidth }}
         >
-          <CommentsPanel
-            paperId={paperId}
-            paperTitle={paper.title}
-            paperCategories={paper.categories}
-            activeTab={rightSidebarTab}
-            comments={paperComments[paperId] ?? []}
-            activeCitationId={paperHighlightTarget?.citationId ?? null}
-            onSelectSummaryCitation={handleSummaryCitationSelect}
-            selectedExcerpt={selectedExcerpt}
-            onClearSelectedExcerpt={() => setSelectedExcerpt(null)}
-            onChangeTab={setRightSidebarTab}
-          />
+          {activePaper ? (
+            <CommentsPanel
+              paperId={paperId}
+              paperTitle={activePaper.title}
+              paperCategories={activePaper.categories}
+              activeTab={rightSidebarTab}
+              comments={paperComments[paperId] ?? []}
+              activeCitationId={paperHighlightTarget?.citationId ?? null}
+              onSelectSummaryCitation={handleSummaryCitationSelect}
+              selectedExcerpt={selectedExcerpt}
+              onClearSelectedExcerpt={() => setSelectedExcerpt(null)}
+              onChangeTab={setRightSidebarTab}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center px-6 text-center text-sm leading-6 text-gray-500">
+              {isZh ? '上传文件后，这里会显示 AI 问答、笔记、评论和论文信息。' : 'After uploading a file, AI chat, notes, comments, and paper info will appear here.'}
+            </div>
+          )}
         </div>
       </div>
 
-      {showBlogShareModal ? (
+      {showBlogShareModal && activePaper ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4">
           <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
@@ -935,7 +1065,7 @@ export function PaperDetail({ paper, onBack }: PaperDetailProps) {
 
             <div className="px-5 py-4">
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                <p className="line-clamp-2 text-sm font-medium leading-6 text-slate-800">{paper.title}</p>
+                <p className="line-clamp-2 text-sm font-medium leading-6 text-slate-800">{activePaper.title}</p>
               </div>
               <textarea
                 value={shareComment}

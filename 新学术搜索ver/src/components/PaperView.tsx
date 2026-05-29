@@ -19,6 +19,7 @@ interface PaperViewProps {
 export function PaperView({ paper, currentPage, pdfScale, highlightTarget = null, onClearHighlight, onTextSelect }: PaperViewProps) {
   const pdfPages = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const isLocalUpload = paper.id.startsWith('local-reader-') && Boolean(paper.pdfUrl);
   
   // Group sentences by page
   const sentencesByPage: Record<number, any[]> = {};
@@ -68,6 +69,29 @@ export function PaperView({ paper, currentPage, pdfScale, highlightTarget = null
 
     onTextSelect?.(text || null);
   }, [onTextSelect]);
+
+  if (isLocalUpload) {
+    return (
+      <div ref={containerRef} className="h-full min-h-0 overflow-auto bg-gray-100">
+        <div className="px-6 py-6">
+          <div
+            className="mx-auto max-w-5xl rounded-lg bg-white shadow-lg"
+            style={{
+              transform: `scale(${pdfScale})`,
+              transformOrigin: 'top center',
+              marginBottom: `${Math.max(0, (pdfScale - 1) * 420)}px`,
+            }}
+          >
+            <iframe
+              src={paper.pdfUrl}
+              title={paper.title}
+              className="h-[calc(100vh-12rem)] min-h-[42rem] w-full rounded-lg border border-gray-300 bg-white"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -55,7 +55,7 @@ export function BlogGenerationPrompt({ onGenerate, isGenerating, progress }: Blo
 
               {/* Tip Text */}
               <p className="text-xs text-gray-500 text-center pt-1">
-                复杂文章可能需要更多时间，请耐心等待。
+                正在快速解析文献结构、公式与摘要。
               </p>
             </div>
           )}

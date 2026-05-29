@@ -54,7 +54,7 @@ export default function App() {
   const [selectedPaper, setSelectedPaper] =
     useState<Paper | null>(null);
   const [viewMode, setViewMode] = useState<
-    "home" | "list" | "detail" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search"
+    "home" | "list" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search"
   >("home");
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -64,6 +64,7 @@ export default function App() {
   const [scholarQAKey, setScholarQAKey] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
+  const [readerInitialFile, setReaderInitialFile] = useState<File | null>(null);
 
   const filteredPapers = useMemo(() => {
     let results = mockPapers;
@@ -200,13 +201,13 @@ export default function App() {
     setHasSearched(false);
   };
 
-  const isReaderView = viewMode === "detail";
+  const isReaderView = viewMode === "detail" || viewMode === "reader";
 
   return (
     <LanguageProvider>
       <div className={isReaderView ? "h-screen overflow-hidden bg-white flex" : "min-h-screen bg-white flex"}>
         {/* Left Sidebar - Only show in list view, library view, and scholar-qa view */}
-        {(viewMode === "list" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search") && (
+        {(viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search") && (
           <LeftSidebar
             onNavigate={(view) => setViewMode(view as any)}
             onOpenInvite={() => setShowInviteModal(true)}
@@ -285,6 +286,16 @@ export default function App() {
             <MyLibrary
               papers={mockPapers}
               onPaperClick={handleSelectPaper}
+              onOpenReader={(file) => {
+                setReaderInitialFile(file ?? null);
+                setViewMode("reader");
+              }}
+            />
+          ) : viewMode === "reader" ? (
+            <PaperDetail
+              paper={null}
+              initialLocalFile={readerInitialFile}
+              onBack={() => setViewMode("all-feeds")}
             />
           ) : viewMode === "scholar-qa" ? (
             <ScholarQA key={scholarQAKey} papersCount={mockPapers.length} onReset={handleResetScholarQA} />
@@ -296,7 +307,8 @@ export default function App() {
             <IdeaDiscovery />
           ) : (
             <PaperDetail
-              paper={selectedPaper!}
+              paper={selectedPaper}
+              initialLocalFile={null}
               onBack={handleBackToList}
             />
           )}
