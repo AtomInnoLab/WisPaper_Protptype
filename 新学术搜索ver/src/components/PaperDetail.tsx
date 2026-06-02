@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal, Upload, FileText } from 'lucide-react';
+import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal, Upload, FileText, RefreshCw } from 'lucide-react';
 import { Paper } from '../types';
 import { TableOfContents } from './TableOfContents';
 import { PageThumbnails } from './PageThumbnails';
@@ -326,6 +326,18 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDet
     setShareComment(nextComment);
     setShareToComments(true);
     setShowBlogShareModal(true);
+  };
+
+  const handleRefreshShareComment = () => {
+    const currentTemplateIndex = defaultShareComments.findIndex((comment) => comment === shareComment.trim());
+    const baseIndex = currentTemplateIndex >= 0 ? currentTemplateIndex : defaultShareCommentIndex;
+    const nextIndex = (baseIndex + 1) % defaultShareComments.length;
+    const nextComment = defaultShareComments[nextIndex];
+
+    setDefaultShareCommentIndex(nextIndex);
+    setDefaultShareComment(nextComment);
+    setShareComment(nextComment);
+    setShareToComments(true);
   };
 
   const handleSubmitBlogShare = async (commentOverride?: string, templateIndex?: number) => {
@@ -1067,12 +1079,25 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDet
               <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                 <p className="line-clamp-2 text-sm font-medium leading-6 text-slate-800">{activePaper.title}</p>
               </div>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-slate-700">
+                  {isZh ? '分享文案' : 'Share copy'}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRefreshShareComment}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>{isZh ? 'AI 换一条' : 'Regenerate'}</span>
+                </button>
+              </div>
               <textarea
                 value={shareComment}
                 onChange={(event) => setShareComment(event.target.value)}
                 placeholder={isZh ? '写下你的评论...' : 'Add your comment...'}
                 rows={5}
-                className="mt-4 block w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                className="mt-2 block w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                 autoFocus
               />
               <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
@@ -1101,7 +1126,7 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDet
                 className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <SendHorizontal className="h-4 w-4" />
-                <span>{isZh ? '复制' : 'Copy'}</span>
+                <span>{isZh ? '复制并分享' : 'Copy and share'}</span>
               </button>
             </div>
           </div>
