@@ -207,6 +207,363 @@ function BasicInformation() {
 // Membership & Payment Tab
 function MembershipPayment() {
   const [showUsage, setShowUsage] = React.useState(false);
+  const [expandedDate, setExpandedDate] = React.useState('2026-06-02');
+  const [expandedFeature, setExpandedFeature] = React.useState('2026-06-02-Search');
+  const [showAllUsageDates, setShowAllUsageDates] = React.useState(false);
+  const featureMeta: Record<string, { color: string; featureClass: string }> = {
+    Search: { color: '#ff8a1f', featureClass: 'bg-orange-100 text-orange-700' },
+    Survey: { color: '#2f80ed', featureClass: 'bg-blue-100 text-blue-700' },
+    QA: { color: '#8b5cf6', featureClass: 'bg-purple-100 text-purple-700' },
+    Feeds: { color: '#94a3b8', featureClass: 'bg-slate-100 text-slate-700' },
+    Agent: { color: '#14b8a6', featureClass: 'bg-teal-100 text-teal-700' },
+  };
+  const makeRecord = (title: string, time: string, amount: number) => ({ title, detail: '', time, amount });
+  const makeFeature = (
+    feature: string,
+    requests: number,
+    credits: number,
+    records: Array<{ title: string; time: string; amount: number }>
+  ) => ({
+    feature,
+    ...featureMeta[feature],
+    requests,
+    credits,
+    records: records.map((record) => ({ ...record, detail: '' })),
+  });
+  const usageGroups = [
+    {
+      date: '2026-06-02',
+      label: '今天',
+      total: 248,
+      dayLimit: 500,
+      features: [
+        {
+          feature: 'Search',
+          color: '#ff8a1f',
+          featureClass: 'bg-orange-100 text-orange-700',
+          requests: 12,
+          credits: 150,
+          records: [
+            { title: '论文翻译', detail: '"Attention Is All You Need" - 全文翻译', time: '2026-06-02 14:32', amount: -30 },
+            { title: '文献检索', detail: '搜索“深度学习在医学图像中的应用”相关论文', time: '2026-06-02 14:05', amount: -20 },
+            { title: 'Quick Search', detail: '检索 Transformer 综述论文', time: '2026-06-02 13:48', amount: -15 },
+            { title: 'Deep Search', detail: '深度检索 Agent 评估方法', time: '2026-06-02 13:20', amount: -15 },
+            { title: '论文翻译', detail: '摘要翻译', time: '2026-06-02 12:52', amount: -10 },
+            { title: '文献检索', detail: '搜索 RAG survey', time: '2026-06-02 12:15', amount: -10 },
+            { title: 'Quick Search', detail: '检索 benchmark 数据集', time: '2026-06-02 11:58', amount: -10 },
+            { title: '文献检索', detail: '搜索 AI workflow', time: '2026-06-02 11:30', amount: -10 },
+            { title: '论文翻译', detail: '方法章节翻译', time: '2026-06-02 10:56', amount: -10 },
+            { title: 'Quick Search', detail: '检索 tool use 论文', time: '2026-06-02 10:34', amount: -10 },
+            { title: '文献检索', detail: '搜索 multimodal retrieval', time: '2026-06-02 10:22', amount: -10 },
+            { title: 'Deep Search', detail: '扩展检索研究空白', time: '2026-06-02 09:55', amount: -10 },
+          ],
+        },
+        {
+          feature: 'Survey',
+          color: '#2f80ed',
+          featureClass: 'bg-blue-100 text-blue-700',
+          requests: 1,
+          credits: 53,
+          records: [
+            { title: 'AI Survey', detail: '生成多模态推理 benchmark 综述', time: '2026-06-02 09:48', amount: -53 },
+          ],
+        },
+        {
+          feature: 'QA',
+          color: '#8b5cf6',
+          featureClass: 'bg-purple-100 text-purple-700',
+          requests: 1,
+          credits: 45,
+          records: [
+            { title: 'AI问答', detail: '关于 Transformer 架构的详细解释', time: '2026-06-02 11:15', amount: -45 },
+          ],
+        },
+        {
+          feature: 'Feeds',
+          color: '#94a3b8',
+          featureClass: 'bg-slate-100 text-slate-700',
+          requests: 1,
+          credits: 0,
+          records: [
+            { title: '订阅更新', detail: '查看本周高相关论文推送', time: '2026-06-02 08:40', amount: 0 },
+          ],
+        },
+      ],
+    },
+    {
+      date: '2026-06-01',
+      label: '昨天',
+      total: 380,
+      dayLimit: 500,
+      features: [
+        {
+          feature: 'Search',
+          color: '#ff8a1f',
+          featureClass: 'bg-orange-100 text-orange-700',
+          requests: 4,
+          credits: 210,
+          records: [
+            { title: 'Deep Search', detail: '检索“LLM Agent evaluation”相关论文', time: '2026-06-01 18:12', amount: -90 },
+            { title: '论文翻译', detail: '"Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" - 摘要翻译', time: '2026-06-01 15:30', amount: -40 },
+            { title: 'Quick Search', detail: '检索“AI research workflow”相关论文', time: '2026-06-01 10:06', amount: -80 },
+          ],
+        },
+        {
+          feature: 'Survey',
+          color: '#2f80ed',
+          featureClass: 'bg-blue-100 text-blue-700',
+          requests: 1,
+          credits: 80,
+          records: [
+            { title: 'AI Survey', detail: '生成 Agentic RAG 研究综述', time: '2026-06-01 16:44', amount: -80 },
+          ],
+        },
+        {
+          feature: 'QA',
+          color: '#8b5cf6',
+          featureClass: 'bg-purple-100 text-purple-700',
+          requests: 2,
+          credits: 70,
+          records: [
+            { title: 'AI问答', detail: '解释 chain-of-thought 与 tool use 的区别', time: '2026-06-01 13:20', amount: -35 },
+            { title: 'AI问答', detail: '总结 MoE 架构的训练优势', time: '2026-06-01 11:42', amount: -35 },
+          ],
+        },
+        {
+          feature: 'Agent',
+          color: '#14b8a6',
+          featureClass: 'bg-teal-100 text-teal-700',
+          requests: 1,
+          credits: 70,
+          records: [
+            { title: 'Agent任务', detail: '整理三篇论文的对比分析框架', time: '2026-06-01 09:18', amount: -70 },
+          ],
+        },
+        {
+          feature: 'Feeds',
+          color: '#94a3b8',
+          featureClass: 'bg-slate-100 text-slate-700',
+          requests: 1,
+          credits: 20,
+          records: [
+            { title: '订阅更新', detail: '刷新 AI Agent 方向订阅', time: '2026-06-01 08:10', amount: -20 },
+          ],
+        },
+      ],
+    },
+    {
+      date: '2026-05-31',
+      label: '05月31日',
+      total: 70,
+      dayLimit: 500,
+      features: [
+        {
+          feature: 'Search',
+          color: '#ff8a1f',
+          featureClass: 'bg-orange-100 text-orange-700',
+          requests: 1,
+          credits: 30,
+          records: [
+            { title: '文献检索', detail: '搜索“multimodal retrieval benchmark”相关论文', time: '2026-05-31 17:24', amount: -30 },
+          ],
+        },
+        {
+          feature: 'QA',
+          color: '#8b5cf6',
+          featureClass: 'bg-purple-100 text-purple-700',
+          requests: 1,
+          credits: 40,
+          records: [
+            { title: 'AI问答', detail: '解释 contrastive learning 的核心机制', time: '2026-05-31 14:02', amount: -40 },
+          ],
+        },
+      ],
+    },
+    {
+      date: '2026-05-30',
+      label: '05月30日',
+      total: 312,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 3, 160, [
+          makeRecord('Deep Search', '2026-05-30 16:18', -90),
+          makeRecord('论文翻译', '2026-05-30 14:46', -40),
+          makeRecord('Quick Search', '2026-05-30 10:25', -30),
+        ]),
+        makeFeature('Survey', 1, 72, [makeRecord('AI Survey', '2026-05-30 12:10', -72)]),
+        makeFeature('QA', 2, 80, [
+          makeRecord('AI问答', '2026-05-30 15:42', -40),
+          makeRecord('AI问答', '2026-05-30 11:36', -40),
+        ]),
+      ],
+    },
+    {
+      date: '2026-05-29',
+      label: '05月29日',
+      total: 196,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 2, 110, [
+          makeRecord('文献检索', '2026-05-29 18:08', -60),
+          makeRecord('论文翻译', '2026-05-29 13:35', -50),
+        ]),
+        makeFeature('Agent', 1, 56, [makeRecord('Agent任务', '2026-05-29 16:20', -56)]),
+        makeFeature('Feeds', 1, 30, [makeRecord('订阅更新', '2026-05-29 09:18', -30)]),
+      ],
+    },
+    {
+      date: '2026-05-28',
+      label: '05月28日',
+      total: 428,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 5, 240, [
+          makeRecord('Deep Search', '2026-05-28 19:02', -100),
+          makeRecord('文献检索', '2026-05-28 16:17', -50),
+          makeRecord('Quick Search', '2026-05-28 14:22', -30),
+          makeRecord('论文翻译', '2026-05-28 11:40', -40),
+          makeRecord('Quick Search', '2026-05-28 09:30', -20),
+        ]),
+        makeFeature('Survey', 1, 88, [makeRecord('AI Survey', '2026-05-28 13:12', -88)]),
+        makeFeature('QA', 2, 100, [
+          makeRecord('AI问答', '2026-05-28 17:25', -45),
+          makeRecord('AI问答', '2026-05-28 10:18', -55),
+        ]),
+      ],
+    },
+    {
+      date: '2026-05-27',
+      label: '05月27日',
+      total: 145,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 2, 75, [
+          makeRecord('文献检索', '2026-05-27 15:08', -35),
+          makeRecord('论文翻译', '2026-05-27 11:12', -40),
+        ]),
+        makeFeature('QA', 1, 45, [makeRecord('AI问答', '2026-05-27 16:30', -45)]),
+        makeFeature('Feeds', 1, 25, [makeRecord('订阅更新', '2026-05-27 08:55', -25)]),
+      ],
+    },
+    {
+      date: '2026-05-26',
+      label: '05月26日',
+      total: 260,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 2, 100, [
+          makeRecord('Deep Search', '2026-05-26 17:55', -70),
+          makeRecord('Quick Search', '2026-05-26 10:24', -30),
+        ]),
+        makeFeature('Survey', 1, 95, [makeRecord('AI Survey', '2026-05-26 14:10', -95)]),
+        makeFeature('Agent', 1, 65, [makeRecord('Agent任务', '2026-05-26 11:45', -65)]),
+      ],
+    },
+    {
+      date: '2026-05-25',
+      label: '05月25日',
+      total: 88,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 1, 40, [makeRecord('文献检索', '2026-05-25 13:52', -40)]),
+        makeFeature('QA', 1, 48, [makeRecord('AI问答', '2026-05-25 10:05', -48)]),
+      ],
+    },
+    {
+      date: '2026-05-24',
+      label: '05月24日',
+      total: 334,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 4, 190, [
+          makeRecord('Deep Search', '2026-05-24 18:40', -80),
+          makeRecord('论文翻译', '2026-05-24 15:16', -50),
+          makeRecord('文献检索', '2026-05-24 11:28', -40),
+          makeRecord('Quick Search', '2026-05-24 09:22', -20),
+        ]),
+        makeFeature('Survey', 1, 84, [makeRecord('AI Survey', '2026-05-24 14:05', -84)]),
+        makeFeature('Agent', 1, 60, [makeRecord('Agent任务', '2026-05-24 10:30', -60)]),
+      ],
+    },
+    {
+      date: '2026-05-23',
+      label: '05月23日',
+      total: 174,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 2, 92, [
+          makeRecord('文献检索', '2026-05-23 16:18', -42),
+          makeRecord('论文翻译', '2026-05-23 10:36', -50),
+        ]),
+        makeFeature('QA', 1, 46, [makeRecord('AI问答', '2026-05-23 14:22', -46)]),
+        makeFeature('Feeds', 1, 36, [makeRecord('订阅更新', '2026-05-23 09:05', -36)]),
+      ],
+    },
+    {
+      date: '2026-05-22',
+      label: '05月22日',
+      total: 286,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 3, 150, [
+          makeRecord('Deep Search', '2026-05-22 18:15', -80),
+          makeRecord('文献检索', '2026-05-22 13:52', -35),
+          makeRecord('Quick Search', '2026-05-22 09:48', -35),
+        ]),
+        makeFeature('Survey', 1, 76, [makeRecord('AI Survey', '2026-05-22 15:20', -76)]),
+        makeFeature('Agent', 1, 60, [makeRecord('Agent任务', '2026-05-22 11:14', -60)]),
+      ],
+    },
+    {
+      date: '2026-05-21',
+      label: '05月21日',
+      total: 119,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 1, 54, [makeRecord('论文翻译', '2026-05-21 15:44', -54)]),
+        makeFeature('QA', 1, 45, [makeRecord('AI问答', '2026-05-21 12:18', -45)]),
+        makeFeature('Feeds', 1, 20, [makeRecord('订阅更新', '2026-05-21 08:50', -20)]),
+      ],
+    },
+    {
+      date: '2026-05-20',
+      label: '05月20日',
+      total: 402,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 4, 220, [
+          makeRecord('Deep Search', '2026-05-20 19:10', -100),
+          makeRecord('论文翻译', '2026-05-20 16:02', -50),
+          makeRecord('文献检索', '2026-05-20 13:18', -40),
+          makeRecord('Quick Search', '2026-05-20 10:22', -30),
+        ]),
+        makeFeature('Survey', 1, 92, [makeRecord('AI Survey', '2026-05-20 14:40', -92)]),
+        makeFeature('QA', 2, 90, [
+          makeRecord('AI问答', '2026-05-20 17:28', -45),
+          makeRecord('AI问答', '2026-05-20 11:35', -45),
+        ]),
+      ],
+    },
+    {
+      date: '2026-05-19',
+      label: '05月19日',
+      total: 63,
+      dayLimit: 500,
+      features: [
+        makeFeature('Search', 1, 28, [makeRecord('Quick Search', '2026-05-19 10:16', -28)]),
+        makeFeature('QA', 1, 35, [makeRecord('AI问答', '2026-05-19 09:42', -35)]),
+      ],
+    },
+  ];
+  const dailyUsage = usageGroups.map((day) => ({
+    date: day.date,
+    label: day.label,
+    used: day.total,
+    total: day.dayLimit,
+    featureCount: day.features.length,
+  }));
+  const visibleUsageGroups = showAllUsageDates ? usageGroups : usageGroups.slice(0, 10);
+  const hasMoreUsageDates = usageGroups.length > 10 && !showAllUsageDates;
 
   if (showUsage) {
     return (
@@ -221,193 +578,114 @@ function MembershipPayment() {
             <span>返回</span>
           </button>
 
-          <h3 className="text-sm font-medium text-gray-500 mb-4">Usage（额度消耗情况）</h3>
-          
-          {/* Usage Summary */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-blue-700 font-medium">本月已使用</span>
-              <span className="text-xs text-blue-600">2024年3月</span>
-            </div>
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-2xl font-bold text-blue-900">1,250</span>
-              <span className="text-sm text-blue-700">Credits</span>
-            </div>
-            <div className="w-full bg-blue-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full" style={{ width: '62.5%' }}></div>
-            </div>
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-blue-700">剩余 750 Credits</span>
-              <span className="text-xs text-blue-600">总额度 2,000</span>
-            </div>
-          </div>
-
-          {/* Usage Records */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-              <h4 className="text-xs font-semibold text-gray-900">消耗记录</h4>
-            </div>
-            
-            <div className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
-              {/* Usage Record Item */}
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">论文翻译</span>
-                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Scholar Search</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      "Attention Is All You Need" - 全文翻译
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-12 14:32</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-red-600">-120</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">AI问答</span>
-                      <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">Scholar QA</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      关于Transformer架构的详细解释
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-12 11:15</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-red-600">-45</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">论文复现</span>
-                      <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">PaperClaw</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      ResNet模型复现 - 实验配置生成
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-11 16:48</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-red-600">-200</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">文献检索</span>
-                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Scholar Search</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      搜索"深度学习在医学图像中的应用"相关论文
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-11 10:22</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-red-600">-30</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">充值</span>
-                      <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">Recharge</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      充值订单 #CR202403110001
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-11 09:00</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-green-600">+1,000</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">AI问答</span>
-                      <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">Scholar QA</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      多轮对话 - 关于GAN网络原理
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-10 15:30</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-red-600">-85</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">论文翻译</span>
-                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Scholar Search</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      "BERT: Pre-training of Deep Bidirectional Transformers" 
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-10 11:45</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-red-600">-95</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">想法发现</span>
-                      <span className="px-1.5 py-0.5 bg-teal-100 text-teal-700 text-xs rounded">Idea Discovery</span>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1">
-                      分析研究领域趋势和研究空白
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">2024-03-09 14:20</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-semibold text-red-600">-150</p>
-                    <p className="text-xs text-gray-500">Credits</p>
-                  </div>
-                </div>
-              </div>
+          {/* Usage Details */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-[0_18px_50px_-44px_rgba(15,23,42,0.22)]">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-gray-900">Usage 明细</h4>
             </div>
 
-            {/* Load More */}
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
-              <button className="w-full text-xs text-gray-600 hover:text-gray-900 font-medium transition-colors">
-                加载更多记录
-              </button>
+            <div className="divide-y divide-gray-100">
+              {visibleUsageGroups.map((day) => {
+                const isDateOpen = expandedDate === day.date;
+
+                return (
+                  <div key={day.date}>
+                    <button
+                      onClick={() => {
+                        const nextDate = isDateOpen ? '' : day.date;
+                        setExpandedDate(nextDate);
+                        if (!isDateOpen && day.features[0]) {
+                          setExpandedFeature(`${day.date}-${day.features[0].feature}`);
+                        }
+                      }}
+                      className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isDateOpen ? 'rotate-90' : ''}`} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-gray-900">{day.label}</span>
+                            <span className="text-xs text-gray-500">{day.date}</span>
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500">{day.features.length} 个功能</p>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-semibold text-gray-900">{day.total.toLocaleString()} Credits</p>
+                      </div>
+                    </button>
+
+                    {isDateOpen && (
+                      <div className="px-4 pb-4 bg-gray-50/70">
+                        <div className="space-y-2 pt-2">
+                          {day.features.map((item) => {
+                            const featureKey = `${day.date}-${item.feature}`;
+                            const isFeatureOpen = expandedFeature === featureKey;
+                            const featurePercent = day.total > 0 ? Math.round((item.credits / day.total) * 100) : 0;
+
+                            return (
+                              <div key={featureKey} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                                <button
+                                  onClick={() => setExpandedFeature(isFeatureOpen ? '' : featureKey)}
+                                  className="w-full px-4 py-3 flex items-center justify-between gap-4 text-left hover:bg-gray-50 transition-colors"
+                                >
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isFeatureOpen ? 'rotate-90' : ''}`} />
+                                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full" style={{ backgroundColor: item.color }}>
+                                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                                    </span>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium text-gray-900">{item.feature}</span>
+                                        <span className="text-xs text-gray-500">{featurePercent}%</span>
+                                        <span className="text-xs text-gray-400">· {item.requests} 次使用</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <p className="shrink-0 text-sm font-medium text-gray-900">{item.credits.toLocaleString()} Credits</p>
+                                </button>
+
+                                {isFeatureOpen && (
+                                  <div className="border-t border-gray-100 divide-y divide-gray-100">
+                                    {item.records.map((record) => (
+                                      <div key={`${featureKey}-${record.title}-${record.time}`} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-start justify-between gap-3">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                              <span className="text-xs font-medium text-gray-900">{record.title}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-400 mt-1">{record.time.slice(11, 16)}</p>
+                                          </div>
+                                          <div className="text-right flex-shrink-0">
+                                            <p className={`text-sm font-semibold ${record.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                              {record.amount > 0 ? '+' : ''}{record.amount.toLocaleString()}
+                                            </p>
+                                            <p className="text-xs text-gray-500">Credits</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {hasMoreUsageDates && (
+                <div className="px-5 py-3 bg-gray-50">
+                  <button
+                    onClick={() => setShowAllUsageDates(true)}
+                    className="w-full text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    更多
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -435,10 +713,21 @@ function MembershipPayment() {
         {/* Usage */}
         <button 
           onClick={() => setShowUsage(true)}
-          className="w-full bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between hover:bg-gray-50 transition-colors group"
+          className="w-full bg-white border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors group text-left"
         >
-          <span className="text-sm font-medium text-gray-900">Usage（额度消耗情况）</span>
-          <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-900">Usage（按天额度消耗情况）</span>
+            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {dailyUsage.slice(0, 3).map((day) => (
+              <div key={day.date} className="rounded-md bg-gray-50 px-3 py-2">
+                <p className="text-xs text-gray-500">{day.label}</p>
+                <p className="mt-1 text-sm font-semibold text-gray-900">{day.used} Credits</p>
+                <p className="mt-0.5 text-[11px] text-gray-400">{day.featureCount} 个功能</p>
+              </div>
+            ))}
+          </div>
         </button>
       </div>
     </div>
