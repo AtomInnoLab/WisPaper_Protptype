@@ -1081,7 +1081,7 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDet
               </div>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <span className="text-sm font-medium text-slate-700">
-                  {isZh ? '分享文案' : 'Share copy'}
+                  {isZh ? '推荐语' : 'Recommendation'}
                 </span>
                 <button
                   type="button"
