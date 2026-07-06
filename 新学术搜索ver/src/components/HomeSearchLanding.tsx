@@ -1,4 +1,7 @@
 import React from 'react';
+import { useGSAP } from '@gsap/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   ArrowUp,
   ArrowRight,
@@ -18,7 +21,6 @@ import {
   Sparkles,
   TableProperties,
 } from 'lucide-react';
-import { TextType } from './TextType';
 
 type MarketingLanguage = 'zh' | 'en';
 type HomeSearchLandingMode = 'home' | 'search';
@@ -364,6 +366,7 @@ export function HomeSearchLanding({
 }: HomeSearchLandingProps) {
   const [landingSearchQuery, setLandingSearchQuery] = React.useState('');
   const [expandedSearchFaqIndexes, setExpandedSearchFaqIndexes] = React.useState<number[]>([0]);
+  const homeRootRef = React.useRef<HTMLElement | null>(null);
   const featureRailRef = React.useRef<HTMLDivElement | null>(null);
   const featureDragRef = React.useRef({ active: false, moved: false, startX: 0, scrollLeft: 0 });
   const suppressFeatureClickRef = React.useRef(false);
@@ -487,220 +490,935 @@ export function HomeSearchLanding({
     syncMeta('meta[name="twitter:description"]', 'content');
   }, [homeDescription, homeTitle, isSearchMode, isZh]);
 
+  useGSAP(
+    () => {
+      if (isSearchMode) {
+        return;
+      }
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      gsap.from('.home-hero-copy > *', {
+        y: 34,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+        stagger: 0.08,
+      });
+
+      gsap.fromTo(
+        '.home-hero-visual',
+        { scale: 0.88, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 1.1, ease: 'power3.out', delay: 0.14 },
+      );
+
+      gsap.utils.toArray<HTMLElement>('.home-scale-fade').forEach((element) => {
+        gsap.fromTo(
+          element,
+          { scale: 0.88, opacity: 0.38 },
+          {
+            scale: 1,
+            opacity: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: element,
+              start: 'top 88%',
+              end: 'center 48%',
+              scrub: true,
+            },
+          },
+        );
+
+        gsap.to(element, {
+          scale: 0.96,
+          opacity: 0.42,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: element,
+            start: 'center 28%',
+            end: 'bottom top',
+            scrub: true,
+          },
+        });
+      });
+
+      const pinTarget = homeRootRef.current?.querySelector('.home-workflow-pin');
+      if (pinTarget) {
+        ScrollTrigger.create({
+          trigger: '.home-workflow-section',
+          start: 'top 14%',
+          end: 'bottom 72%',
+          pin: pinTarget,
+          pinSpacing: false,
+          invalidateOnRefresh: true,
+        });
+      }
+    },
+    { scope: homeRootRef, dependencies: [isSearchMode, language] },
+  );
+
   return (
-    <div className="space-y-16 pb-8 text-slate-900">
+    <main ref={homeRootRef} className={`search-marketing-page ${isSearchMode ? '' : 'home-elegant-shell'} w-full max-w-full space-y-16 overflow-x-hidden pb-8 text-slate-900`}>
+      <style>{`
+        .search-marketing-page {
+          --primary: #23282f;
+          --on-primary: #ffffff;
+          --ink: #23282f;
+          --body: #636c76;
+          --mute: #999999;
+          --accent: #0079ff;
+          --accent-hover: #1b87ff;
+          --accent-soft: rgba(0, 121, 255, 0.1);
+          --accent-soft-strong: rgba(0, 121, 255, 0.12);
+          --accent-deep: #111fa4;
+          --canvas: #ffffff;
+          --canvas-soft: #f1f2f3;
+          --canvas-softer: #f3f9ff;
+          --line: #e5e7eb;
+          --line-blue: #e6ecf4;
+          color: var(--ink);
+          font-family: UberMoveText, system-ui, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .search-marketing-page * { box-sizing: border-box; }
+
+        .search-marketing-page .search-mode-hero {
+          position: relative;
+          background:
+            linear-gradient(180deg, rgba(243, 249, 255, 0.78) 0%, rgba(255, 255, 255, 0.96) 72%),
+            var(--canvas);
+        }
+
+        .search-marketing-page .landing-eyebrow {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 38px;
+          border: 1px solid rgba(0, 121, 255, 0.18);
+          border-radius: 999px;
+          background: var(--accent-soft-strong);
+          padding: 8px 16px;
+          color: var(--accent-deep);
+          font-size: 14px;
+          line-height: 18px;
+          font-weight: 600;
+        }
+
+        .search-marketing-page .landing-title {
+          margin: 20px auto 0;
+          max-width: 960px;
+          min-height: 0;
+          color: var(--ink);
+          font-size: 48px;
+          line-height: 58px;
+          font-weight: 750;
+          letter-spacing: 0;
+        }
+
+        .search-marketing-page .landing-subtitle {
+          margin: 18px auto 0;
+          max-width: 720px;
+          color: var(--body);
+          font-size: 18px;
+          line-height: 30px;
+          font-weight: 500;
+        }
+
+        .search-marketing-page .hero-search-shell {
+          position: relative;
+          overflow: hidden;
+          margin: 48px auto 0;
+          max-width: 1040px;
+          border: 1px solid rgba(0, 121, 255, 0.16);
+          border-radius: 20px;
+          background:
+            linear-gradient(180deg, rgba(243, 249, 255, 0.88), rgba(255, 255, 255, 0.96) 76%);
+          padding: 18px;
+          box-shadow: rgba(35, 40, 47, 0.08) 0 20px 60px;
+        }
+
+        .search-marketing-page .hero-search-card {
+          position: relative;
+          border: 1px solid var(--line-blue);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.94);
+          padding: 18px 20px;
+        }
+
+        .search-marketing-page .hero-search-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          color: var(--body);
+          font-size: 14px;
+          line-height: 20px;
+          font-weight: 500;
+        }
+
+        .search-marketing-page .hero-search-input {
+          width: 100%;
+          resize: none;
+          border: 0;
+          outline: 0;
+          background: transparent;
+          color: var(--ink);
+          font-size: 16px;
+          line-height: 28px;
+        }
+
+        .search-marketing-page .hero-search-placeholder {
+          pointer-events: none;
+          position: absolute;
+          inset-inline: 20px;
+          top: 58px;
+          color: #8da0bb;
+          font-size: 16px;
+          line-height: 28px;
+        }
+
+        .search-marketing-page .hero-search-controls {
+          position: relative;
+          margin-top: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+
+        .search-marketing-page .mode-shell {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 48px;
+          border: 1px solid var(--line-blue);
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.9);
+          padding: 6px 8px 6px 14px;
+          box-shadow: rgba(35, 40, 47, 0.06) 0 10px 26px;
+        }
+
+        .search-marketing-page .mode-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 36px;
+          border-radius: 999px;
+          border: 1px solid rgba(0, 121, 255, 0.14);
+          background: var(--accent-soft-strong);
+          padding: 8px 14px;
+          color: var(--accent-deep);
+          font-size: 14px;
+          line-height: 16px;
+          font-weight: 600;
+        }
+
+        .search-marketing-page .hero-submit {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 52px;
+          height: 52px;
+          border: 0;
+          border-radius: 999px;
+          background: var(--accent);
+          color: var(--on-primary);
+          box-shadow: rgba(0, 121, 255, 0.24) 0 14px 30px;
+          transition: background 0.16s ease, transform 0.16s ease;
+        }
+
+        .search-marketing-page .hero-submit:hover {
+          background: var(--accent-hover);
+          transform: translateY(-1px);
+        }
+
+        .search-marketing-page .landing-section {
+          background: var(--canvas);
+          padding: 56px 24px;
+        }
+
+        .search-marketing-page .landing-section.muted {
+          background: linear-gradient(180deg, rgba(243, 249, 255, 0.58), rgba(255, 255, 255, 0.92));
+        }
+
+        .search-marketing-page .landing-section.soft {
+          background: linear-gradient(180deg, rgba(241, 242, 243, 0.6), rgba(255, 255, 255, 0.92));
+        }
+
+        .search-marketing-page .section-title {
+          margin: 0;
+          color: var(--ink);
+          font-size: 34px;
+          line-height: 42px;
+          font-weight: 740;
+          letter-spacing: 0;
+        }
+
+        .search-marketing-page .section-title.centered {
+          text-align: center;
+        }
+
+        .search-marketing-page .pain-card,
+        .search-marketing-page .solution-card,
+        .search-marketing-page .mode-card,
+        .search-marketing-page .side-card,
+        .search-marketing-page .faq-card {
+          border: 1px solid var(--line);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.86);
+          box-shadow: rgba(35, 40, 47, 0.06) 0 16px 42px;
+        }
+
+        .search-marketing-page .pain-card {
+          min-height: 310px;
+          padding: 28px 24px;
+        }
+
+        .search-marketing-page .pain-icon {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 72px;
+          height: 72px;
+          border-radius: 18px;
+          background: var(--accent-soft-strong);
+          color: var(--ink);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        }
+
+        .search-marketing-page .solution-card {
+          padding: 24px;
+          transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .search-marketing-page .solution-card:hover {
+          border-color: rgba(0, 121, 255, 0.24);
+          transform: translateY(-2px);
+          box-shadow: rgba(35, 40, 47, 0.08) 0 20px 52px;
+        }
+
+        .search-marketing-page .solution-icon {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          background: var(--accent-soft-strong);
+          color: var(--accent);
+        }
+
+        .search-marketing-page .mode-card {
+          padding: 28px;
+        }
+
+        .search-marketing-page .mode-card.featured {
+          border-color: rgba(0, 121, 255, 0.18);
+          background: linear-gradient(180deg, var(--canvas-softer), var(--canvas));
+        }
+
+        .search-marketing-page .mode-icon {
+          border-radius: 14px;
+          background: var(--accent);
+          padding: 12px;
+          color: var(--on-primary);
+        }
+
+        .search-marketing-page .mode-icon.dark {
+          background: var(--primary);
+        }
+
+        .search-marketing-page .check-dot {
+          margin-top: 4px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+          border-radius: 999px;
+          background: var(--accent-soft-strong);
+          color: var(--accent);
+        }
+
+        .search-marketing-page .check-dot.dark {
+          background: var(--primary);
+          color: var(--on-primary);
+        }
+
+        .search-marketing-page .results-panel {
+          overflow: hidden;
+          border: 1px solid var(--line);
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.92);
+          box-shadow: rgba(35, 40, 47, 0.08) 0 18px 52px;
+        }
+
+        .search-marketing-page .table-head {
+          background: var(--canvas-softer);
+          border-bottom: 1px solid var(--line);
+        }
+
+        .search-marketing-page .side-card {
+          padding: 22px;
+        }
+
+        .search-marketing-page .primary-action {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          border-radius: 999px;
+          background: var(--accent);
+          padding: 12px 18px;
+          color: var(--on-primary);
+          font-size: 14px;
+          line-height: 18px;
+          font-weight: 600;
+          transition: background 0.16s ease, transform 0.16s ease;
+        }
+
+        .search-marketing-page .primary-action:hover {
+          background: var(--accent-hover);
+          transform: translateY(-1px);
+        }
+
+        .search-marketing-page .faq-card {
+          overflow: hidden;
+          box-shadow: none;
+        }
+
+        .search-marketing-page .bottom-cta {
+          position: relative;
+          overflow: hidden;
+          background: var(--primary);
+          color: var(--on-primary);
+        }
+
+        .search-marketing-page.home-elegant-shell {
+          --home-ink: #111827;
+          --home-muted: #667085;
+          --home-soft: #eef7f8;
+          --home-cobalt: #165dff;
+          --home-sage: #0f8f79;
+          --home-amber: #ffb020;
+          --home-lilac: #7c5cff;
+          --home-paper: rgba(255, 255, 255, 0.76);
+          font-family: "Cabinet Grotesk", "Avenir Next", "Helvetica Neue", Arial, system-ui, sans-serif;
+          color: var(--home-ink);
+        }
+
+        .home-hero-section {
+          position: relative;
+          overflow: hidden;
+          border-radius: 34px;
+          background:
+            radial-gradient(circle at 84% 12%, rgba(22, 93, 255, 0.14), transparent 32%),
+            radial-gradient(circle at 14% 24%, rgba(15, 143, 121, 0.16), transparent 30%),
+            linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(238, 247, 248, 0.88));
+        }
+
+        .home-grain {
+          pointer-events: none;
+          position: absolute;
+          inset: 0;
+          opacity: 0.2;
+          background-image:
+            linear-gradient(rgba(17, 24, 39, 0.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(17, 24, 39, 0.035) 1px, transparent 1px);
+          background-size: 44px 44px;
+          mask-image: radial-gradient(circle at center, black, transparent 72%);
+        }
+
+        .home-hero-title {
+          margin: 0;
+          max-width: min(1120px, 100%);
+          color: var(--home-ink);
+          font-size: clamp(3.1rem, 6.2vw, 6.9rem);
+          line-height: 0.98;
+          font-weight: 820;
+          letter-spacing: 0;
+        }
+
+        .home-inline-image {
+          display: inline-block;
+          width: clamp(74px, 10vw, 148px);
+          height: clamp(38px, 5vw, 66px);
+          margin: 0 0.12em;
+          border: 1px solid rgba(255, 255, 255, 0.84);
+          border-radius: 999px;
+          vertical-align: middle;
+          background-image:
+            linear-gradient(rgba(17, 24, 39, 0.08), rgba(17, 24, 39, 0.04)),
+            url("https://picsum.photos/seed/research-studio/640/360");
+          background-position: center;
+          background-size: cover;
+          box-shadow: 0 20px 60px rgba(17, 24, 39, 0.14);
+          filter: saturate(0.82) contrast(1.08);
+        }
+
+        .home-primary-button,
+        .home-secondary-button {
+          display: inline-flex;
+          min-height: 54px;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          border-radius: 999px;
+          padding: 0 24px;
+          font-size: 15px;
+          line-height: 20px;
+          font-weight: 760;
+          transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .home-primary-button {
+          background: #111827;
+          color: #ffffff;
+          box-shadow: 0 20px 50px rgba(17, 24, 39, 0.22);
+        }
+
+        .home-primary-button:hover,
+        .home-secondary-button:hover {
+          transform: translateY(-2px);
+        }
+
+        .home-secondary-button {
+          border: 1px solid rgba(17, 24, 39, 0.1);
+          background: rgba(255, 255, 255, 0.72);
+          color: #111827;
+        }
+
+        .home-hero-visual {
+          position: relative;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          border-radius: 34px;
+          background: rgba(255, 255, 255, 0.68);
+          box-shadow: 0 34px 110px rgba(17, 24, 39, 0.18);
+          backdrop-filter: blur(22px);
+        }
+
+        .home-hero-image {
+          min-height: 290px;
+          border-radius: 28px;
+          background-image:
+            linear-gradient(180deg, rgba(17, 24, 39, 0.08), rgba(17, 24, 39, 0.36)),
+            url("https://picsum.photos/seed/academic-workflow/1100/760");
+          background-position: center;
+          background-size: cover;
+          filter: saturate(0.74) contrast(1.12);
+        }
+
+        .home-floating-search {
+          margin: -76px 22px 22px;
+          position: relative;
+          border: 1px solid rgba(255, 255, 255, 0.78);
+          border-radius: 24px;
+          background: rgba(255, 255, 255, 0.88);
+          padding: 18px;
+          box-shadow: 0 22px 70px rgba(17, 24, 39, 0.16);
+          backdrop-filter: blur(18px);
+        }
+
+        .home-bento-grid {
+          display: grid;
+          grid-auto-flow: dense;
+          grid-auto-rows: minmax(178px, auto);
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 18px;
+        }
+
+        .home-bento-card {
+          position: relative;
+          overflow: hidden;
+          border: 1px solid rgba(17, 24, 39, 0.08);
+          border-radius: 28px;
+          background: rgba(255, 255, 255, 0.74);
+          padding: 28px;
+          box-shadow: 0 26px 80px rgba(17, 24, 39, 0.08);
+        }
+
+        .home-bento-card.large {
+          grid-column: span 2;
+          grid-row: span 2;
+          min-height: 374px;
+          background:
+            linear-gradient(140deg, rgba(17, 24, 39, 0.88), rgba(28, 42, 58, 0.82)),
+            url("https://picsum.photos/seed/research-board/1200/900");
+          background-position: center;
+          background-size: cover;
+          color: #ffffff;
+        }
+
+        .home-bento-card.wide {
+          grid-column: span 2;
+        }
+
+        .home-bento-card .home-bento-value {
+          font-size: clamp(2.1rem, 4vw, 4.2rem);
+          line-height: 0.95;
+          font-weight: 820;
+          letter-spacing: 0;
+        }
+
+        .home-workflow-section {
+          position: relative;
+          padding: 120px 0 130px;
+        }
+
+        .home-workflow-pin {
+          will-change: transform;
+        }
+
+        .home-accordion-rail {
+          display: flex;
+          gap: 18px;
+          overflow-x: auto;
+          overflow-y: visible;
+          padding: 10px 8px 32px;
+          cursor: grab;
+          touch-action: pan-x;
+          scrollbar-width: none;
+        }
+
+        .home-accordion-rail::-webkit-scrollbar {
+          display: none;
+        }
+
+        .home-feature-card {
+          position: relative;
+          isolation: isolate;
+          min-height: 440px;
+          width: 210px;
+          flex: 0 0 auto;
+          overflow: hidden;
+          border: 1px solid rgba(17, 24, 39, 0.09);
+          border-radius: 30px;
+          background: rgba(255, 255, 255, 0.78);
+          padding: 22px;
+          text-align: left;
+          box-shadow: 0 24px 80px rgba(17, 24, 39, 0.08);
+          transition: width 0.32s ease, transform 0.32s ease, box-shadow 0.32s ease, color 0.32s ease;
+        }
+
+        .home-feature-card:hover,
+        .home-feature-card:focus-visible {
+          width: 336px;
+          transform: translateY(-8px);
+          box-shadow: 0 34px 110px rgba(17, 24, 39, 0.16);
+          outline: none;
+        }
+
+        .home-feature-card::before {
+          content: "";
+          position: absolute;
+          inset: 20px auto auto 20px;
+          z-index: -1;
+          width: 54px;
+          height: 54px;
+          border-radius: 22px;
+          background: var(--feature-color, rgba(22, 93, 255, 0.16));
+          opacity: 0.92;
+          transition: inset 0.32s ease, width 0.32s ease, height 0.32s ease, border-radius 0.32s ease, opacity 0.32s ease;
+        }
+
+        .home-feature-card:hover::before,
+        .home-feature-card:focus-visible::before {
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          border-radius: 30px;
+          opacity: 0.2;
+        }
+
+        .home-feature-detail {
+          width: 256px;
+          transform: translateY(16px);
+          opacity: 0;
+          transition: transform 0.32s ease, opacity 0.32s ease;
+        }
+
+        .home-feature-card:hover .home-feature-detail,
+        .home-feature-card:focus-visible .home-feature-detail {
+          transform: translateY(0);
+          opacity: 1;
+        }
+
+        .home-testimonial-card {
+          transition: transform 0.7s ease;
+        }
+
+        .home-testimonial-card:hover {
+          transform: scale(1.035);
+        }
+
+        @media (max-width: 768px) {
+          .search-marketing-page .landing-title {
+            font-size: 36px;
+            line-height: 44px;
+          }
+
+          .search-marketing-page .hero-search-shell {
+            margin-top: 32px;
+            padding: 14px;
+          }
+
+          .search-marketing-page .hero-search-controls {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .search-marketing-page .mode-shell,
+          .search-marketing-page .hero-submit {
+            width: 100%;
+          }
+
+          .home-hero-title {
+            font-size: clamp(2.75rem, 13vw, 4.4rem);
+          }
+
+          .home-bento-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .home-bento-card.large,
+          .home-bento-card.wide {
+            grid-column: auto;
+            grid-row: auto;
+          }
+
+          .home-workflow-section {
+            padding: 72px 0 86px;
+          }
+
+          .home-feature-card,
+          .home-feature-card:hover,
+          .home-feature-card:focus-visible {
+            width: 292px;
+          }
+        }
+      `}</style>
       {!isSearchMode ? (
       <section
         id="scholar-search-hero"
-        className="relative px-6 py-8 md:px-10 md:py-10"
+        className="home-hero-section px-6 py-24 md:px-10 md:py-32"
       >
-        <div className="relative fade-up-enter">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-900">
-              <Sparkles className="h-4 w-4" />
-              <span>{isZh ? '面向学术界的全链路AI科研加速器' : 'The world-leading end-to-end research accelerator'}</span>
-            </div>
-
-            <h1 className="mx-auto min-h-[5.5rem] max-w-4xl text-4xl font-black tracking-tight leading-[1.05] text-slate-950 md:min-h-[8.5rem] md:text-6xl">
+        <div className="home-grain" />
+        <div className="relative mx-auto grid max-w-[88rem] gap-12 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.72fr)] lg:items-end">
+          <div className="home-hero-copy">
+            <h1 className="home-hero-title">
               {isZh ? (
-                <span className="flex flex-col items-center leading-[1.05]">
-                  <span>WisPaper:</span>
-                  <TextType
-                    text="从检索到实验，重塑你的科研工作流"
-                    typingSpeed={48}
-                    startDelay={220}
-                    className="mt-1 block"
-                  />
-                </span>
+                <>
+                  把科研工作流
+                  <span className="home-inline-image" />
+                  整理成可行动的智能系统
+                </>
               ) : (
-                <span className="flex flex-col items-center leading-[1.05]">
-                  <span>WisPaper:</span>
-                  <TextType
-                    text="Your AI Academic Agent"
-                    typingSpeed={48}
-                    startDelay={220}
-                    className="mt-1 block"
-                  />
-                </span>
+                <>
+                  Turn research
+                  <span className="home-inline-image" />
+                  into an intelligent operating system
+                </>
               )}
             </h1>
-            <p className="mx-auto mt-4 min-h-[4rem] max-w-3xl text-xl leading-8 text-slate-700 md:min-h-[5rem]">
+            <p className="mt-8 max-w-3xl text-xl leading-9 text-slate-700">
               {isZh
-                ? '一站式完成文献查找、知识沉淀与Agent实验，将数天的调研工作量缩减至分钟级。'
-                : 'Complete literature discovery, knowledge capture, and agent-driven experimentation in one workspace, reducing days of research work to minutes.'}
+                ? '从文献发现、知识库沉淀到 Agent 实验，WisPaper 将分散工具编排成一个连续工作台，让复杂调研更快进入判断和行动。'
+                : 'From literature discovery and knowledge capture to agent-driven experiments, WisPaper turns scattered tools into one continuous workspace for faster research decisions.'}
             </p>
-            <div className="mx-auto mt-6 w-full max-w-3xl rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <input
-                  value={landingSearchQuery}
-                  onChange={(e) => setLandingSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleLandingSearch();
-                    }
-                  }}
-                  placeholder={isZh ? '例如：找最近3年研究 AI4Science 的论文…' : 'e.g., Find me papers that study AI4Science in recent 3 years...'}
-                  className="h-9 w-full border-0 px-3 text-sm focus:outline-none"
-                />
-                <button
-                  onClick={handleLandingSearch}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-white transition-colors hover:bg-gray-800"
-                >
-                  <Search className="h-4.5 w-4.5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mx-auto mt-10 max-w-5xl">
-              <div className="relative overflow-hidden rounded-[2rem] border border-slate-200/90 bg-slate-950 shadow-[0_32px_120px_-70px_rgba(15,23,42,0.85)]">
-                <div className="aspect-video bg-slate-950">
-                  <video
-                    className="h-full w-full object-cover"
-                    src="/media/homepage-showcase.mp4"
-                    controls
-                    playsInline
-                    preload="metadata"
-                  >
-                    {isZh ? '您的浏览器暂不支持视频播放。' : 'Your browser does not support video playback.'}
-                  </video>
-                </div>
-                <div className="absolute left-5 top-5 flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-rose-400/90" />
-                  <span className="h-3 w-3 rounded-full bg-amber-300/90" />
-                  <span className="h-3 w-3 rounded-full bg-emerald-400/90" />
-                </div>
-              </div>
-
-              <div className="relative mt-6 overflow-hidden rounded-[1.75rem] border border-cyan-100/80 bg-white/72 px-4 py-7 shadow-[0_24px_80px_-56px_rgba(59,130,246,0.28)] backdrop-blur-xl md:px-8">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(59,130,246,0.12),_transparent_30%)]" />
-                <div className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
-
-                <div className="relative grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  {heroStats.map((item) => (
-                    <article
-                      key={item.zhLabel}
-                      className="rounded-[1.35rem] border border-white/70 bg-white/58 px-5 py-6 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
-                    >
-                      <p className="text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
-                        {isZh ? item.zhValue : item.enValue}
-                      </p>
-                      <p className="mt-3 text-sm font-medium text-slate-600 md:text-base">
-                        {isZh ? item.zhLabel : item.enLabel}
-                      </p>
-                    </article>
-                  ))}
-                </div>
-              </div>
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <button type="button" onClick={() => onStartSearch()} className="home-primary-button">
+                <span>{isZh ? '进入 Workspace' : 'Enter Workspace'}</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button type="button" onClick={() => onNavigateToMarketingPage('search')} className="home-secondary-button">
+                <span>{isZh ? '查看 Scholar Search' : 'View Scholar Search'}</span>
+              </button>
             </div>
           </div>
 
-          <div className="mx-auto mt-14 max-w-[88rem]">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1fr)] lg:items-start">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 shadow-sm">
-                  <Sparkles className="h-3.5 w-3.5 text-teal-600" />
-                  <span>{isZh ? 'Research OS' : 'Research OS'}</span>
-                </div>
-                <h2 className="mt-4 max-w-xl text-4xl font-black leading-[1.05] tracking-tight text-slate-950 md:text-5xl">
-                  {isZh ? (
-                    <>
-                      编排你的
-                      <span className="block text-teal-700">科研工作流。</span>
-                    </>
-                  ) : (
-                    <>
-                      We orchestrate
-                      <span className="block text-teal-700">research intelligence.</span>
-                    </>
-                  )}
-                </h2>
+          <div className="home-hero-visual home-scale-fade">
+            <div className="home-hero-image" />
+            <div className="home-floating-search">
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200/80 bg-white px-4 py-3">
+                <Search className="h-5 w-5 shrink-0 text-slate-500" />
+                <input
+                  value={landingSearchQuery}
+                  onChange={(event) => setLandingSearchQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      handleLandingSearch();
+                    }
+                  }}
+                  placeholder={isZh ? '找近三年 AI4Science 论文' : 'Find recent AI4Science papers'}
+                  className="h-10 min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+                <button
+                  type="button"
+                  onClick={handleLandingSearch}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800"
+                >
+                  <ArrowUp className="h-4.5 w-4.5" />
+                </button>
               </div>
-
-              <p className="max-w-2xl text-base leading-7 text-slate-600 lg:pt-9">
-                {isZh
-                  ? 'WisPaper 将检索、知识库、追新、问答、综述与更多学术工具串成一个连续工作台，帮助你更快识别研究缺口，优选科研路径。'
-                  : 'WisPaper connects search, library, feeds, QA, surveys, and more academic tools into one continuous workspace for faster research decisions.'}
-              </p>
-            </div>
-
-            <div
-              ref={featureRailRef}
-              onPointerDown={handleFeatureRailPointerDown}
-              onPointerMove={handleFeatureRailPointerMove}
-              onPointerUp={finishFeatureRailDrag}
-              onPointerCancel={finishFeatureRailDrag}
-              className="mt-10 flex cursor-grab touch-pan-x select-none gap-4 overflow-x-auto overflow-y-visible pb-6 active:cursor-grabbing [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {featureOverviewCards.map((card, index) => {
-                const Icon = card.icon;
-
-                return (
-                  <button
-                    key={card.zhTitle}
-                    type="button"
-                    onClick={(event) => handleFeatureCardClick(event, card.key)}
-                    className={`group relative h-[26rem] w-[12.5rem] shrink-0 overflow-hidden rounded-[1.75rem] border bg-white/82 px-5 py-5 text-left shadow-[0_18px_55px_-45px_rgba(15,23,42,0.35)] backdrop-blur transition-[width,transform,background-color,box-shadow] duration-300 hover:w-[20rem] hover:-translate-y-1 hover:shadow-[0_30px_80px_-50px_rgba(15,23,42,0.48)] focus-visible:w-[20rem] focus:outline-none focus:ring-2 focus:ring-teal-200 md:h-[28rem] md:w-[13.5rem] md:hover:w-[21.5rem] md:focus-visible:w-[21.5rem] ${card.border} ${card.surface}`}
-                  >
-                    <span className="pointer-events-none absolute bottom-5 left-5 select-none text-6xl font-black leading-none text-slate-950/[0.055] transition-colors duration-300 group-hover:text-teal-900/[0.08] group-focus-visible:text-teal-900/[0.08]">
-                      {String(index + 1).padStart(2, '0')}.
-                    </span>
-
-                    {card.isExplore ? (
-                      <div className="absolute inset-0 bg-[linear-gradient(135deg,_rgba(15,23,42,0.035),_transparent_38%),linear-gradient(315deg,_rgba(20,184,166,0.07),_transparent_34%)]" />
-                    ) : null}
-
-                    <div className="relative flex h-full flex-col">
-                      <div className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${card.accent} shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-
-                      <h3 className="mt-6 max-w-[9rem] text-xl font-black leading-tight tracking-tight text-slate-950 transition-[max-width] duration-300 group-hover:max-w-[16rem] group-focus-visible:max-w-[16rem] md:text-2xl">
-                        {isZh ? card.zhTitle : card.enTitle}
-                      </h3>
-
-                      <div className="mt-8 w-[16.5rem] translate-y-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100 md:w-[18rem]">
-                        <p className="text-[0.95rem] leading-7 text-slate-600">
-                          {isZh ? card.zhBody : card.enBody}
-                        </p>
-
-                        <p className="mt-5 border-t border-slate-200/80 pt-5 text-[0.88rem] leading-6 text-slate-500">
-                          {isZh ? card.zhDetail : card.enDetail}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {(isZh
+                  ? ['自动识别研究问题', '连接知识库与 Agent']
+                  : ['Understands research intent', 'Connects library and agents']
+                ).map((item) => (
+                  <div key={item} className="rounded-2xl bg-slate-950/[0.04] px-4 py-3 text-sm font-semibold text-slate-700">
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
       ) : null}
 
+      {!isSearchMode ? (
+      <section className="home-scale-fade px-6 py-28 md:px-10 md:py-40">
+        <div className="mx-auto max-w-[88rem]">
+          <div className="max-w-4xl">
+            <h2 className="text-4xl font-black leading-[1.06] text-slate-950 md:text-6xl">
+              {isZh ? '从发现到复用，让每一步研究都留下结构。' : 'From discovery to reuse, every research step becomes structured.'}
+            </h2>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
+              {isZh
+                ? '首页不再堆叠功能，而是把科研旅程拆成清晰的工作层：检索、沉淀、追问、生成。'
+                : 'The homepage organizes the research journey into clear working layers: search, capture, question, and generate.'}
+            </p>
+          </div>
+
+          <div className="home-bento-grid mt-14">
+            <article className="home-bento-card large">
+              <div className="relative flex h-full flex-col justify-between">
+                <div>
+                  <p className="text-xl font-semibold text-white/82">{isZh ? '连续研究工作台' : 'Continuous research workspace'}</p>
+                  <h3 className="mt-5 max-w-xl text-4xl font-black leading-[1.05] text-white md:text-5xl">
+                    {isZh ? '把论文、问题和实验路径放在同一条线上。' : 'Keep papers, questions, and experiments on one line.'}
+                  </h3>
+                </div>
+                <p className="max-w-lg text-base leading-8 text-white/72">
+                  {isZh
+                    ? '不再在搜索、阅读、问答和笔记间反复切换，所有线索都可以继续进入下一步。'
+                    : 'Move through search, reading, QA, and notes without losing context between tools.'}
+                </p>
+              </div>
+            </article>
+
+            {heroStats.slice(0, 2).map((item, index) => (
+              <article key={item.zhLabel} className="home-bento-card">
+                <p className="home-bento-value" style={{ color: index === 0 ? 'var(--home-cobalt)' : 'var(--home-sage)' }}>
+                  {isZh ? item.zhValue : item.enValue}
+                </p>
+                <p className="mt-4 text-base font-semibold leading-7 text-slate-700">
+                  {isZh ? item.zhLabel : item.enLabel}
+                </p>
+              </article>
+            ))}
+
+            <article className="home-bento-card wide">
+              <div className="flex h-full flex-col justify-between gap-8 md:flex-row md:items-end">
+                <div>
+                  <p className="text-base font-semibold text-slate-500">{isZh ? '面向长期沉淀' : 'Built for compounding work'}</p>
+                  <h3 className="mt-4 max-w-lg text-3xl font-black leading-[1.08] text-slate-950">
+                    {isZh ? '检索结果可以直接变成可复用的知识资产。' : 'Search results become reusable knowledge assets.'}
+                  </h3>
+                </div>
+                <Database className="h-14 w-14 shrink-0 text-[var(--home-lilac)]" />
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+      ) : null}
+
+      {!isSearchMode ? (
+      <section className="home-workflow-section px-6 md:px-10">
+        <div className="mx-auto grid max-w-[88rem] gap-10 lg:grid-cols-[0.78fr_1.22fr]">
+          <div className="home-workflow-pin">
+            <h2 className="max-w-xl text-4xl font-black leading-[1.06] text-slate-950 md:text-6xl">
+              {isZh ? '一个研究问题，会自然流向不同工具。' : 'One research question naturally flows into different tools.'}
+            </h2>
+            <p className="mt-6 max-w-md text-lg leading-8 text-slate-600">
+              {isZh
+                ? '悬浮卡片查看每个能力的展开说明，横向拖动可以浏览完整工作流。'
+                : 'Hover to expand each capability, then drag horizontally to browse the full workflow.'}
+            </p>
+          </div>
+
+          <div
+            ref={featureRailRef}
+            onPointerDown={handleFeatureRailPointerDown}
+            onPointerMove={handleFeatureRailPointerMove}
+            onPointerUp={finishFeatureRailDrag}
+            onPointerCancel={finishFeatureRailDrag}
+            className="home-accordion-rail select-none active:cursor-grabbing"
+          >
+            {featureOverviewCards.map((card, index) => {
+              const Icon = card.icon;
+              const colors = ['rgba(15,143,121,0.2)', 'rgba(124,92,255,0.2)', 'rgba(22,93,255,0.18)', 'rgba(255,176,32,0.2)', 'rgba(17,24,39,0.12)', 'rgba(14,165,233,0.18)'];
+
+              return (
+                <button
+                  key={card.zhTitle}
+                  type="button"
+                  onClick={(event) => handleFeatureCardClick(event, card.key)}
+                  className="home-feature-card home-scale-fade group"
+                  style={{ '--feature-color': colors[index % colors.length] } as React.CSSProperties}
+                >
+                  <span className="text-5xl font-black leading-none text-slate-950/[0.08]">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+
+                  <div className="relative mt-12 flex h-14 w-14 items-center justify-center rounded-[22px] bg-white/76 text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.86)]">
+                    <Icon className="h-6 w-6" />
+                  </div>
+
+                  <h3 className="mt-7 max-w-[10rem] text-2xl font-black leading-tight text-slate-950">
+                    {isZh ? card.zhTitle : card.enTitle}
+                  </h3>
+
+                  <div className="home-feature-detail mt-8">
+                    <p className="text-[0.98rem] leading-8 text-slate-700">
+                      {isZh ? card.zhBody : card.enBody}
+                    </p>
+                    <p className="mt-5 border-t border-slate-200/80 pt-5 text-sm leading-7 text-slate-500">
+                      {isZh ? card.zhDetail : card.enDetail}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+      ) : null}
+
       {isSearchMode ? (
-      <section className="px-6 py-6 md:px-10 md:py-8">
+      <section className="search-mode-hero px-6 py-10 md:px-10 md:py-14">
         <div className="mx-auto max-w-6xl">
           <div className="mb-10 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-900">
+            <div className="landing-eyebrow">
               <Sparkles className="h-4 w-4" />
               <span>Scholar Search</span>
             </div>
-            <h1 className="mt-5 min-h-[3.5rem] text-4xl font-bold tracking-tight text-slate-950 md:min-h-[4rem] md:text-5xl">
+            <h1 className="landing-title">
               {isZh ? 'WisPaper: 用更聪明的方式开始学术搜索' : 'WisPaper: Start yoursearch more intelligently'}
             </h1>
-            <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-slate-600">
+            <p className="landing-subtitle">
               {isZh
                 ? '支持自然语言提问的智能搜索引擎，全文检索精准锁定匹配论文。'
                 : 'An intelligent academic search engine that supports natural-language queries and uses full-text retrieval to pinpoint relevant papers.'}
             </p>
           </div>
 
-          <div className="relative overflow-hidden rounded-[2rem] border border-cyan-100/90 bg-[linear-gradient(180deg,rgba(237,250,255,0.96),rgba(255,255,255,1)_72%)] p-4 shadow-[0_30px_90px_-60px_rgba(14,116,144,0.38)] md:p-6">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.16),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_32%)]" />
-
-            <div className="relative rounded-[1.75rem] border border-white/90 bg-white px-5 py-5 shadow-[0_22px_44px_-34px_rgba(15,23,42,0.25)] md:px-6">
-              <div className="pointer-events-none mb-3 flex items-center gap-2 text-sm font-medium text-slate-400">
+          <div className="hero-search-shell">
+            <div className="hero-search-card">
+              <div className="hero-search-label">
                 <Search className="h-4 w-4" />
                 <span>{isZh ? '描述你的研究问题' : 'Describe your research question'}</span>
               </div>
@@ -715,10 +1433,10 @@ export function HomeSearchLanding({
                 }}
                 placeholder=""
                 rows={1}
-                className="w-full resize-none bg-transparent text-[1.02rem] leading-8 text-slate-800 placeholder:text-slate-400 focus:outline-none"
+                className="hero-search-input"
               />
               {!landingSearchQuery ? (
-                <div className="pointer-events-none absolute inset-x-5 top-[3.55rem] text-[1.02rem] leading-8 text-slate-400 md:inset-x-6">
+                <div className="hero-search-placeholder">
                   {isZh
                     ? '例如：搜索 2022 年后使用 GNN 做 molecular property prediction、排除 QM9、强调 realistic constraints 的论文'
                     : 'e.g. Find post-2022 papers on molecular property prediction using GNNs, excluding QM9 and emphasizing realistic constraints'}
@@ -726,14 +1444,14 @@ export function HomeSearchLanding({
               ) : null}
             </div>
 
-            <div className="relative mt-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="hero-search-controls">
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/80 p-1.5 pl-3 pr-3 shadow-[0_12px_32px_-24px_rgba(15,23,42,0.28)] backdrop-blur"
+                  className="mode-shell"
                 >
                   <Search className="h-5 w-5 text-slate-500" />
-                  <span className="inline-flex items-center gap-2 rounded-full border border-cyan-100 bg-cyan-50 px-4 py-2 text-sm font-medium text-cyan-900">
+                  <span className="mode-chip">
                     <Globe className="h-4 w-4" />
                     <span>{isZh ? '深度模式' : 'Deep Mode'}</span>
                   </span>
@@ -743,7 +1461,7 @@ export function HomeSearchLanding({
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleLandingSearch}
-                  className="inline-flex h-12 min-w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#18a7ea,#0f8fdf)] px-4 text-white shadow-[0_18px_36px_-20px_rgba(14,116,144,0.55)] transition hover:scale-[1.02] hover:shadow-[0_22px_42px_-20px_rgba(14,116,144,0.62)]"
+                  className="hero-submit"
                 >
                   <ArrowUp className="h-6 w-6" />
                 </button>
@@ -756,10 +1474,10 @@ export function HomeSearchLanding({
       ) : null}
 
       {isSearchMode ? (
-      <section className="bg-[linear-gradient(180deg,rgba(248,250,252,0.92),rgba(241,245,249,0.78))] px-6 py-14 md:px-10 md:py-16">
+      <section className="landing-section muted">
         <div className="mx-auto max-w-6xl">
         <div className="mx-auto mb-10 max-w-3xl text-center">
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
+          <h2 className="section-title centered">
             {isZh ? '为什么传统学术搜索总让你越搜越累？' : 'Why does traditional academic search become exhausting so quickly?'}
           </h2>
         </div>
@@ -768,20 +1486,20 @@ export function HomeSearchLanding({
             const visuals = [
               {
                 icon: Filter,
-                shell: 'bg-[#ead6ff]',
-                blob: 'bg-[#e2ccff]',
+                shell: 'bg-[#f3f9ff]',
+                blob: 'bg-[#e6ecf4]',
                 rotate: '-rotate-6',
               },
               {
                 icon: Search,
-                shell: 'bg-[#d7deff]',
-                blob: 'bg-[#cfd7ff]',
+                shell: 'bg-[rgba(0,121,255,0.12)]',
+                blob: 'bg-[#f3f9ff]',
                 rotate: 'rotate-6',
               },
               {
                 icon: Compass,
-                shell: 'bg-[#cfe8ff]',
-                blob: 'bg-[#c6e0fb]',
+                shell: 'bg-[#f1f2f3]',
+                blob: 'bg-[#e5e7eb]',
                 rotate: '-rotate-3',
               },
             ][index];
@@ -789,10 +1507,10 @@ export function HomeSearchLanding({
             const Icon = visuals.icon;
 
             return (
-              <article key={item.enTitle} className="mx-auto flex max-w-[18.5rem] flex-col items-center px-3 py-2 text-center">
+              <article key={item.enTitle} className="pain-card mx-auto flex max-w-[19.5rem] flex-col items-center text-center">
                 <div className="relative mb-5 flex h-28 w-28 items-center justify-center">
                   <div className={`absolute h-20 w-20 rounded-[1.5rem] ${visuals.blob} ${visuals.rotate}`} />
-                  <div className={`relative flex h-20 w-20 items-center justify-center rounded-full ${visuals.shell} shadow-[0_18px_40px_-28px_rgba(15,23,42,0.35)]`}>
+                  <div className={`pain-icon ${visuals.shell}`}>
                     <Icon className="h-11 w-11 text-slate-950" strokeWidth={1.7} />
                   </div>
                 </div>
@@ -816,10 +1534,10 @@ export function HomeSearchLanding({
       ) : null}
 
       {isSearchMode ? (
-      <section className="bg-white px-6 py-14 md:px-10 md:py-16">
+      <section className="landing-section">
         <div className="mx-auto max-w-6xl">
         <div className="max-w-3xl">
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+          <h2 className="section-title">
             {isZh
               ? 'WisPaper 如何更快找到真正相关的论文'
               : 'How WisPaper helps you find relevant papers faster'}
@@ -830,9 +1548,9 @@ export function HomeSearchLanding({
             const Icon = card.icon;
 
             return (
-              <article key={card.enTitle} className="border-t border-slate-200 pt-6 lg:border-t-0 lg:border-l lg:pl-6 lg:pt-0">
+              <article key={card.enTitle} className="solution-card">
                 <div className="flex items-center justify-between">
-                  <div className="inline-flex rounded-2xl bg-slate-50 p-3 text-cyan-700">
+                  <div className="solution-icon">
                     <Icon className="h-5 w-5" />
                   </div>
                   <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -850,27 +1568,27 @@ export function HomeSearchLanding({
       ) : null}
 
       {isSearchMode ? (
-      <section className="bg-[linear-gradient(180deg,rgba(236,254,255,0.88),rgba(255,255,255,0.9))] px-6 py-14 md:px-10 md:py-16">
+      <section className="landing-section soft">
         <div className="mx-auto max-w-6xl">
         <div className="max-w-3xl">
-          <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+          <h2 className="section-title">
             {isZh ? '两种搜索方式，匹配不同研究场景' : 'Two search modes for different research scenarios'}
           </h2>
         </div>
         <div className="mt-8 grid gap-10 lg:grid-cols-2">
-        <article className="border-t border-cyan-200/80 pt-8 lg:pt-6">
+        <article className="mode-card featured">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-cyan-600 p-3 text-white">
+            <div className="mode-icon">
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-slate-950">Deep Search</h2>
-              <p className="text-sm text-cyan-800">
+              <p className="text-sm text-slate-600">
                 {isZh ? '适合理解研究意图与复杂条件' : 'Built for research intent and complex filters'}
               </p>
             </div>
           </div>
-          <div className="mt-6 border-l-2 border-cyan-200/80 pl-5">
+          <div className="mt-6 border-l-2 border-blue-100 pl-5">
             <p className="text-sm leading-7 text-slate-700">
               {isZh
                 ? '当你的目标不是“找一篇已知论文”，而是要围绕一个研究问题系统性筛选文献时，Deep Search 更合适。'
@@ -882,7 +1600,7 @@ export function HomeSearchLanding({
               : ['AI understands research questions and context', 'Supports complex conditions, ambiguous terms, and exclusion logic', 'Better for literature reviews and high-quality filtering', 'Better for related work, method comparison, and research gap discovery']
             ).map((item) => (
               <div key={item} className="flex items-start gap-3">
-                <div className="mt-1 rounded-full bg-cyan-600 p-1 text-white">
+                <div className="check-dot">
                   <Check className="h-3.5 w-3.5" />
                 </div>
                 <p className="text-sm leading-7 text-slate-700">{item}</p>
@@ -892,9 +1610,9 @@ export function HomeSearchLanding({
           </div>
         </article>
 
-        <article className="border-t border-slate-200/80 pt-8 lg:pt-6">
+        <article className="mode-card">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-slate-900 p-3 text-white">
+            <div className="mode-icon dark">
               <Search className="h-5 w-5" />
             </div>
             <div>
@@ -916,7 +1634,7 @@ export function HomeSearchLanding({
               : ['Free to use', 'Faster response', 'Best for known titles, authors, and broad topic search', 'Good for fast lookup and initial exploration']
             ).map((item) => (
               <div key={item} className="flex items-start gap-3">
-                <div className="mt-1 rounded-full bg-slate-900 p-1 text-white">
+                <div className="check-dot dark">
                   <Check className="h-3.5 w-3.5" />
                 </div>
                 <p className="text-sm leading-7 text-slate-700">{item}</p>
@@ -931,16 +1649,16 @@ export function HomeSearchLanding({
       ) : null}
 
       {isSearchMode ? (
-      <section className="bg-[linear-gradient(180deg,rgba(237,250,255,0.94),rgba(248,250,252,0.96)_58%,rgba(255,255,255,1))] px-6 py-14 md:px-10 md:py-16">
+      <section className="landing-section muted">
         <div className="mx-auto max-w-6xl">
           <div>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            <h2 className="section-title">
               {isZh ? '搜索之后，不止是结果列表' : 'Search results that go beyond a list of links'}
             </h2>
           </div>
           <div className="mt-8 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-          <div className="overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white shadow-[0_24px_60px_-42px_rgba(15,23,42,0.18)]">
-            <div className="grid grid-cols-[1.9fr_0.7fr_0.9fr_1fr_1fr_1fr_1fr] border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <div className="results-panel">
+            <div className="table-head grid grid-cols-[1.9fr_0.7fr_0.9fr_1fr_1fr_1fr_1fr] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
               <span>{isZh ? '标题' : 'Title'}</span>
               <span>{isZh ? '年份' : 'Year'}</span>
               <span>{isZh ? '引用量' : 'Citations'}</span>
@@ -962,9 +1680,9 @@ export function HomeSearchLanding({
             ))}
           </div>
 
-          <div className="rounded-[1.5rem] border border-cyan-100 bg-white/88 p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.16)]">
+          <div className="side-card">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-cyan-50 p-3 text-cyan-700">
+              <div className="solution-icon">
                 <Database className="h-5 w-5" />
               </div>
               <div>
@@ -999,16 +1717,16 @@ export function HomeSearchLanding({
       ) : null}
 
       {isSearchMode ? (
-      <section id="resources-section" className="bg-white px-6 py-14 md:px-10 md:py-16">
+      <section id="resources-section" className="landing-section">
         <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
           <div>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">
+            <h2 className="section-title">
               {isZh ? '从一次搜索，发展成系统性的文献综述' : 'Turn one search into a structured literature review'}
             </h2>
             <button
               type="button"
               onClick={() => onNavigateToMarketingPage('ai-survey')}
-              className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="primary-action mt-6"
             >
               <span>{isZh ? '进入AI Survey' : 'Go to AI Survey'}</span>
               <ArrowRight className="h-4 w-4" />
@@ -1050,7 +1768,7 @@ export function HomeSearchLanding({
 
               return (
                 <div key={item.enTitle} className="border-t border-slate-200 pt-5">
-                  <div className="inline-flex rounded-2xl bg-slate-50 p-3 text-cyan-700">
+                  <div className="solution-icon">
                     <Icon className="h-5 w-5" />
                   </div>
                   <p className="mt-4 text-base font-semibold text-slate-950">{isZh ? item.zhTitle : item.enTitle}</p>
@@ -1064,11 +1782,11 @@ export function HomeSearchLanding({
       ) : null}
 
       {!isSearchMode ? (
-      <section className="space-y-6">
-        <div className="relative overflow-hidden rounded-[2rem] bg-white/22 px-0 py-8 backdrop-blur-xl">
+      <section className="home-scale-fade space-y-6 px-6 py-24 md:px-10 md:py-32">
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/42 px-0 py-10 shadow-[0_30px_100px_rgba(17,24,39,0.08)] backdrop-blur-xl">
 
           <div className="px-6 pb-6 text-center">
-            <h2 className="min-h-[4rem] text-3xl font-bold tracking-tight text-slate-950 md:min-h-[5rem] md:text-4xl">
+            <h2 className="mx-auto min-h-[4rem] max-w-4xl text-4xl font-black leading-[1.08] text-slate-950 md:min-h-[5rem] md:text-6xl">
               {isZh ? '全球科研人员都在用 WisPaper' : 'Researchers around the world use WisPaper'}
             </h2>
             <p className="mx-auto mt-4 min-h-[3.5rem] max-w-3xl text-base leading-7 text-slate-600 md:min-h-[3.75rem]">
@@ -1083,7 +1801,7 @@ export function HomeSearchLanding({
               {[...audiences, ...audiences].map((item, index) => (
                 <article
                   key={`${item.short}-${index}`}
-                  className="flex min-h-[21rem] w-[21rem] min-w-[21rem] flex-col rounded-[2rem] border border-slate-200/80 bg-white/92 p-7 text-left shadow-[0_20px_60px_-44px_rgba(15,23,42,0.34)]"
+                  className="home-testimonial-card flex min-h-[21rem] w-[21rem] min-w-[21rem] flex-col rounded-[2rem] border border-slate-200/80 bg-white/92 p-7 text-left shadow-[0_20px_60px_-44px_rgba(15,23,42,0.34)]"
                 >
                   <h3 className="min-h-[4rem] text-[1.25rem] font-semibold leading-8 tracking-tight text-slate-950">
                     {isZh ? item.zhTitle : item.enTitle}
@@ -1110,9 +1828,9 @@ export function HomeSearchLanding({
       ) : null}
 
       {isSearchMode ? (
-      <section className="bg-[linear-gradient(180deg,rgba(239,249,255,0.72),rgba(255,255,255,1))] px-6 py-14 md:px-10 md:py-16">
+      <section className="landing-section muted">
         <div className="mx-auto max-w-6xl">
-          <h2 className="text-center text-[2rem] font-bold tracking-tight text-slate-950 md:text-[2.35rem]">
+          <h2 className="section-title centered">
             {isZh ? '常见问题' : 'FAQ'}
           </h2>
 
@@ -1121,7 +1839,7 @@ export function HomeSearchLanding({
               const isOpen = expandedSearchFaqIndexes.includes(index);
 
               return (
-                <article key={item.enQuestion} className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white/92 shadow-[0_20px_50px_-42px_rgba(15,23,42,0.16)]">
+                <article key={item.enQuestion} className="faq-card">
                   <button
                     type="button"
                     onClick={() =>
@@ -1155,8 +1873,7 @@ export function HomeSearchLanding({
       ) : null}
 
       {isSearchMode ? (
-      <section className="surface-glow relative overflow-hidden bg-[linear-gradient(135deg,_rgba(15,23,42,1),_rgba(15,23,42,0.92)_55%,_rgba(8,47,73,0.95))] px-6 py-14 text-white md:px-10 md:py-16">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(34,211,238,0.18),_transparent_30%)]" />
+      <section className="bottom-cta px-6 py-14 text-white md:px-10 md:py-16">
         <div className="relative mx-auto flex max-w-6xl flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
             <h2 className="mt-3 text-4xl font-bold tracking-tight">
@@ -1170,7 +1887,7 @@ export function HomeSearchLanding({
             <button
               type="button"
               onClick={() => onStartSearch()}
-              className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
             >
               <span>{isZh ? '免费开始搜索论文' : 'Start Searching for Free'}</span>
               <ArrowRight className="h-4 w-4" />
@@ -1179,6 +1896,6 @@ export function HomeSearchLanding({
         </div>
       </section>
       ) : null}
-    </div>
+    </main>
   );
 }

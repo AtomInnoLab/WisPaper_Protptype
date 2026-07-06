@@ -99,51 +99,410 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
   const { t } = useLanguage();
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-gray-50 px-6 py-12">
-      <div className="w-full max-w-4xl">
+    <div className="scholar-search-landing flex-1 flex items-center justify-center px-6 py-12">
+      <style>{`
+        .scholar-search-landing {
+          --primary: #23282f;
+          --on-primary: #ffffff;
+          --ink: #23282f;
+          --body: #636c76;
+          --mute: #999999;
+          --accent: #0079ff;
+          --accent-hover: #1b87ff;
+          --accent-soft: rgba(0, 121, 255, 0.1);
+          --accent-soft-strong: rgba(0, 121, 255, 0.12);
+          --accent-deep: #111fa4;
+          --canvas: #ffffff;
+          --canvas-soft: #f1f2f3;
+          --canvas-softer: #f3f9ff;
+          --line: #e5e7eb;
+          --line-blue: #e6ecf4;
+          min-height: 100%;
+          background:
+            linear-gradient(180deg, rgba(243, 249, 255, 0.72) 0%, rgba(255, 255, 255, 0) 38%),
+            transparent;
+          color: var(--ink);
+          font-family: UberMoveText, system-ui, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .scholar-search-landing * { box-sizing: border-box; }
+
+        .scholar-search-landing .search-page {
+          width: 100%;
+          max-width: 980px;
+        }
+
+        .scholar-search-landing .search-hero {
+          text-align: center;
+          margin-bottom: 24px;
+        }
+
+        .scholar-search-landing .search-kicker {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 32px;
+          margin-bottom: 14px;
+          padding: 8px 16px;
+          border-radius: 999px;
+          background: var(--accent-soft-strong);
+          color: var(--accent-deep);
+          font-size: 14px;
+          line-height: 16px;
+          font-weight: 600;
+        }
+
+        .scholar-search-landing .search-title {
+          max-width: 780px;
+          margin: 0 auto;
+          color: var(--ink);
+          font-size: 42px;
+          line-height: 52px;
+          font-weight: 700;
+          letter-spacing: 0;
+        }
+
+        .scholar-search-landing .search-title .accent {
+          color: var(--accent);
+        }
+
+        .scholar-search-landing .search-shell {
+          margin-bottom: 32px;
+          padding: 18px;
+          border: 1px solid var(--line-blue);
+          border-radius: 20px;
+          background: rgba(255, 255, 255, 0.9);
+          box-shadow: rgba(35, 40, 47, 0.08) 0 18px 44px;
+        }
+
+        .scholar-search-landing .search-input-wrap {
+          position: relative;
+          margin-bottom: 14px;
+          border-radius: 14px;
+          background: var(--canvas-softer);
+          border: 1px solid rgba(0, 121, 255, 0.1);
+        }
+
+        .scholar-search-landing .search-textarea {
+          width: 100%;
+          min-height: 110px;
+          padding: 18px 20px;
+          border: 0;
+          outline: 0;
+          resize: none;
+          background: transparent;
+          color: var(--ink);
+          font-size: 16px;
+          line-height: 24px;
+        }
+
+        .scholar-search-landing .search-textarea::placeholder {
+          color: var(--mute);
+        }
+
+        .scholar-search-landing .search-controls {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding-top: 2px;
+        }
+
+        .scholar-search-landing .control-left,
+        .scholar-search-landing .control-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .scholar-search-landing .mode-toggle {
+          position: relative;
+          display: inline-flex;
+          gap: 8px;
+          padding: 6px;
+          border-radius: 999px;
+          background: var(--line-blue);
+        }
+
+        .scholar-search-landing .mode-toggle-bg {
+          position: absolute;
+          inset-block: 6px;
+          border-radius: 999px;
+          background: var(--canvas);
+          box-shadow: rgba(35, 40, 47, 0.08) 0 6px 18px;
+          transition: left 0.2s ease, right 0.2s ease;
+        }
+
+        .scholar-search-landing .mode-toggle-bg.quick {
+          left: 6px;
+          right: calc(50% + 4px);
+        }
+
+        .scholar-search-landing .mode-toggle-bg.deep {
+          left: calc(50% + 4px);
+          right: 6px;
+        }
+
+        .scholar-search-landing .mode-button {
+          position: relative;
+          z-index: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          min-height: 38px;
+          padding: 9px 16px;
+          border-radius: 999px;
+          border: 0;
+          background: transparent;
+          color: var(--body);
+          font-size: 14px;
+          line-height: 16px;
+          font-weight: 500;
+          white-space: nowrap;
+          transition: color 0.16s ease;
+        }
+
+        .scholar-search-landing .mode-button.active {
+          color: var(--accent-deep);
+        }
+
+        .scholar-search-landing .unmetered-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 42px;
+          padding: 10px 14px;
+          border: 0;
+          border-radius: 999px;
+          background: var(--canvas-soft);
+          color: var(--body);
+          font-size: 14px;
+          line-height: 16px;
+          font-weight: 500;
+          transition: background 0.16s ease, color 0.16s ease;
+        }
+
+        .scholar-search-landing .unmetered-button:hover {
+          background: var(--accent-soft);
+          color: var(--accent-deep);
+        }
+
+        .scholar-search-landing .submit-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          border: 0;
+          border-radius: 999px;
+          background: var(--accent);
+          color: var(--on-primary);
+          box-shadow: rgba(0, 121, 255, 0.22) 0 10px 24px;
+          transition: background 0.16s ease, transform 0.16s ease;
+        }
+
+        .scholar-search-landing .submit-button:hover {
+          background: var(--accent-hover);
+          transform: translateY(-1px);
+        }
+
+        .scholar-search-landing .examples-title {
+          margin: 0 0 16px;
+          text-align: center;
+          color: var(--ink);
+          font-size: 18px;
+          line-height: 24px;
+          font-weight: 700;
+        }
+
+        .scholar-search-landing .category-row {
+          position: relative;
+          margin-bottom: 18px;
+        }
+
+        .scholar-search-landing .category-inner {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .scholar-search-landing .category-scroll {
+          flex: 1;
+          overflow: hidden;
+        }
+
+        .scholar-search-landing .category-list {
+          display: flex;
+          gap: 8px;
+        }
+
+        .scholar-search-landing .category-list.center {
+          justify-content: center;
+        }
+
+        .scholar-search-landing .category-pill {
+          flex-shrink: 0;
+          min-height: 38px;
+          padding: 10px 14px;
+          border: 0;
+          border-radius: 999px;
+          background: var(--line-blue);
+          color: var(--body);
+          font-size: 14px;
+          line-height: 16px;
+          font-weight: 500;
+          white-space: nowrap;
+          transition: background 0.16s ease, color 0.16s ease;
+        }
+
+        .scholar-search-landing .category-pill.active {
+          background: var(--primary);
+          color: var(--on-primary);
+        }
+
+        .scholar-search-landing .category-pill:not(.active):hover {
+          background: var(--accent-soft-strong);
+          color: var(--accent-deep);
+        }
+
+        .scholar-search-landing .category-arrow {
+          flex-shrink: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          border: 0;
+          border-radius: 999px;
+          background: var(--canvas-soft);
+          color: var(--body);
+          transition: background 0.16s ease, color 0.16s ease;
+        }
+
+        .scholar-search-landing .category-arrow:hover {
+          background: var(--accent-soft);
+          color: var(--accent-deep);
+        }
+
+        .scholar-search-landing .example-list {
+          display: grid;
+          gap: 10px;
+        }
+
+        .scholar-search-landing .example-row {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          min-height: 58px;
+          padding: 15px 18px;
+          border: 1px solid var(--line);
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.86);
+          color: var(--body);
+          transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background 0.16s ease;
+        }
+
+        .scholar-search-landing .example-row:hover {
+          border-color: rgba(0, 121, 255, 0.28);
+          background: var(--canvas);
+          box-shadow: rgba(35, 40, 47, 0.08) 0 10px 28px;
+          transform: translateY(-1px);
+        }
+
+        .scholar-search-landing .example-text {
+          text-align: left;
+          color: var(--body);
+          font-size: 14px;
+          line-height: 20px;
+        }
+
+        .scholar-search-landing .example-icon {
+          flex-shrink: 0;
+          color: var(--mute);
+          transition: color 0.16s ease, transform 0.16s ease;
+        }
+
+        .scholar-search-landing .example-row:hover .example-icon {
+          color: var(--accent);
+          transform: translateX(3px);
+        }
+
+        @media (max-width: 760px) {
+          .scholar-search-landing {
+            align-items: flex-start;
+            padding: 32px 16px;
+          }
+
+          .scholar-search-landing .search-title {
+            font-size: 34px;
+            line-height: 42px;
+          }
+
+          .scholar-search-landing .search-shell {
+            padding: 14px;
+          }
+
+          .scholar-search-landing .search-controls {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .scholar-search-landing .control-left,
+          .scholar-search-landing .control-right,
+          .scholar-search-landing .mode-toggle {
+            width: 100%;
+          }
+
+          .scholar-search-landing .mode-button {
+            flex: 1;
+            justify-content: center;
+          }
+
+          .scholar-search-landing .unmetered-button {
+            flex: 1;
+            justify-content: center;
+          }
+        }
+      `}</style>
+      <div className="search-page">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 mb-3">
-            Hi . Which paper do you want to read today?
+        <div className="search-hero">
+          <span className="search-kicker">Scholar Search</span>
+          <h1 className="search-title">
+            Hi. Which paper do you want to <span className="accent">read today?</span>
           </h1>
         </div>
 
         {/* Search Box Container */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
+        <div className="search-shell">
           {/* Search Input */}
-          <div className="relative mb-4">
+          <div className="search-input-wrap">
             <textarea
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}
               placeholder="e.g., Find me papers that study AI4Science in recent 3 years..."
               rows={3}
-              className="w-full px-4 py-3 text-base border-0 focus:outline-none resize-none"
+              className="search-textarea"
             />
           </div>
 
           {/* Mode Toggle and Options */}
-          <div className="flex items-center justify-between pt-3">
-            <div className="flex items-center gap-3">
+          <div className="search-controls">
+            <div className="control-left">
               {/* Slider Tab for Quick/Deep Mode */}
-              <div className="relative bg-gray-100 rounded-lg p-1 inline-flex">
+              <div className="mode-toggle">
                 {/* Sliding Background */}
                 <div 
-                  className={`absolute inset-y-1 bg-white rounded-md shadow-sm transition-all duration-200 ease-in-out ${
-                    searchMode === 'deep' 
-                      ? 'left-[calc(50%+0.125rem)] right-1' 
-                      : 'left-1 right-[calc(50%+0.125rem)]'
-                  }`}
+                  className={`mode-toggle-bg ${searchMode === 'deep' ? 'deep' : 'quick'}`}
                 />
                 
                 {/* Quick Mode */}
                 <button
                   onClick={() => setSearchMode('quick')}
-                  className={`relative z-10 flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    searchMode === 'quick'
-                      ? 'text-gray-900 font-medium'
-                      : 'text-gray-500'
-                  }`}
+                  className={`mode-button ${searchMode === 'quick' ? 'active' : ''}`}
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="12" cy="12" r="10" />
@@ -155,11 +514,7 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
                 {/* Deep Mode */}
                 <button
                   onClick={() => setSearchMode('deep')}
-                  className={`relative z-10 flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm transition-colors whitespace-nowrap ${
-                    searchMode === 'deep'
-                      ? 'text-blue-600 font-medium'
-                      : 'text-gray-500'
-                  }`}
+                  className={`mode-button ${searchMode === 'deep' ? 'active' : ''}`}
                 >
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
@@ -175,9 +530,9 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="control-right">
               {/* Unmetered */}
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-gray-600 hover:text-gray-900 text-sm transition-colors">
+              <button className="unmetered-button">
                 <Infinity className="w-4 h-4" />
                 <span>Unmetered</span>
               </button>
@@ -185,7 +540,7 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
               {/* Search Button */}
               <button
                 onClick={handleSearch}
-                className="p-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-full transition-colors"
+                className="submit-button"
               >
                 <Search className="w-5 h-5" />
               </button>
@@ -200,21 +555,17 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
 
         {/* Try Our Examples Section */}
         <div>
-          <h2 className="text-center text-lg font-semibold text-gray-900 mb-4">{t('search.examples')}</h2>
+          <h2 className="examples-title">{t('search.examples')}</h2>
           
           {/* Category Tabs - show different categories based on mode */}
           {searchMode === 'books' ? (
-            <div className="relative mb-6">
-              <div className="flex items-center justify-center gap-2">
+            <div className="category-row">
+              <div className="category-list center">
                 {bookCategoryKeys.map((category) => (
                   <button
                     key={category}
                     onClick={() => setSelectedBookCategory(category)}
-                    className={`flex-shrink-0 px-4 py-2 text-sm rounded-lg transition-colors whitespace-nowrap ${
-                      selectedBookCategory === category
-                        ? 'bg-gray-900 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
+                    className={`category-pill ${selectedBookCategory === category ? 'active' : ''}`}
                   >
                     {t(`category.${category}`)}
                   </button>
@@ -222,17 +573,13 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
               </div>
             </div>
           ) : searchMode === 'theses' ? (
-            <div className="relative mb-6">
-              <div className="flex items-center justify-center gap-2">
+            <div className="category-row">
+              <div className="category-list center">
                 {thesesCategoryKeys.map((category) => (
                   <button
                     key={category}
                     onClick={() => setSelectedThesesCategory(category)}
-                    className={`flex-shrink-0 px-4 py-2 text-sm rounded-lg transition-colors whitespace-nowrap ${
-                      selectedThesesCategory === category
-                        ? 'bg-gray-900 text-white'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
+                    className={`category-pill ${selectedThesesCategory === category ? 'active' : ''}`}
                   >
                     {t(`category.${category}`)}
                   </button>
@@ -240,28 +587,24 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
               </div>
             </div>
           ) : (
-            <div className="relative mb-6">
-              <div className="flex items-center gap-2">
+            <div className="category-row">
+              <div className="category-inner">
                 {canScrollLeft && (
                   <button
                     onClick={() => scrollCategories('left')}
-                    className="flex-shrink-0 p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="category-arrow"
                   >
-                    <ChevronLeft className="w-4 h-4 text-gray-600" />
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
                 )}
                 
-                <div className="flex-1 overflow-hidden">
-                  <div className="flex gap-2">
+                <div className="category-scroll">
+                  <div className="category-list">
                     {categoryKeys.slice(currentCategoryIndex, currentCategoryIndex + visibleCategories).map((category) => (
                       <button
                         key={category}
                         onClick={() => setSelectedCategory(category)}
-                        className={`flex-shrink-0 px-4 py-2 text-sm rounded-lg transition-colors whitespace-nowrap ${
-                          selectedCategory === category
-                            ? 'bg-gray-900 text-white'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                        }`}
+                        className={`category-pill ${selectedCategory === category ? 'active' : ''}`}
                       >
                         {t(`category.${category}`)}
                       </button>
@@ -272,9 +615,9 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
                 {canScrollRight && (
                   <button
                     onClick={() => scrollCategories('right')}
-                    className="flex-shrink-0 p-1.5 hover:bg-gray-200 rounded transition-colors"
+                    className="category-arrow"
                   >
-                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 )}
               </div>
@@ -282,16 +625,16 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
           )}
 
           {/* Example Queries - show different queries based on mode */}
-          <div className="space-y-2">
+          <div className="example-list">
             {searchMode === 'books' ? (
               getBookCategoryExamples(selectedBookCategory).map((queryKey, index) => (
                 <button
                   key={index}
                   onClick={() => handleExampleClick(t(queryKey))}
-                  className="w-full flex items-center justify-between px-5 py-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group"
+                  className="example-row"
                 >
-                  <span className="text-gray-700 text-sm text-left">{t(queryKey)}</span>
-                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all flex-shrink-0 ml-4" />
+                  <span className="example-text">{t(queryKey)}</span>
+                  <ArrowRight className="example-icon w-4 h-4" />
                 </button>
               ))
             ) : searchMode === 'theses' ? (
@@ -299,10 +642,10 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
                 <button
                   key={index}
                   onClick={() => handleExampleClick(t(queryKey))}
-                  className="w-full flex items-center justify-between px-5 py-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group"
+                  className="example-row"
                 >
-                  <span className="text-gray-700 text-sm text-left">{t(queryKey)}</span>
-                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all flex-shrink-0 ml-4" />
+                  <span className="example-text">{t(queryKey)}</span>
+                  <ArrowRight className="example-icon w-4 h-4" />
                 </button>
               ))
             ) : (
@@ -310,10 +653,10 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
                 <button
                   key={index}
                   onClick={() => handleExampleClick(t(queryKey))}
-                  className="w-full flex items-center justify-between px-5 py-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group"
+                  className="example-row"
                 >
-                  <span className="text-gray-700 text-sm text-left">{t(queryKey)}</span>
-                  <ArrowRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all flex-shrink-0 ml-4" />
+                  <span className="example-text">{t(queryKey)}</span>
+                  <ArrowRight className="example-icon w-4 h-4" />
                 </button>
               ))
             )}
