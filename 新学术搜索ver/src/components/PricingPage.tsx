@@ -842,11 +842,11 @@ export function PricingPage({ onOpenRecharge }: PricingPageProps) {
                   <strong>300 + 300</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="每日补给" tooltip="登录当天自动发放。" />
+                  <InfoLabel label="每日积分" tooltip="每日登录后发放，用于当天基础体验。" />
                   <strong>200</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="存储" tooltip="知识库存储空间。" />
+                  <span className="uber-info-label">存储</span>
                   <strong>1GB</strong>
                 </div>
               </div>
@@ -863,15 +863,15 @@ export function PricingPage({ onOpenRecharge }: PricingPageProps) {
               <p className="plan-subtitle">适合每周稳定检索和轻量问答。</p>
               <div className="info-list">
                 <div className="info-row">
-                  <InfoLabel label="每月积分" tooltip="每月自动发放。" />
+                  <InfoLabel label="每月积分" tooltip="按订阅周期发放，到期后未使用余额将清零。" />
                   <strong>10,000</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="每日补给" tooltip="被动补给 + 登录补给。" />
+                  <InfoLabel label="每日积分" tooltip="由基础每日额度和登录奖励组成。" />
                   <strong>200 + 200</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="存储" tooltip="知识库存储空间。" />
+                  <span className="uber-info-label">存储</span>
                   <strong>10GB</strong>
                 </div>
               </div>
@@ -888,15 +888,15 @@ export function PricingPage({ onOpenRecharge }: PricingPageProps) {
               <p className="plan-subtitle">最适合日常深度研究和 Agent 任务。</p>
               <div className="info-list">
                 <div className="info-row">
-                  <InfoLabel label="每月积分" tooltip="每月自动发放。" dark />
+                  <InfoLabel label="每月积分" tooltip="按订阅周期发放，到期后未使用余额将清零。" dark />
                   <strong>160,000</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="每日补给" tooltip="被动补给 + 登录补给；Pro 被动补给更高。" dark />
+                  <InfoLabel label="每日积分" tooltip="Pro 基础每日额度更高，登录奖励另计。" dark />
                   <strong>500 + 200</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="存储" tooltip="知识库存储空间。" dark />
+                  <span className="uber-info-label">存储</span>
                   <strong>50GB</strong>
                 </div>
               </div>
@@ -913,15 +913,15 @@ export function PricingPage({ onOpenRecharge }: PricingPageProps) {
               <p className="plan-subtitle">高频 Agent 使用、多项目协作和更高存储需求。</p>
               <div className="info-list">
                 <div className="info-row">
-                  <InfoLabel label="每月积分" tooltip="每月自动发放。" />
+                  <InfoLabel label="每月积分" tooltip="按订阅周期发放，到期后未使用余额将清零。" />
                   <strong>{maxPlans.x2.monthly}</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="每日补给" tooltip="被动补给 + 登录补给；被动补给随档位提升。" />
+                  <InfoLabel label="每日积分" tooltip="基础每日额度随档位提升，登录奖励另计。" />
                   <strong>{maxPlans.x2.passive} + 200</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="存储" tooltip={`知识库存储 50GB + Projects 存储 ${maxPlans.x2.projectStorage}。`} />
+                  <span className="uber-info-label">存储</span>
                   <strong>50GB + {maxPlans.x2.projectStorage}</strong>
                 </div>
               </div>
@@ -938,15 +938,15 @@ export function PricingPage({ onOpenRecharge }: PricingPageProps) {
               <p className="plan-subtitle">满足高存储需求和更高频 Agent 工作流。</p>
               <div className="info-list">
                 <div className="info-row">
-                  <InfoLabel label="每月积分" tooltip="每月自动发放。" />
+                  <InfoLabel label="每月积分" tooltip="按订阅周期发放，到期后未使用余额将清零。" />
                   <strong>{maxPlans.x5.monthly}</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="每日补给" tooltip="被动补给 + 登录补给；被动补给随档位提升。" />
+                  <InfoLabel label="每日积分" tooltip="基础每日额度随档位提升，登录奖励另计。" />
                   <strong>{maxPlans.x5.passive} + 200</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label="存储" tooltip={`知识库存储 50GB + Projects 存储 ${maxPlans.x5.projectStorage}。`} />
+                  <span className="uber-info-label">存储</span>
                   <strong>50GB + {maxPlans.x5.projectStorage}</strong>
                 </div>
               </div>
