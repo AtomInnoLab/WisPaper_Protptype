@@ -214,7 +214,7 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onO
     }
 
     if (page === 'pricing') {
-      return <PricingPage onOpenRecharge={onOpenRecharge} />;
+      return <PricingPage language={language} onOpenRecharge={onOpenRecharge} />;
     }
 
     const configMap: Record<Exclude<MarketingPageKey, 'home'>, PageConfig> = {

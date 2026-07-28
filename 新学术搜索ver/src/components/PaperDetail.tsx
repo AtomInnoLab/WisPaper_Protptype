@@ -920,6 +920,16 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDet
           </div>
 
           <div className="flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 text-xs font-medium text-gray-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+              title={isZh ? '打开本地文件' : 'Open local file'}
+              aria-label={isZh ? '打开本地文件' : 'Open local file'}
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span>{isZh ? '打开本地文件' : 'Open local file'}</span>
+            </button>
             <button className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900">
               <ThumbsUp className="h-3.5 w-3.5" />
               <span>53</span>
