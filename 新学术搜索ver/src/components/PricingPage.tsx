@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, HelpCircle, Minus } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { calculateStorageCredits, STORAGE_RMB_PER_GB } from '../utils/storagePricing';
 
 type BillingCycle = 'monthly' | 'annual';
 type PaymentMethod = 'airwallex' | 'stripe' | 'airwallex-wallets' | 'stripe-wallets';
@@ -99,7 +100,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('airwallex');
   const [extraStorageGb, setExtraStorageGb] = React.useState(100);
   const isAnnual = billingCycle === 'annual';
-  const extraStorageCredits = extraStorageGb * 75;
+  const extraStorageCredits = calculateStorageCredits(extraStorageGb);
   const text = (localized: LocalizedText) => copy(localized, language);
 
   return (
@@ -1528,7 +1529,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
 
               <div className="storage-slider-values">
                 <strong>{extraStorageGb} GB</strong>
-                <span>¥0.75 / GB · {text({ zh: '月', en: 'month' })}</span>
+                <span>¥{STORAGE_RMB_PER_GB} / GB · {text({ zh: '月', en: 'month' })}</span>
               </div>
               <input
                 className="storage-range"
@@ -1548,8 +1549,8 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
               </div>
               <p className="storage-calculator-note">
                 {text({
-                  zh: '原型按 100 Credits≈¥1 换算，最终额度、价格、宽限期及 Credits 汇率以后台配置为准。',
-                  en: 'Prototype estimate uses 100 Credits≈¥1. Final capacity, pricing, grace period, and conversion rate are backend-configured.',
+                  zh: '按 ¥7 = $1、$1 = 10,000 Credits 换算；最终额度、宽限期及汇率以后台配置为准。',
+                  en: 'Converted at ¥7 = $1 and $1 = 10,000 Credits. Final capacity, grace period, and rates are backend-configured.',
                 })}
               </p>
               <button type="button" className="storage-purchase-button">

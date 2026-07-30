@@ -4,6 +4,7 @@ import {
   User,
   CreditCard,
   Settings,
+  ChevronDown,
   ChevronRight,
   Crown,
   FileText,
@@ -14,10 +15,11 @@ import {
   Clock3,
   ExternalLink,
   Loader2,
-  HardDrive,
-  ArchiveRestore,
+  Download,
 } from 'lucide-react';
 import { isValidEmail } from '../utils/email';
+import { calculateStorageCredits } from '../utils/storagePricing';
+import { StorageManagementSection } from './StorageManagementSection';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -26,13 +28,21 @@ interface SettingsModalProps {
 
 type TabType = 'basic' | 'membership' | 'payment' | 'account';
 
+const creditPackages = [
+  { id: 'pack-0618', purchasedAt: '2026 年 6 月 18 日', expiresAt: '2026 年 8 月 18 日', total: 5000, used: 1200 },
+  { id: 'pack-0602', purchasedAt: '2026 年 6 月 2 日', expiresAt: '2026 年 8 月 2 日', total: 3000, used: 1800 },
+  { id: 'pack-0524', purchasedAt: '2026 年 5 月 24 日', expiresAt: '2026 年 7 月 24 日', total: 2000, used: 1200 },
+];
+
+const tenGbStorageCredits = calculateStorageCredits(10);
+
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const navigationItems = [
-    { id: 'basic' as const, label: '个人资料', description: '身份与研究信息', icon: User },
-    { id: 'membership' as const, label: '会员与额度', description: '套餐、Credits 与存储', icon: Crown },
-    { id: 'payment' as const, label: '订单与发票', description: '付款与开票记录', icon: CreditCard },
-    { id: 'account' as const, label: '安全与偏好', description: '登录、安全及注销', icon: Settings },
+    { id: 'basic' as const, label: '个人资料', icon: User },
+    { id: 'membership' as const, label: '会员与额度', icon: Crown },
+    { id: 'payment' as const, label: '订单与发票', icon: CreditCard },
+    { id: 'account' as const, label: '安全与偏好', icon: Settings },
   ];
   const activePage = navigationItems.find((item) => item.id === activeTab) ?? navigationItems[0];
 
@@ -83,18 +93,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   }`}
                 >
                   <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-700'}`} />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-semibold">{item.label}</span>
-                    <span className={`mt-0.5 block text-[10px] ${isActive ? 'text-slate-300' : 'text-slate-400'}`}>{item.description}</span>
-                  </span>
+                  <span className="min-w-0 text-xs font-semibold">{item.label}</span>
                 </button>
               );
             })}
           </nav>
-
-          <p className="px-2 text-[10px] leading-4 text-slate-400">
-            账户信息仅用于提供服务与保障账户安全。
-          </p>
         </aside>
 
         {/* Right Content Area */}
@@ -102,9 +105,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* Header */}
           <header className="flex items-start justify-between border-b border-slate-200 px-8 py-5">
             <div>
-              <p className="text-[11px] font-medium tracking-[0.16em] text-slate-400">我的账户</p>
-              <h2 id="my-account-title" className="mt-1 text-xl font-semibold tracking-[-0.02em] text-slate-950">{activePage.label}</h2>
-              <p className="mt-1 text-xs text-slate-500">{activePage.description}</p>
+              <h2 id="my-account-title" className="text-xl font-semibold tracking-[-0.02em] text-slate-950">{activePage.label}</h2>
             </div>
             <button
               onClick={onClose}
@@ -160,9 +161,6 @@ function BasicInformation() {
             <button className="mt-3 text-xs font-medium text-slate-600 transition-colors hover:text-slate-950">
               更换头像
             </button>
-            <p className="mt-2 max-w-[9rem] text-[11px] leading-4 text-slate-400">
-              支持 JPG、PNG，文件不超过 5 MB
-            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-x-5 gap-y-5">
@@ -239,10 +237,14 @@ function BasicInformation() {
         </section>
 
         <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5">
-          <p className={`flex items-center gap-1.5 text-xs ${saved ? 'text-emerald-600' : 'text-slate-400'}`}>
-            {saved && <CheckCircle2 className="h-3.5 w-3.5" />}
-            {saved ? '个人资料已保存' : '修改后请保存'}
-          </p>
+          <div>
+            {saved && (
+              <p className="flex items-center gap-1.5 text-xs text-emerald-600">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                个人资料已保存
+              </p>
+            )}
+          </div>
             <button
               onClick={handleSave}
               className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-slate-800 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-slate-300"
@@ -257,6 +259,7 @@ function BasicInformation() {
 
 // Membership & Payment Tab
 function MembershipPayment() {
+  const [showCreditPackages, setShowCreditPackages] = useState(false);
   const [showUsage, setShowUsage] = React.useState(false);
   const [expandedDate, setExpandedDate] = React.useState('2026-06-02');
   const [expandedFeature, setExpandedFeature] = React.useState('2026-06-02-Search');
@@ -756,92 +759,125 @@ function MembershipPayment() {
                 <span className="rounded-md bg-emerald-400/15 px-2 py-1 text-[10px] font-medium text-emerald-300">生效中</span>
               </div>
               <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Pro 月度版</h3>
-              <p className="mt-2 text-xs leading-5 text-slate-400">下次续费日期：2026 年 7 月 10 日 · ¥68/月</p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">下次续费日期：2026 年 7 月 10 日</p>
             </div>
             <button className="self-center rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-slate-950 transition-all hover:bg-slate-100 active:scale-[0.98]">
               升级为年度版
             </button>
           </div>
-          <div className="grid grid-cols-3 border-t border-white/10 bg-white/[0.04]">
-            <div className="px-6 py-4">
-              <p className="text-[10px] text-slate-400">可用 Credits</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">900</p>
-            </div>
-            <div className="border-x border-white/10 px-6 py-4">
-              <p className="text-[10px] text-slate-400">本月已使用</p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">4,238</p>
-            </div>
-            <div className="px-6 py-4">
-              <p className="text-[10px] text-slate-400">自动续费</p>
-              <p className="mt-1 text-sm font-semibold">已开启</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-5 rounded-xl border border-slate-200 bg-white p-5">
-          <div className="flex items-start justify-between gap-5">
-            <div>
-              <h3 className="text-sm font-semibold text-slate-950">存储空间</h3>
-              <p className="mt-1 text-xs text-slate-500">高速额度由会员基础额度与额外购买额度组成</p>
-            </div>
-            <button
-              onClick={() => console.info('Open storage management')}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-            >
-              调整空间
-            </button>
-          </div>
-
-          <div className="mt-5 grid grid-cols-[1.25fr_0.75fr] gap-4">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <div className="flex items-start justify-between gap-4">
+          <div className="border-t border-white/10 px-6 py-5">
+            <div className="flex items-end justify-between gap-4">
+              <div>
                 <div className="flex items-center gap-2">
-                  <HardDrive className="h-4 w-4 text-slate-600" />
-                  <div>
-                    <p className="text-xs font-semibold text-slate-900">高速存储</p>
-                    <p className="mt-0.5 text-[10px] text-slate-400">Reader、QA、Survey 与 Agent 可直接调用</p>
-                  </div>
+                  <p className="text-xs font-semibold text-white">会员 Credits</p>
+                  <span className="rounded-md bg-white/10 px-2 py-1 text-[9px] font-semibold text-slate-300">周期额度</span>
                 </div>
-                <p className="text-right text-sm font-semibold text-slate-950 tabular-nums">
-                  46.8 <span className="text-[11px] font-normal text-slate-400">/ 60 GB</span>
-                </p>
               </div>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full w-[78%] rounded-full bg-slate-900" />
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <span className="rounded-md bg-white px-2 py-1 text-[10px] text-slate-600 ring-1 ring-slate-200">会员基础 50 GB</span>
-                <span className="rounded-md bg-blue-50 px-2 py-1 text-[10px] text-blue-700 ring-1 ring-blue-100">额外购买 10 GB</span>
-                <span className="ml-auto text-[10px] text-slate-400">剩余 13.2 GB</span>
-              </div>
+              <p className="text-xs font-semibold text-white tabular-nums">36,600 剩余</p>
             </div>
-
-            <div className="rounded-xl bg-slate-50 p-4">
-              <div className="flex items-center gap-2">
-                <ArchiveRestore className="h-4 w-4 text-slate-600" />
-                <p className="text-xs font-semibold text-slate-900">归档存储</p>
-              </div>
-              <p className="mt-4 text-xl font-semibold tracking-[-0.03em] text-slate-950 tabular-nums">312.8 GB</p>
-              <p className="mt-1 text-[10px] leading-4 text-slate-400">486 个低频文件长期保存，恢复后可重新用于高频任务</p>
+            <div
+              className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"
+              role="progressbar"
+              aria-label="Pro 会员 Credits 已使用额度"
+              aria-valuemin={0}
+              aria-valuemax={160000}
+              aria-valuenow={123400}
+            >
+              <div className="h-full w-[77.125%] rounded-full bg-white" />
             </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-[1fr_auto] items-center gap-5 border-t border-slate-100 pt-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Clock3 className="h-3.5 w-3.5 text-amber-600" />
-                <p className="text-xs font-medium text-slate-800">12 个文件将在未来 18 天内自动归档</p>
-              </div>
-              <p className="mt-1 pl-5 text-[10px] leading-4 text-slate-400">文件在高速存储中保留满 6 个月后自动归档并释放额度。</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] text-slate-400">10 GB 加购续费</p>
-              <p className="mt-1 text-xs font-semibold text-slate-900 tabular-nums">750 Credits / 月</p>
-              <p className="mt-0.5 text-[10px] text-slate-400">下次扣费：2026-07-10</p>
+            <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+              <span className="tabular-nums">已使用 123,400 / 160,000</span>
+              <span>22.9% 可用</span>
             </div>
           </div>
         </section>
+
+        <section className="mt-5">
+          <article className="overflow-hidden rounded-xl border border-blue-100 bg-blue-50/50">
+              <div className="flex items-start gap-3 p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreditPackages((current) => !current)}
+                  className="group flex min-w-0 flex-1 items-start justify-between gap-4 text-left"
+                  aria-expanded={showCreditPackages}
+                  aria-controls="credit-package-details"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-semibold text-slate-900">充值包 Credits</h4>
+                      <span className="rounded-md bg-blue-100 px-2 py-1 text-[9px] font-semibold text-blue-700">{creditPackages.length} 笔</span>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-slate-950 tabular-nums">5,800</p>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:text-slate-700 ${showCreditPackages ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => console.info('Open credit package purchase')}
+                  className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
+                >
+                  购买充值包
+                </button>
+              </div>
+
+              <div className="px-4 pb-4">
+                <div className="h-2 overflow-hidden rounded-full bg-blue-100" role="progressbar" aria-label="充值包 Credits 池已使用额度" aria-valuemin={0} aria-valuemax={10000} aria-valuenow={4200}>
+                  <div className="h-full w-[42%] rounded-full bg-blue-600" />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
+                  <span className="tabular-nums">已使用 4,200 / 10,000</span>
+                  <span>{showCreditPackages ? '收起购买明细' : '展开查看每笔余额'}</span>
+                </div>
+              </div>
+
+              {showCreditPackages && (
+                <div id="credit-package-details" className="border-t border-blue-100 bg-white">
+                  {creditPackages.map((creditPackage, index) => {
+                    const remaining = creditPackage.total - creditPackage.used;
+                    const usedPercentage = (creditPackage.used / creditPackage.total) * 100;
+
+                    return (
+                      <div
+                        key={creditPackage.id}
+                        className={`px-4 py-3.5 ${index > 0 ? 'border-t border-slate-100' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-[11px] font-semibold text-slate-900">购买于 {creditPackage.purchasedAt}</p>
+                            <p className="mt-1 text-[9px] text-slate-400">有效期至 {creditPackage.expiresAt}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-semibold text-blue-700 tabular-nums">{remaining.toLocaleString()} 剩余</p>
+                            <p className="mt-0.5 text-[9px] text-slate-400">共 {creditPackage.total.toLocaleString()} Credits</p>
+                          </div>
+                        </div>
+                        <div
+                          className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"
+                          role="progressbar"
+                          aria-label={`${creditPackage.purchasedAt}购买的充值包已使用额度`}
+                          aria-valuemin={0}
+                          aria-valuemax={creditPackage.total}
+                          aria-valuenow={creditPackage.used}
+                        >
+                          <div className="h-full rounded-full bg-blue-500" style={{ width: `${usedPercentage}%` }} />
+                        </div>
+                        <div className="mt-1.5 flex items-center justify-between text-[9px] text-slate-400">
+                          <span className="tabular-nums">已使用 {creditPackage.used.toLocaleString()}</span>
+                          <span className="tabular-nums">{remaining.toLocaleString()} / {creditPackage.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+          </article>
+        </section>
+
+        <StorageManagementSection />
 
         {/* Usage */}
         <button 
@@ -851,7 +887,6 @@ function MembershipPayment() {
           <div className="flex items-center justify-between">
             <div>
               <span className="text-sm font-semibold text-slate-950">额度使用明细</span>
-              <p className="mt-1 text-xs text-slate-500">按日期与功能查看 Credits 消耗</p>
             </div>
             <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
           </div>
@@ -875,13 +910,13 @@ function PaymentTab() {
   const [visibleCount, setVisibleCount] = useState(4);
 
   const orderHistory = [
-    { id: 'storage-1', date: '2026年6月10日', type: '高速存储 10GB 续费', amount: '750 Credits', status: 'paid' as const },
-    { id: '1', date: '2026年3月10日', type: 'Pro 月度', amount: '¥68.00', status: 'paid' as const },
-    { id: '2', date: '2026年2月10日', type: 'Pro 月度', amount: '¥68.00', status: 'paid' as const },
-    { id: '3', date: '2026年1月15日', type: 'Credits 充值', amount: '¥30.00', status: 'paid' as const },
-    { id: '4', date: '2025年12月10日', type: 'Pro 月度', amount: '¥68.00', status: 'paid' as const },
-    { id: '5', date: '2025年11月10日', type: 'Pro 月度', amount: '¥68.00', status: 'paid' as const },
-    { id: '6', date: '2025年10月20日', type: 'Credits 充值', amount: '¥50.00', status: 'paid' as const },
+    { id: 'storage-1', date: '2026年6月10日', type: '高速存储 10GB 续费', method: 'Credits 余额', amount: `${tenGbStorageCredits.toLocaleString()} Credits`, status: 'paid' as const },
+    { id: '1', date: '2026年3月10日', type: 'Pro 月度', method: '支付宝', amount: '—', status: 'paid' as const },
+    { id: '2', date: '2026年2月10日', type: 'Pro 月度', method: 'Stripe', amount: '—', status: 'paid' as const },
+    { id: '3', date: '2026年1月15日', type: 'Credits 充值', method: 'Airwallex', amount: '—', status: 'paid' as const },
+    { id: '4', date: '2025年12月10日', type: 'Pro 月度', method: '支付宝', amount: '—', status: 'paid' as const },
+    { id: '5', date: '2025年11月10日', type: 'Pro 月度', method: 'Stripe', amount: '—', status: 'paid' as const },
+    { id: '6', date: '2025年10月20日', type: 'Credits 充值', method: 'Airwallex', amount: '—', status: 'paid' as const },
   ];
 
   const visibleOrders = orderHistory.slice(0, visibleCount);
@@ -899,7 +934,6 @@ function PaymentTab() {
               </div>
               <div>
                 <span className="text-sm font-semibold text-slate-950">发票管理</span>
-                <p className="mt-0.5 text-xs text-slate-500">申请、查看和下载发票</p>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
@@ -924,7 +958,6 @@ function PaymentTab() {
           <div className="mb-4 flex items-end justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-950">订单记录</h3>
-              <p className="mt-1 text-xs text-slate-500">会员订阅与 Credits 充值记录</p>
             </div>
             <p className="text-[11px] text-slate-400">共 {orderHistory.length} 笔</p>
           </div>
@@ -932,25 +965,37 @@ function PaymentTab() {
           {/* Table */}
           <div className="overflow-hidden rounded-xl border border-slate-200">
             {/* Table Header */}
-            <div className="grid grid-cols-[1fr_1fr_5rem_5rem] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
+            <div className="grid grid-cols-[1.05fr_1.2fr_0.8fr_4rem_5rem_3.5rem] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
               <span className="text-[11px] font-medium text-slate-500">日期</span>
               <span className="text-[11px] font-medium text-slate-500">订单类型</span>
+              <span className="text-[11px] font-medium text-slate-500">支付方式</span>
               <span className="text-[11px] font-medium text-slate-500">状态</span>
               <span className="text-right text-[11px] font-medium text-slate-500">金额</span>
+              <span className="text-right text-[11px] font-medium text-slate-500">账单</span>
             </div>
 
             {/* Table Rows */}
             {visibleOrders.map((order, index) => (
               <div
                 key={order.id}
-                className={`grid grid-cols-[1fr_1fr_5rem_5rem] items-center gap-4 px-4 py-3.5 transition-colors hover:bg-slate-50/70 ${
+                className={`grid grid-cols-[1.05fr_1.2fr_0.8fr_4rem_5rem_3.5rem] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-slate-50/70 ${
                   index !== visibleOrders.length - 1 ? 'border-b border-slate-100' : ''
                 }`}
               >
                 <span className="text-xs text-slate-600">{order.date}</span>
                 <span className="text-sm font-medium text-slate-900">{order.type}</span>
+                <span className="text-xs text-slate-600">{order.method}</span>
                 <span className="text-xs text-emerald-600">已支付</span>
                 <span className="text-right text-sm font-medium text-slate-950 tabular-nums">{order.amount || '—'}</span>
+                <button
+                  type="button"
+                  onClick={() => console.info('Download billing statement', { orderId: order.id })}
+                  className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 transition-colors hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  aria-label={`下载账单 ${order.date} ${order.type}`}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span>下载</span>
+                </button>
               </div>
             ))}
           </div>
@@ -983,8 +1028,13 @@ const deletionConsequences = [
 
 // Account Settings Tab
 function AccountSettings({ onFinish }: { onFinish: () => void }) {
-  const [scenario, setScenario] = useState<DeletionScenario>('ready');
+  const [scenario] = useState<DeletionScenario>('ready');
   const [deletionStep, setDeletionStep] = useState<DeletionStep>('closed');
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationState, setVerificationState] = useState<'idle' | 'sent' | 'valid' | 'invalid'>('idle');
   const [countdown, setCountdown] = useState(0);
@@ -1066,52 +1116,50 @@ function AccountSettings({ onFinish }: { onFinish: () => void }) {
     }, 900);
   };
 
+  const closePasswordDialog = () => {
+    setShowPasswordDialog(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordError('');
+  };
+
+  const savePassword = () => {
+    if (newPassword.length < 8) {
+      setPasswordError('新密码至少需要 8 位');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('两次输入的新密码不一致');
+      return;
+    }
+    console.info('Password updated');
+    closePasswordDialog();
+  };
+
   return (
     <div className="p-8">
       <div className="mx-auto max-w-3xl">
         <div className="space-y-5">
           {/* Change Password */}
-          <section className="rounded-xl border border-slate-200 p-5">
-            <div className="mb-5 flex items-start justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-950">登录安全</h3>
-                <p className="mt-1 text-xs text-slate-500">定期更新密码，降低账户被盗风险</p>
-              </div>
-              <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700">状态正常</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="mb-2 block text-xs font-medium text-slate-700">当前密码</label>
-                <input
-                  type="password"
-                  placeholder="输入当前密码"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                />
+          <button
+            type="button"
+            onClick={() => setShowPasswordDialog(true)}
+            className="group flex w-full items-center justify-between gap-5 rounded-xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-slate-300 hover:bg-slate-50/70 active:scale-[0.995] focus:outline-none focus:ring-2 focus:ring-slate-300"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+                <ShieldCheck className="h-4 w-4 text-slate-600" />
               </div>
               <div>
-                <label className="mb-2 block text-xs font-medium text-slate-700">新密码</label>
-                <input
-                  type="password"
-                  placeholder="至少 8 位"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                />
-              </div>
-              <div>
-                <label className="mb-2 block text-xs font-medium text-slate-700">确认新密码</label>
-                <input
-                  type="password"
-                  placeholder="再次输入"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                />
+                <h3 className="text-sm font-semibold text-slate-950">更改密码</h3>
               </div>
             </div>
-          </section>
-
-          <div className="flex justify-end">
-            <button className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition-all hover:bg-slate-800 active:scale-[0.98]">
-              保存安全设置
-            </button>
-          </div>
+            <div className="flex items-center gap-5">
+              <span className="font-mono text-sm tracking-[0.18em] text-slate-500">******</span>
+              <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
+            </div>
+          </button>
 
           {/* Danger Zone */}
           <section className="rounded-xl border border-red-200 bg-red-50/30 p-5">
@@ -1132,23 +1180,106 @@ function AccountSettings({ onFinish }: { onFinish: () => void }) {
                 注销账户
               </button>
             </div>
-
-            <div className="mt-4 flex items-center justify-between border-t border-red-100 pt-3">
-              <p className="text-[10px] text-slate-400">原型验收状态</p>
-              <select
-                value={scenario}
-                onChange={(event) => setScenario(event.target.value as DeletionScenario)}
-                className="rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] text-slate-600 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                aria-label="原型验收状态"
-              >
-                <option value="ready">个人账户 · 可注销</option>
-                <option value="pending-order">个人账户 · 有待处理订单</option>
-                <option value="institution">机构账户</option>
-              </select>
-            </div>
           </section>
         </div>
       </div>
+
+      {showPasswordDialog && (
+        <div
+          className="fixed inset-0 z-[10010] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]"
+          onClick={closePasswordDialog}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-[0_28px_80px_-30px_rgba(15,23,42,0.55)]"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="change-password-title"
+          >
+            <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5">
+              <div>
+                <h3 id="change-password-title" className="text-lg font-semibold tracking-[-0.02em] text-slate-950">更改密码</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closePasswordDialog}
+                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                aria-label="关闭更改密码"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              <div>
+                <label className="mb-2 block text-xs font-medium text-slate-700">当前密码</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(event) => {
+                    setCurrentPassword(event.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="输入当前密码"
+                  autoComplete="current-password"
+                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-medium text-slate-700">新密码</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(event) => {
+                    setNewPassword(event.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="至少 8 位"
+                  autoComplete="new-password"
+                  className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-medium text-slate-700">确认新密码</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setPasswordError('');
+                  }}
+                  placeholder="再次输入新密码"
+                  autoComplete="new-password"
+                  className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:ring-2 ${
+                    passwordError
+                      ? 'border-red-300 focus:ring-red-100'
+                      : 'border-slate-300 focus:border-slate-500 focus:ring-slate-200'
+                  }`}
+                />
+                {passwordError && <p className="mt-2 text-xs text-red-600">{passwordError}</p>}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-slate-100 bg-slate-50/70 px-6 py-4">
+              <button
+                type="button"
+                onClick={closePasswordDialog}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={savePassword}
+                disabled={!currentPassword || !newPassword || !confirmPassword}
+                className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                保存新密码
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {deletionStep !== 'closed' && (
         <div

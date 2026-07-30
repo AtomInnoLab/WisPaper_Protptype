@@ -1,13 +1,17 @@
 import React, { useRef, useState } from 'react';
 import {
+  AlignLeft,
   AlertCircle,
+  ArrowUp,
   ArrowDownUp,
   BookOpen,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
+  FileText,
   Filter,
   Plus,
   Search,
@@ -15,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Paper } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { StorageUsagePanel } from './StorageUsagePanel';
 
 interface MyLibraryProps {
   papers: Paper[];
@@ -43,10 +48,18 @@ const statusSequence: LibraryStatus[] = [
 ];
 
 export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps) {
-  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
-  const localFileInputRef = useRef<HTMLInputElement | null>(null);
   const { language } = useLanguage();
   const isZh = language === 'zh';
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [assistantQuestion, setAssistantQuestion] = useState('');
+  const [assistantScope, setAssistantScope] = useState(isZh ? '单篇论文' : 'Single paper');
+  const [answerLength, setAnswerLength] = useState(isZh ? '中' : 'Medium');
+  const [showScopeMenu, setShowScopeMenu] = useState(false);
+  const [showLengthMenu, setShowLengthMenu] = useState(false);
+  const [assistantAttachment, setAssistantAttachment] = useState('');
+  const [questionSent, setQuestionSent] = useState(false);
+  const localFileInputRef = useRef<HTMLInputElement | null>(null);
+  const assistantFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const rows = papers.slice(0, 15).map((paper, index) => ({
     paper,
@@ -77,6 +90,28 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
     }
 
     event.target.value = '';
+  };
+
+  const handleAssistantFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAssistantAttachment(file.name);
+    }
+    event.target.value = '';
+  };
+
+  const submitAssistantQuestion = () => {
+    const question = assistantQuestion.trim();
+    if (!question) return;
+    console.info('Ask library assistant', {
+      question,
+      scope: assistantScope,
+      answerLength,
+      attachment: assistantAttachment || null,
+    });
+    setAssistantQuestion('');
+    setQuestionSent(true);
+    window.setTimeout(() => setQuestionSent(false), 1800);
   };
 
   const renderStatus = (status: LibraryStatus) => {
@@ -133,7 +168,7 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
   };
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden bg-[#eef6ff] p-5">
+    <div className="relative flex min-h-0 flex-1 overflow-hidden bg-[#eef6ff] p-5">
       <input
         ref={localFileInputRef}
         type="file"
@@ -141,7 +176,14 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
         className="hidden"
         onChange={handleLocalFileSelect}
       />
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[1.4rem] bg-white px-5 py-5 shadow-[0_20px_60px_-46px_rgba(15,23,42,0.35)]">
+      <input
+        ref={assistantFileInputRef}
+        type="file"
+        accept="application/pdf,.pdf,.doc,.docx,.txt,.md"
+        className="hidden"
+        onChange={handleAssistantFileSelect}
+      />
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[1.4rem] bg-white px-5 pb-40 pt-5 shadow-[0_20px_60px_-46px_rgba(15,23,42,0.35)]">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-2xl font-bold tracking-tight text-gray-950">
             {isZh ? '我的知识库' : 'My Library'}
@@ -169,6 +211,11 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
             </button>
           </div>
         </div>
+
+        <StorageUsagePanel
+          language={isZh ? 'zh' : 'en'}
+          className="mt-5 shrink-0"
+        />
 
         <div className="mt-9 flex items-center justify-between gap-4">
           <div className="flex items-center gap-8">
@@ -289,6 +336,141 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
           </button>
         </div>
       </section>
+
+      <div className="pointer-events-none fixed bottom-8 left-[calc(16rem+2.5rem)] right-10 z-30 flex justify-center max-lg:left-10">
+        <div className="pointer-events-auto w-full max-w-5xl rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-26px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+          <textarea
+            value={assistantQuestion}
+            onChange={(event) => {
+              setAssistantQuestion(event.target.value);
+              setQuestionSent(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault();
+                submitAssistantQuestion();
+              }
+            }}
+            placeholder={isZh ? '向知识助手提问，或试试「总结这篇文档」「翻译这段话…」' : 'Ask the knowledge assistant, or try “Summarize this document” or “Translate this passage…”'}
+            aria-label={isZh ? '向知识助手提问' : 'Ask the knowledge assistant'}
+            className="h-16 w-full resize-none bg-transparent px-3 py-2 text-sm leading-6 text-slate-800 outline-none placeholder:text-slate-400"
+          />
+
+          {assistantAttachment && (
+            <div className="mx-3 mb-2 flex w-fit items-center gap-2 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] text-slate-600">
+              <FileText className="h-3.5 w-3.5" />
+              <span className="max-w-60 truncate">{assistantAttachment}</span>
+              <button
+                type="button"
+                onClick={() => setAssistantAttachment('')}
+                className="text-slate-400 transition-colors hover:text-slate-700"
+                aria-label={isZh ? '移除附件' : 'Remove attachment'}
+              >
+                <XCircle className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => assistantFileInputRef.current?.click()}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95"
+                aria-label={isZh ? '添加附件' : 'Add attachment'}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowScopeMenu((current) => !current);
+                    setShowLengthMenu(false);
+                  }}
+                  className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 px-3.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  aria-expanded={showScopeMenu}
+                >
+                  <FileText className="h-4 w-4 text-slate-500" />
+                  <span>{assistantScope}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                </button>
+                {showScopeMenu && (
+                  <div className="absolute bottom-11 left-0 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                    {(isZh ? ['单篇论文', '所选文献', '全部知识库'] : ['Single paper', 'Selected papers', 'Entire library']).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setAssistantScope(option);
+                          setShowScopeMenu(false);
+                        }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+                          assistantScope === option ? 'bg-slate-100 font-medium text-slate-950' : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLengthMenu((current) => !current);
+                    setShowScopeMenu(false);
+                  }}
+                  className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 px-3.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  aria-expanded={showLengthMenu}
+                >
+                  <AlignLeft className="h-4 w-4 text-slate-500" />
+                  <span>{answerLength}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                </button>
+                {showLengthMenu && (
+                  <div className="absolute bottom-11 left-0 w-32 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                    {(isZh ? ['简短', '中', '详细'] : ['Short', 'Medium', 'Detailed']).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setAnswerLength(option);
+                          setShowLengthMenu(false);
+                        }}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+                          answerLength === option ? 'bg-slate-100 font-medium text-slate-950' : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {questionSent && (
+                <span className="ml-1 text-[11px] font-medium text-emerald-600">
+                  {isZh ? '问题已发送' : 'Question sent'}
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={submitAssistantQuestion}
+              disabled={!assistantQuestion.trim()}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white transition-all hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-white"
+              aria-label={isZh ? '发送问题' : 'Send question'}
+            >
+              <ArrowUp className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

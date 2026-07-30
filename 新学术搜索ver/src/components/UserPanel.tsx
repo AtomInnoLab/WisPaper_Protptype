@@ -175,24 +175,59 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenN
             {/* Menu Items */}
             <div className="py-1">
               {/* Membership Info Card */}
-              <div className="mx-3 mt-2 mb-1 p-2.5 bg-gray-50 border border-gray-200 rounded-lg">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-gray-500">{t('subscription.free')}</span>
-                  <button className="text-xs text-gray-900 hover:text-black font-medium" onClick={() => { if (onOpenPaywall) onOpenPaywall(); setShowUserMenu(false); }}>{t('subscription.upgrade')}</button>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5 text-gray-900" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-                    </svg>
-                    <span className="text-sm font-semibold text-gray-900">900</span>
-                    <span className="text-xs text-gray-500 ml-0.5">{t('credits')}</span>
+              <div className="mx-3 mb-2 mt-2 overflow-hidden rounded-xl bg-slate-950 text-white shadow-[0_14px_30px_-22px_rgba(15,23,42,0.9)]">
+                <div className="p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Crown className="h-3.5 w-3.5 shrink-0 text-amber-300" />
+                      <span className="truncate text-xs font-semibold">
+                        {language === 'zh' ? 'Pro 月度版' : 'Pro Monthly'}
+                      </span>
+                    </div>
+                    <span className="shrink-0 rounded bg-emerald-400/15 px-1.5 py-0.5 text-[9px] font-medium text-emerald-300">
+                      {language === 'zh' ? '生效中' : 'Active'}
+                    </span>
                   </div>
-                  <button 
-                    onClick={() => { if (onOpenRecharge) onOpenRecharge(); setShowUserMenu(false); }}
-                    className="text-xs text-gray-900 hover:text-black font-medium"
+
+                  <p className="mt-2.5 text-[9px] text-slate-400">
+                    {language === 'zh' ? '7 月 10 日续费' : 'Renews Jul 10'}
+                  </p>
+
+                  <div className="mt-3 flex items-end justify-between gap-2">
+                    <span className="text-[10px] text-slate-400">
+                      {language === 'zh' ? '会员 Credits' : 'Member Credits'}
+                    </span>
+                    <span className="text-sm font-semibold tabular-nums">36,600</span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                    <div className="h-full w-[77.125%] rounded-full bg-white" />
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[9px] text-slate-400">
+                    <span>123,400 / 160,000</span>
+                    <span>{language === 'zh' ? '22.9% 可用' : '22.9% available'}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 border-t border-white/10">
+                  <button
+                    type="button"
+                    className="border-r border-white/10 px-3 py-2.5 text-[10px] font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                    onClick={() => {
+                      if (onOpenPaywall) onOpenPaywall();
+                      setShowUserMenu(false);
+                    }}
                   >
-                    {t('recharge')}
+                    {language === 'zh' ? '升级套餐' : 'Upgrade'}
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (onOpenRecharge) onOpenRecharge();
+                      setShowUserMenu(false);
+                    }}
+                    className="px-3 py-2.5 text-[10px] font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                  >
+                    {language === 'zh' ? '充值 Credits' : 'Buy Credits'}
                   </button>
                 </div>
               </div>
