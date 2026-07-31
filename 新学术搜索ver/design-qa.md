@@ -1,54 +1,64 @@
-# Credit package pool design QA
+# Research canvas interaction design QA
 
 ## Evidence
 
-- Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-874922ab-c1db-48da-a7c5-ea996d87ad0a.png`
-- Page overview: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/credit-package-pool-overview.png`
-- Expanded purchase records: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/credit-package-pool-expanded.png`
-- Side-by-side removal comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/credit-package-pool-comparison.png`
-- State: 我的账户 → 会员与额度，充值包 Credits 池展开
+- Source visual truth: `/Users/trimeresurus/.codex/generated_images/019fa7d7-4b3c-70c3-aecd-0c7556ccb222/call_3y03s0ohoLqZaJdjLW2ZiGHD.png`
+- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-interactions-final.png`
+- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-interactions-comparison.png`
+- New-card menu state: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-new-card-menu.png`
+- Comments state: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-comments-state.png`
+- Route/state: Workspace → 科研画布；“位置偏置假设”选中；右侧“AI 建议”激活
 - Browser: Codex in-app browser at `http://127.0.0.1:3000/`
-- Source pixels: 1422 × 190
-- Implementation pixels: 1967 × 1324
-- Browser CSS viewport: 1967 × 1324; default in-app browser density
-- Comparison normalization: source and focused implementation crop fitted into equal 900 × 560 frames
+- Source pixels: 1487 × 1058
+- Implementation pixels: 1868 × 1324
+- Browser CSS viewport: 1868 × 1324 at 1× density
+- Normalization: source resized to 1868 px width and top-cropped to 1868 × 1324; implementation retained at native size. Both are stacked in one 1868 × 2648 comparison.
 
-## Full-view comparison
+## Full-view comparison evidence
 
-The three-column “可用 Credits / 本月已使用 / 自动续费” strip shown in the removal reference is no longer present. The dark plan card ends after the member Credits progress area, eliminating the duplicated aggregate metrics.
+The enhanced implementation preserves the selected concept’s project header, semantic research graph, left navigation, persistent inspector, restrained color system, compact card hierarchy, and bottom canvas controls. New Agent and comment cards extend the same graph rather than creating a disconnected dashboard.
 
-## Focused region comparison
+At widths above 1700 px the canvas opens at 100%, at 1400–1699 px it opens at 92%, and below 1400 px it opens at 80%. This preserves readable card scale and prevents paper cards from clipping behind the inspector.
 
-The side-by-side evidence compares the exact removed strip against the new plan-card ending. A second browser capture records the expanded recharge pool, showing three independent purchase rows and their progress bars.
+## Focused interaction evidence
 
-## Fidelity review
+- The new-card capture shows a compact menu with five visually distinct types: research hypothesis, paper, Agent, comment, and experiment.
+- The comments capture shows the selected node’s discussion count, collaborator avatars, timestamps, replies, and comment composer.
+- The default capture shows the Agent running state with a live indicator, animated spinner, pulsing elevation, progress value, and task-specific copy.
 
-- Fonts and typography: Existing account-modal typography is preserved. Pool totals and remaining values use tabular numerals for stable alignment.
-- Spacing and layout rhythm: Removing the bottom strip shortens the plan card. The pool summary and purchase rows share consistent 16 px horizontal padding and compact vertical separators.
-- Colors and visual tokens: The aggregate pool keeps the existing blue semantic color; individual rows use a white surface and lighter blue progress fills.
-- Image quality and assets: No raster or custom visual assets are required. The expand affordance uses the existing Lucide chevron icon.
-- Copy and content: The pool explicitly states 10,000 total Credits, 4,200 used, 5,800 available, and three purchase records. Each record includes purchase date, expiry date, used amount, total amount, and remaining balance.
-- Accessibility: The pool trigger exposes `aria-expanded` and `aria-controls`. The pool and every purchase row expose independent progressbar semantics with current and maximum values.
+## Required fidelity surfaces
+
+- Fonts and typography: Keeps the existing sans-serif product stack, 10–13 px canvas metadata, 13–16 px node titles, and compact inspector hierarchy. New card types use the same optical weights and line heights.
+- Spacing and layout rhythm: Existing header and inspector dimensions are preserved. Agent, comment, experiment, and finding cards were separated into clear rows after visual QA to prevent collisions.
+- Colors and visual tokens: Paper uses blue, Agent violet, comment amber, experiment orange, and findings/methods emerald. Selected state remains blue and semantic link colors remain consistent.
+- Image quality and asset fidelity: Uses the existing WisPaper logo, generated collaborator portraits, and the product’s current icon library. No placeholder imagery was introduced.
+- Copy and content: New states use realistic research collaboration copy, including evidence screening, NeedleBench discussion, validation experiments, and AI recommendations.
+- Motion: Running Agent cards use restrained shadow pulsing, a spinning activity indicator, a live status dot, and progressive completion without moving the card’s geometry.
 
 ## Interaction checks
 
-- Confirmed the three removed plan metrics are absent.
-- Confirmed the collapsed state shows aggregate total, used, available, and purchase count.
-- Confirmed clicking the pool opens three purchase records.
-- Confirmed each purchase record has its own progress bar.
-- Confirmed clicking again collapses the records, and a second click reopens them.
-- Confirmed “购买充值包” remains a separate enabled action.
+- Opened the left-sidebar “科研画布 · 实验” entry.
+- Opened the new-card menu and created a paper card.
+- Entered association mode, selected two cards, and confirmed a new “关联” edge was added.
+- Opened the comments tab, added a comment, and confirmed the count changed from 2 to 3.
+- Opened the running Agent from the header and confirmed the detail inspector shows real-time status and the Agent-workspace action.
+- Confirmed manual zoom controls update the scale.
+- Confirmed the implementation includes pointer-drag handlers with zoom-compensated card coordinates, dynamic edge recalculation, touch pinch handling, and trackpad pinch handling through modifier-wheel input.
 - Production build completed successfully.
-- Console history contained an initial `showCreditPackages` scope error during pass 1. It was fixed; the final reload and all interactions produced no new errors.
 
 ## Findings and comparison history
 
-- Pass 1 — P1: Expansion state was declared in the parent modal while the pool renders inside `MembershipPayment`, causing the membership page to crash. Moved the state into `MembershipPayment`.
-- Pass 2: Reloaded the app, repeated navigation, collapse, expansion, and reopen checks. No actionable P0, P1, or P2 issues remain.
+- Pass 1 — P1: Paper, Agent, and comment objects did not have sufficient type distinction. Added dedicated icons, semantic surfaces, border colors, metadata, and type-specific content.
+- Pass 1 — P1: Static connectors would not follow dragged cards. Replaced hard-coded line positions with graph edges calculated from current node coordinates.
+- Pass 1 — P2: Agent and comment cards overlapped the experiment/finding row. Moved the bottom row down and repeated visual capture.
+- Pass 2 — P2: The graph appeared undersized on the 1868 px viewport. Added responsive initial zoom with a 100% large-desktop state.
+- Pass 3: Recaptured default, new-card, and comments states. No actionable P0, P1, or P2 findings remain.
 
 ## Follow-up polish
 
-- P3: Replace the mock purchase rows with API data and calculate pool totals from the returned records.
+- P3: Persist node coordinates, zoom, comments, and edges to a project API after usability validation.
+- P3: Add multiplayer cursors and conflict resolution when real-time collaboration enters scope.
+- P3: Add keyboard shortcuts and an undo history stack before production rollout.
 
 ## Final result
 

@@ -15,6 +15,7 @@ import { AllFeedsWorkspace } from "./components/AllFeedsWorkspace";
 import { FudanCollectionResults } from "./components/FudanCollectionResults";
 import { AcademicAgent } from "./components/AcademicAgent";
 import { ResearchProjects } from "./components/ResearchProjects";
+import { ResearchCanvas } from "./components/ResearchCanvas";
 import { FloatingTaskButton } from "./components/FloatingTaskButton";
 import { SearchMoreButton } from "./components/SearchMoreButton";
 import { NewbieTasksModal } from "./components/NewbieTasksModal";
@@ -56,7 +57,7 @@ export default function App() {
   const [selectedPaper, setSelectedPaper] =
     useState<Paper | null>(null);
   const [viewMode, setViewMode] = useState<
-    "home" | "list" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects"
+    "home" | "list" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas"
   >("home");
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -203,13 +204,13 @@ export default function App() {
     setHasSearched(false);
   };
 
-  const isReaderView = viewMode === "detail" || viewMode === "reader" || viewMode === "academic-agent" || viewMode === "research-projects";
+  const isReaderView = viewMode === "detail" || viewMode === "reader" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas";
 
   return (
     <LanguageProvider>
       <div className={isReaderView ? "h-screen overflow-hidden bg-white flex" : "min-h-screen bg-white flex"}>
         {/* Left Sidebar - Only show in list view, library view, and scholar-qa view */}
-        {(viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects") && (
+        {(viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas") && (
           <LeftSidebar
             onNavigate={(view) => setViewMode(view as any)}
             onOpenInvite={() => setShowInviteModal(true)}
@@ -311,6 +312,8 @@ export default function App() {
             <AcademicAgent onOpenProjects={() => setViewMode("research-projects")} />
           ) : viewMode === "research-projects" ? (
             <ResearchProjects onOpenAgent={() => setViewMode("academic-agent")} />
+          ) : viewMode === "research-canvas" ? (
+            <ResearchCanvas onOpenAgent={() => setViewMode("academic-agent")} />
           ) : (
             <PaperDetail
               paper={selectedPaper}

@@ -2,3 +2,16 @@
 @source './**/*.{js,ts,jsx,tsx}';
 @import 'tw-animate-css';
 @import './styles/globals.css';
+
+@keyframes research-agent-glow {
+  0%, 100% {
+    box-shadow: 0 4px 18px rgba(124, 58, 237, 0.10);
+  }
+  50% {
+    box-shadow: 0 8px 30px rgba(124, 58, 237, 0.24);
+  }
+}
+
+.research-agent-running {
+  animation: research-agent-glow 1.8s ease-in-out infinite;
+}
