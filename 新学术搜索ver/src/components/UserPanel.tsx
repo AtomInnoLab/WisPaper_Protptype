@@ -13,7 +13,7 @@ interface UserPanelProps {
   isCollapsed?: boolean;
 }
 
-export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenNotifications, onOpenSettings, isCollapsed = false }: UserPanelProps) {
+export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, onOpenSettings, isCollapsed = false }: UserPanelProps) {
   const { language, setLanguage, t } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showInviteBanner, setShowInviteBanner] = useState(true);
@@ -190,7 +190,7 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenN
                   </div>
 
                   <p className="mt-2.5 text-[9px] text-slate-400">
-                    {language === 'zh' ? '7 月 10 日续费' : 'Renews Jul 10'}
+                    {language === 'zh' ? '7 月 10 日到期' : 'Expires Jul 10'}
                   </p>
 
                   <div className="mt-3 flex items-end justify-between gap-2">
@@ -203,31 +203,21 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenN
                     <div className="h-full w-[77.125%] rounded-full bg-white" />
                   </div>
                   <div className="mt-1.5 flex items-center justify-between text-[9px] text-slate-400">
-                    <span>123,400 / 160,000</span>
+                    <span>{language === 'zh' ? '将在 7 月 3 日重置' : 'Resets Jul 3'}</span>
                     <span>{language === 'zh' ? '22.9% 可用' : '22.9% available'}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 border-t border-white/10">
+                <div className="border-t border-white/10">
                   <button
                     type="button"
-                    className="border-r border-white/10 px-3 py-2.5 text-[10px] font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                    className="w-full px-3 py-2.5 text-[10px] font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
                     onClick={() => {
                       if (onOpenPaywall) onOpenPaywall();
                       setShowUserMenu(false);
                     }}
                   >
-                    {language === 'zh' ? '升级套餐' : 'Upgrade'}
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      if (onOpenRecharge) onOpenRecharge();
-                      setShowUserMenu(false);
-                    }}
-                    className="px-3 py-2.5 text-[10px] font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
-                  >
-                    {language === 'zh' ? '充值 Credits' : 'Buy Credits'}
+                    {language === 'zh' ? '升级' : 'Upgrade'}
                   </button>
                 </div>
               </div>

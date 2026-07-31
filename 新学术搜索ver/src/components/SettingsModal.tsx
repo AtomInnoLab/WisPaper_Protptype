@@ -759,7 +759,7 @@ function MembershipPayment() {
                 <span className="rounded-md bg-emerald-400/15 px-2 py-1 text-[10px] font-medium text-emerald-300">生效中</span>
               </div>
               <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Pro 月度版</h3>
-              <p className="mt-2 text-xs leading-5 text-slate-400">下次续费日期：2026 年 7 月 10 日</p>
+              <p className="mt-2 text-xs leading-5 text-slate-400">2026 年 7 月 10 日到期</p>
             </div>
             <button className="self-center rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-slate-950 transition-all hover:bg-slate-100 active:scale-[0.98]">
               升级为年度版
@@ -786,7 +786,7 @@ function MembershipPayment() {
               <div className="h-full w-[77.125%] rounded-full bg-white" />
             </div>
             <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-              <span className="tabular-nums">已使用 123,400 / 160,000</span>
+              <span>将在 2026 年 7 月 3 日重置</span>
               <span>22.9% 可用</span>
             </div>
           </div>

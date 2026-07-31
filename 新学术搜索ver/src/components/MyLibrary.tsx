@@ -5,6 +5,7 @@ import {
   ArrowUp,
   ArrowDownUp,
   BookOpen,
+  Bot,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -13,8 +14,19 @@ import {
   Download,
   FileText,
   Filter,
+  FolderInput,
+  History,
+  Info,
+  LoaderCircle,
+  MessageCircle,
+  MessageSquareText,
+  Paperclip,
   Plus,
   Search,
+  Sparkles,
+  StickyNote,
+  Trash2,
+  X,
   XCircle,
 } from 'lucide-react';
 import { Paper } from '../types';
@@ -28,6 +40,10 @@ interface MyLibraryProps {
 }
 
 type LibraryStatus = 'in-library' | 'error' | 'processing' | 'missing-pdf';
+type AssistantMessage = { role: 'user' | 'assistant'; text: string };
+type ChatSession = { id: string; title: string; time: string; messages: AssistantMessage[] };
+type LibraryPanelTab = 'info' | 'notes' | 'comments' | 'chat';
+type LibraryPanelMode = 'document' | 'chat';
 
 const statusSequence: LibraryStatus[] = [
   'in-library',
@@ -51,22 +67,61 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
   const { language } = useLanguage();
   const isZh = language === 'zh';
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [deletedPaperIds, setDeletedPaperIds] = useState<Set<string>>(new Set());
+  const [batchActionFeedback, setBatchActionFeedback] = useState('');
   const [assistantQuestion, setAssistantQuestion] = useState('');
-  const [assistantScope, setAssistantScope] = useState(isZh ? '单篇论文' : 'Single paper');
+  const [assistantScope, setAssistantScope] = useState(isZh ? '所选文件' : 'Selected files');
   const [answerLength, setAnswerLength] = useState(isZh ? '中' : 'Medium');
   const [showScopeMenu, setShowScopeMenu] = useState(false);
   const [showLengthMenu, setShowLengthMenu] = useState(false);
   const [assistantAttachment, setAssistantAttachment] = useState('');
-  const [questionSent, setQuestionSent] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [panelMode, setPanelMode] = useState<LibraryPanelMode>('chat');
+  const [activePanelTab, setActivePanelTab] = useState<LibraryPanelTab>('chat');
+  const [panelWidth, setPanelWidth] = useState(400);
+  const [isResizingPanel, setIsResizingPanel] = useState(false);
+  const [selectedLibraryPaper, setSelectedLibraryPaper] = useState<Paper | null>(null);
+  const [paperNotes, setPaperNotes] = useState('');
+  const [commentDraft, setCommentDraft] = useState('');
+  const [paperComments, setPaperComments] = useState([
+    { author: isZh ? '林澄' : 'Lin Cheng', text: isZh ? '方法部分的消融实验值得重点复核。' : 'The ablation study in the methods section deserves a closer look.', time: isZh ? '今天 10:24' : 'Today 10:24' },
+    { author: isZh ? '我' : 'Me', text: isZh ? '已加入下周组会的讨论清单。' : 'Added to next week’s lab meeting agenda.', time: isZh ? '昨天 18:10' : 'Yesterday 18:10' },
+  ]);
+  const [assistantThinking, setAssistantThinking] = useState(false);
+  const [assistantMessages, setAssistantMessages] = useState<AssistantMessage[]>([]);
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
+    {
+      id: 'session-methods',
+      title: isZh ? '比较三篇论文的方法差异' : 'Compare methods across three papers',
+      time: isZh ? '今天 09:42' : 'Today 09:42',
+      messages: [
+        { role: 'user', text: isZh ? '比较三篇论文的方法差异' : 'Compare the methods across these three papers.' },
+        { role: 'assistant', text: isZh ? '三篇论文主要在模型结构、训练目标和评估数据上存在差异。' : 'The papers differ mainly in architecture, training objective, and evaluation data.' },
+      ],
+    },
+    {
+      id: 'session-evidence',
+      title: isZh ? '整理实验结论与证据' : 'Organize findings and evidence',
+      time: isZh ? '昨天 16:18' : 'Yesterday 16:18',
+      messages: [
+        { role: 'user', text: isZh ? '整理实验结论与证据' : 'Organize the experimental findings and evidence.' },
+      ],
+    },
+  ]);
   const localFileInputRef = useRef<HTMLInputElement | null>(null);
   const assistantFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const rows = papers.slice(0, 15).map((paper, index) => ({
-    paper,
-    status: statusSequence[index] ?? 'in-library',
-    date: '2026-05',
-    author: index === 14 ? 'Gomez, R.' : 'Sokolov, A., et al.',
-  }));
+  const rows = papers
+    .slice(0, 15)
+    .map((paper, index) => ({
+      paper,
+      status: statusSequence[index] ?? 'in-library',
+      date: '2026-05',
+      author: index === 14 ? 'Gomez, R.' : 'Sokolov, A., et al.',
+    }))
+    .filter(({ paper }) => !deletedPaperIds.has(paper.id));
+  const selectedPapers = rows.filter(({ paper }) => selectedRows.has(paper.id)).map(({ paper }) => paper);
 
   const toggleRow = (id: string) => {
     const next = new Set(selectedRows);
@@ -102,16 +157,156 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
 
   const submitAssistantQuestion = () => {
     const question = assistantQuestion.trim();
-    if (!question) return;
+    if (!question || assistantThinking) return;
+    const effectiveScope = selectedPapers.length > 0
+      ? (isZh ? `${selectedPapers.length} 篇选中文献` : `${selectedPapers.length} selected papers`)
+      : assistantScope;
     console.info('Ask library assistant', {
       question,
-      scope: assistantScope,
+      scope: effectiveScope,
       answerLength,
       attachment: assistantAttachment || null,
+      paperIds: selectedPapers.map((paper) => paper.id),
     });
+    setChatOpen(true);
+    setPanelMode('chat');
+    setActivePanelTab('chat');
+    setAssistantMessages((messages) => [...messages, { role: 'user', text: question }]);
     setAssistantQuestion('');
-    setQuestionSent(true);
-    window.setTimeout(() => setQuestionSent(false), 1800);
+    setAssistantThinking(true);
+    window.setTimeout(() => {
+      setAssistantMessages((messages) => [
+        ...messages,
+        {
+          role: 'assistant',
+          text: isZh
+            ? `我已在${effectiveScope}中检索相关内容。关键证据集中在方法设计、实验设置与结论边界三部分。你可以继续让我生成摘要、对比表或引用清单。`
+            : `I searched the ${effectiveScope.toLowerCase()} for related material. The strongest evidence is concentrated in method design, experimental setup, and the limits of the conclusions. You can ask for a summary, comparison table, or citation list next.`,
+        },
+      ]);
+      setAssistantThinking(false);
+    }, 850);
+  };
+
+  const openPaperPanel = (paper: Paper) => {
+    setSelectedLibraryPaper(paper);
+    setPanelMode('document');
+    setActivePanelTab('info');
+    setChatOpen(true);
+  };
+
+  const startPanelResize = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = panelWidth;
+
+    setIsResizingPanel(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const nextWidth = Math.min(620, Math.max(320, startWidth + startX - moveEvent.clientX));
+      setPanelWidth(nextWidth);
+    };
+
+    const handlePointerUp = () => {
+      setIsResizingPanel(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+  };
+
+  const submitComment = () => {
+    const nextComment = commentDraft.trim();
+    if (!nextComment) return;
+    setPaperComments((comments) => [
+      ...comments,
+      { author: isZh ? '我' : 'Me', text: nextComment, time: isZh ? '刚刚' : 'Just now' },
+    ]);
+    setCommentDraft('');
+  };
+
+  const startNewConversation = () => {
+    const firstQuestion = assistantMessages.find((message) => message.role === 'user')?.text;
+    if (assistantMessages.length > 0) {
+      setChatSessions((sessions) => [
+        {
+          id: `session-${Date.now()}`,
+          title: firstQuestion || (isZh ? '未命名对话' : 'Untitled conversation'),
+          time: isZh ? '刚刚' : 'Just now',
+          messages: assistantMessages,
+        },
+        ...sessions,
+      ]);
+    }
+    setAssistantMessages([]);
+    setAssistantQuestion('');
+    setAssistantAttachment('');
+    setAssistantThinking(false);
+    setShowChatHistory(false);
+  };
+
+  const restoreConversation = (session: ChatSession) => {
+    setAssistantMessages(session.messages);
+    setAssistantQuestion('');
+    setShowChatHistory(false);
+  };
+
+  const runBatchAction = (action: 'survey' | 'export' | 'project' | 'delete') => {
+    const paperIds = selectedPapers.map((paper) => paper.id);
+    console.info('Run library batch action', { action, paperIds });
+
+    if (action === 'delete') {
+      setDeletedPaperIds((current) => new Set([...current, ...paperIds]));
+      setSelectedRows(new Set());
+      return;
+    }
+
+    const feedback = {
+      survey: isZh ? '正在生成 Survey' : 'Creating Survey',
+      export: isZh ? '正在导出所选文件' : 'Exporting selected files',
+      project: isZh ? '已加入项目' : 'Added to project',
+    }[action];
+    setBatchActionFeedback(feedback);
+    window.setTimeout(() => setBatchActionFeedback(''), 1600);
+  };
+
+  const renderSelectedPaperCards = (compact = false) => {
+    if (selectedPapers.length === 0) return null;
+
+    return (
+      <div className={`flex gap-2 overflow-x-auto ${compact ? 'mb-2 px-1 pt-1' : 'mx-3 mb-2 pt-1'}`}>
+        {selectedPapers.map((paper) => (
+          <div
+            key={paper.id}
+            className={`relative flex shrink-0 items-center gap-2 rounded-xl bg-slate-100 text-left ${
+              compact ? 'w-56 px-3 py-2.5' : 'w-60 px-3.5 py-3'
+            }`}
+          >
+            <FileText className="h-5 w-5 shrink-0 text-slate-700" />
+            <div className="min-w-0 pr-4">
+              <p className="truncate text-xs font-semibold text-slate-900">{paper.title}</p>
+              <p className="mt-0.5 truncate text-[10px] font-medium text-slate-500">
+                {paper.year} · {paper.authors[0] || (isZh ? '未知作者' : 'Unknown author')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toggleRow(paper.id)}
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white transition hover:bg-slate-700 active:scale-95"
+              aria-label={`${isZh ? '移除' : 'Remove '}${paper.title}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   const renderStatus = (status: LibraryStatus) => {
@@ -168,7 +363,7 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
   };
 
   return (
-    <div className="relative flex min-h-0 flex-1 overflow-hidden bg-[#eef6ff] p-5">
+    <div className="relative flex min-h-0 flex-1 overflow-hidden bg-[#eef6ff] p-5 pr-0">
       <input
         ref={localFileInputRef}
         type="file"
@@ -265,12 +460,13 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
           <div className="h-full overflow-auto bg-white">
             {rows.map(({ paper, status, author, date }, index) => {
               const selected = selectedRows.has(paper.id);
+              const activePaper = selectedLibraryPaper?.id === paper.id;
 
               return (
                 <div
                   key={`${paper.id}-${index}`}
                   className={`grid grid-cols-[48px_minmax(28rem,1fr)_15rem_15.5rem_8.5rem_5rem] border-b border-gray-200 text-[1rem] text-gray-700 transition ${
-                    selected || index === 2 ? 'bg-[#eef6ff]' : 'bg-white hover:bg-gray-50'
+                    selected || activePaper ? 'bg-[#eef6ff]' : 'bg-white hover:bg-gray-50'
                   }`}
                 >
                   <div className="flex items-center justify-center border-r border-gray-200 py-3">
@@ -289,7 +485,7 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
                   </div>
                   <button
                     type="button"
-                    onClick={() => onPaperClick(paper)}
+                    onClick={() => openPaperPanel(paper)}
                     className="truncate border-r border-gray-200 px-5 py-3 text-left text-gray-800 transition hover:text-blue-600"
                     title={paper.title}
                   >
@@ -337,16 +533,60 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
         </div>
       </section>
 
-      <div className="pointer-events-none fixed bottom-8 left-[calc(16rem+2.5rem)] right-10 z-30 flex justify-center max-lg:left-10">
-        <div className="pointer-events-auto w-full max-w-5xl rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-26px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+      <div
+        className={`pointer-events-none fixed bottom-8 left-[calc(16rem+2.5rem)] right-[4.5rem] z-30 flex flex-col items-center gap-3 transition-all duration-300 max-lg:left-10 ${
+          chatOpen ? 'translate-y-4 opacity-0' : 'translate-y-0 opacity-100'
+        }`}
+        aria-hidden={chatOpen}
+      >
+        {selectedPapers.length > 0 && (
+          <div className={`pointer-events-auto flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-[0_18px_48px_-22px_rgba(15,23,42,0.38)] backdrop-blur-xl ${chatOpen ? 'pointer-events-none' : ''}`}>
+            <button
+              type="button"
+              onClick={() => runBatchAction('survey')}
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-[0.98]"
+            >
+              <Sparkles className="h-4 w-4" />
+              {isZh ? '生成 Survey' : 'Create Survey'}
+            </button>
+            <button
+              type="button"
+              onClick={() => runBatchAction('export')}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+            >
+              <Download className="h-4 w-4" />
+              {isZh ? '导出' : 'Export'}
+            </button>
+            <button
+              type="button"
+              onClick={() => runBatchAction('project')}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+            >
+              <FolderInput className="h-4 w-4" />
+              {isZh ? '加入项目' : 'Add to project'}
+            </button>
+            <button
+              type="button"
+              onClick={() => runBatchAction('delete')}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-medium text-red-500 transition hover:border-red-200 hover:bg-red-50 active:scale-[0.98]"
+            >
+              <Trash2 className="h-4 w-4" />
+              {isZh ? '删除' : 'Delete'}
+            </button>
+            {batchActionFeedback && (
+              <span className="px-2 text-xs font-medium text-emerald-600">{batchActionFeedback}</span>
+            )}
+          </div>
+        )}
+        <div className={`w-full max-w-5xl rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-[0_24px_70px_-26px_rgba(15,23,42,0.35)] backdrop-blur-xl ${chatOpen ? 'pointer-events-none' : 'pointer-events-auto'}`}>
+          {renderSelectedPaperCards()}
           <textarea
             value={assistantQuestion}
             onChange={(event) => {
               setAssistantQuestion(event.target.value);
-              setQuestionSent(false);
             }}
             onKeyDown={(event) => {
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              if (event.key === 'Enter' && !event.shiftKey) {
                 event.preventDefault();
                 submitAssistantQuestion();
               }
@@ -398,7 +638,7 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
                 </button>
                 {showScopeMenu && (
                   <div className="absolute bottom-11 left-0 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                    {(isZh ? ['单篇论文', '所选文献', '全部知识库'] : ['Single paper', 'Selected papers', 'Entire library']).map((option) => (
+                    {(isZh ? ['所选文件', '知识库', 'web资源库'] : ['Selected files', 'Library', 'Web resources']).map((option) => (
                       <button
                         key={option}
                         type="button"
@@ -452,17 +692,12 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
                 )}
               </div>
 
-              {questionSent && (
-                <span className="ml-1 text-[11px] font-medium text-emerald-600">
-                  {isZh ? '问题已发送' : 'Question sent'}
-                </span>
-              )}
             </div>
 
             <button
               type="button"
               onClick={submitAssistantQuestion}
-              disabled={!assistantQuestion.trim()}
+              disabled={!assistantQuestion.trim() || assistantThinking}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white transition-all hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-white"
               aria-label={isZh ? '发送问题' : 'Send question'}
             >
@@ -471,6 +706,352 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
           </div>
         </div>
       </div>
+
+      <aside
+        style={{ width: chatOpen ? panelWidth : 56 }}
+        className={`relative z-40 ml-3 flex h-full shrink-0 flex-col overflow-hidden border-l border-slate-200 bg-white ${
+          isResizingPanel ? '' : 'transition-[width] duration-300 ease-out'
+        }`}
+        aria-label={chatOpen ? (isZh ? '文献工作栏' : 'Paper workspace') : (isZh ? '已折叠的文献工作栏' : 'Collapsed paper workspace')}
+      >
+        {!chatOpen ? (
+          <div className="flex h-full w-14 flex-col items-center border-r border-slate-100 py-3">
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-white transition hover:bg-slate-800"
+              aria-label={isZh ? '展开文献工作栏' : 'Expand paper workspace'}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActivePanelTab('chat');
+                setChatOpen(true);
+              }}
+              className="mt-4 flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition hover:bg-blue-100 active:scale-95"
+              aria-label={isZh ? '打开 AI Chat' : 'Open AI Chat'}
+              title="AI Chat"
+            >
+              <Bot className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onPointerDown={startPanelResize}
+              className="group absolute inset-y-0 left-0 z-50 w-2 cursor-col-resize touch-none"
+              aria-label={isZh ? '拖动调整侧栏宽度' : 'Drag to resize the side panel'}
+            >
+              <span className="absolute inset-y-0 left-0 w-px bg-slate-200 transition group-hover:w-0.5 group-hover:bg-blue-400" />
+            </button>
+
+            <nav className="flex h-14 shrink-0 items-stretch border-b border-slate-100 pl-3 pr-2" aria-label={panelMode === 'chat' ? (isZh ? '问答工具' : 'Chat tools') : (isZh ? '文献工具' : 'Paper tools')}>
+              <div className={`grid min-w-0 flex-1 ${panelMode === 'chat' ? 'grid-cols-1' : 'grid-cols-4'}`}>
+                {(panelMode === 'chat'
+                  ? [{ tab: 'chat' as const, label: 'AI Chat', icon: Bot }]
+                  : [
+                      { tab: 'info' as const, label: isZh ? '信息' : 'Info', icon: Info },
+                      { tab: 'notes' as const, label: isZh ? '笔记' : 'Notes', icon: StickyNote },
+                      { tab: 'comments' as const, label: isZh ? '评论' : 'Comments', icon: MessageCircle },
+                      { tab: 'chat' as const, label: 'AI Chat', icon: Bot },
+                    ]
+                ).map(({ tab, label, icon: Icon }) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActivePanelTab(tab)}
+                    className={`relative flex min-w-0 items-center justify-center gap-1.5 text-xs font-medium transition ${
+                      tab === 'chat' && panelMode === 'document' ? 'border-l border-slate-100' : ''
+                    } ${
+                      activePanelTab === tab ? 'text-blue-600' : 'text-slate-400 hover:text-slate-800'
+                    }`}
+                    aria-pressed={activePanelTab === tab}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{label}</span>
+                    {activePanelTab === tab && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-blue-600" />}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setChatOpen(false)}
+                className="ml-2 flex h-9 w-9 shrink-0 self-center items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label={isZh ? '收起右侧组件栏' : 'Collapse side panel'}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </nav>
+
+            {activePanelTab === 'chat' && (
+              <div className="flex h-12 shrink-0 items-center justify-between border-b border-slate-100 px-4">
+                <button
+                  type="button"
+                  onClick={startNewConversation}
+                  className="inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950 active:scale-[0.98]"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full border border-current">
+                    <Plus className="h-3 w-3" />
+                  </span>
+                  {isZh ? '新对话' : 'New chat'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowChatHistory((visible) => !visible)}
+                  className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium transition active:scale-[0.98] ${
+                    showChatHistory ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                  }`}
+                  aria-expanded={showChatHistory}
+                >
+                  <History className="h-4 w-4" />
+                  {isZh ? '对话历史' : 'Chat history'}
+                </button>
+              </div>
+            )}
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {activePanelTab === 'info' && (
+                selectedLibraryPaper ? (
+                  <div className="px-6 py-5">
+                    <h3 className="text-lg font-semibold leading-7 text-slate-950">{selectedLibraryPaper.title}</h3>
+
+                    <div className="mt-5 border-y border-slate-100 py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-500">
+                            <Paperclip className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-900">{isZh ? '1 个附件' : '1 attachment'}</p>
+                            <p className="mt-1 truncate text-xs text-slate-500">{selectedLibraryPaper.title}.pdf</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onPaperClick(selectedLibraryPaper)}
+                          className="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                        >
+                          {isZh ? '打开阅读器' : 'Open reader'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <dl className="mt-5 space-y-4 text-sm">
+                      {[
+                        [isZh ? '标题' : 'Title', selectedLibraryPaper.title],
+                        [isZh ? '作者' : 'Authors', selectedLibraryPaper.authors.join('、')],
+                        [isZh ? '发表年份' : 'Year', String(selectedLibraryPaper.year)],
+                        [isZh ? '来源' : 'Venue', selectedLibraryPaper.venue],
+                        ['ArXiv ID', selectedLibraryPaper.arxivId || '—'],
+                        [isZh ? '分类' : 'Categories', selectedLibraryPaper.categories.join('、')],
+                      ].map(([label, value]) => (
+                        <div key={label} className="grid grid-cols-[5rem_minmax(0,1fr)] gap-3">
+                          <dt className="text-xs text-slate-400">{label}</dt>
+                          <dd className="break-words text-xs leading-5 text-slate-700">{value || '—'}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-72 flex-col items-center justify-center px-8 text-center">
+                    <Info className="h-7 w-7 text-slate-300" />
+                    <p className="mt-3 text-sm font-medium text-slate-700">{isZh ? '选择一篇文献查看信息' : 'Select a paper to view its information'}</p>
+                  </div>
+                )
+              )}
+
+              {activePanelTab === 'notes' && (
+                selectedLibraryPaper ? (
+                  <div className="flex h-full min-h-[28rem] flex-col p-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-slate-900">{isZh ? '文献笔记' : 'Paper notes'}</p>
+                      <span className="text-[10px] text-slate-400">{isZh ? '自动保存' : 'Autosaved'}</span>
+                    </div>
+                    <textarea
+                      value={paperNotes}
+                      onChange={(event) => setPaperNotes(event.target.value)}
+                      placeholder={isZh ? '记录关键发现、方法和待验证的问题…' : 'Capture key findings, methods, and questions to verify…'}
+                      aria-label={isZh ? '文献笔记' : 'Paper notes'}
+                      className="min-h-80 flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50/60 p-4 text-sm leading-7 text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-72 flex-col items-center justify-center px-8 text-center">
+                    <StickyNote className="h-7 w-7 text-slate-300" />
+                    <p className="mt-3 text-sm font-medium text-slate-700">{isZh ? '选择文献后开始记录笔记' : 'Select a paper to start taking notes'}</p>
+                  </div>
+                )
+              )}
+
+              {activePanelTab === 'comments' && (
+                selectedLibraryPaper ? (
+                  <div className="flex h-full min-h-[28rem] flex-col">
+                    <div className="flex-1 space-y-5 px-5 py-5">
+                      {paperComments.map((comment, index) => (
+                        <div key={`${comment.author}-${index}`} className="flex gap-3">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                            {comment.author.slice(0, 1)}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs font-semibold text-slate-900">{comment.author}</p>
+                              <span className="text-[10px] text-slate-400">{comment.time}</span>
+                            </div>
+                            <p className="mt-1 text-sm leading-6 text-slate-600">{comment.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="border-t border-slate-100 p-4">
+                      <textarea
+                        value={commentDraft}
+                        onChange={(event) => setCommentDraft(event.target.value)}
+                        placeholder={isZh ? '添加评论…' : 'Add a comment…'}
+                        aria-label={isZh ? '添加评论' : 'Add a comment'}
+                        className="h-20 w-full resize-none rounded-xl border border-slate-200 p-3 text-sm outline-none transition focus:border-blue-300"
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={submitComment}
+                          disabled={!commentDraft.trim()}
+                          className="rounded-lg bg-slate-950 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200"
+                        >
+                          {isZh ? '发布' : 'Post'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex h-full min-h-72 flex-col items-center justify-center px-8 text-center">
+                    <MessageCircle className="h-7 w-7 text-slate-300" />
+                    <p className="mt-3 text-sm font-medium text-slate-700">{isZh ? '选择文献后查看评论' : 'Select a paper to view comments'}</p>
+                  </div>
+                )
+              )}
+
+              {activePanelTab === 'chat' && (
+                <div className="flex h-full min-h-[28rem] flex-col">
+                  <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                    {showChatHistory ? (
+                      <div>
+                        <p className="mb-3 text-[11px] font-medium text-slate-400">
+                          {isZh ? `${chatSessions.length} 个历史对话` : `${chatSessions.length} previous chats`}
+                        </p>
+                        <div className="divide-y divide-slate-100">
+                          {chatSessions.map((session) => (
+                            <button
+                              key={session.id}
+                              type="button"
+                              onClick={() => restoreConversation(session)}
+                              className="group flex w-full items-center justify-between gap-4 py-3 text-left transition hover:bg-slate-50"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-slate-800 group-hover:text-slate-950">{session.title}</p>
+                                <p className="mt-1 text-[10px] text-slate-400">{session.time}</p>
+                              </div>
+                              <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-slate-500" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        {assistantMessages.length === 0 && (
+                          <div className="rounded-xl bg-slate-50 p-4">
+                            <p className="text-sm font-medium text-slate-800">
+                              {selectedPapers.length > 0
+                                ? (isZh ? `向已选的 ${selectedPapers.length} 篇文献提问` : `Ask the ${selectedPapers.length} selected papers`)
+                                : (isZh ? '向知识库开始提问' : 'Ask your library')}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                              {isZh ? '可以总结论文、解释方法，或对比知识库中的相关研究。' : 'Summarize the paper, explain its methods, or compare related work in your library.'}
+                            </p>
+                          </div>
+                        )}
+                        {assistantMessages.map((message, index) => (
+                          <div key={`${message.role}-${index}`} className={message.role === 'user' ? 'flex justify-end' : 'flex items-start gap-2.5'}>
+                            {message.role === 'assistant' && (
+                              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white">
+                                <Bot className="h-3.5 w-3.5" />
+                              </span>
+                            )}
+                            <div
+                              className={`max-w-[84%] px-3.5 py-2.5 text-sm leading-6 ${
+                                message.role === 'user'
+                                  ? 'rounded-2xl rounded-tr-md bg-blue-50 text-slate-800'
+                                  : 'rounded-2xl rounded-tl-md bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              {message.text}
+                            </div>
+                          </div>
+                        ))}
+                        {assistantThinking && (
+                          <div className="flex items-center gap-2.5 text-xs text-slate-500">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-950 text-white">
+                              <Bot className="h-3.5 w-3.5" />
+                            </span>
+                            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                            {isZh ? '正在检索知识库…' : 'Searching the library…'}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="shrink-0 border-t border-slate-100 bg-slate-50/70 p-3">
+                    {assistantAttachment && (
+                      <div className="mb-2 flex w-fit max-w-full items-center gap-2 rounded-lg bg-white px-2.5 py-1.5 text-[10px] text-slate-600 ring-1 ring-slate-200">
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{assistantAttachment}</span>
+                      </div>
+                    )}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-slate-300">
+                      {renderSelectedPaperCards(true)}
+                      <textarea
+                        value={assistantQuestion}
+                        onChange={(event) => setAssistantQuestion(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' && !event.shiftKey) {
+                            event.preventDefault();
+                            submitAssistantQuestion();
+                          }
+                        }}
+                        placeholder={isZh ? '向 AI Chat 提问…' : 'Ask AI Chat…'}
+                        aria-label={isZh ? '向 AI Chat 提问' : 'Ask AI Chat'}
+                        className="h-16 w-full resize-none bg-transparent px-2 py-1.5 text-sm leading-6 text-slate-800 outline-none placeholder:text-slate-400"
+                      />
+                      <div className="flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => assistantFileInputRef.current?.click()}
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+                          aria-label={isZh ? '添加附件' : 'Add attachment'}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={submitAssistantQuestion}
+                          disabled={!assistantQuestion.trim() || assistantThinking}
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-950 text-white transition hover:bg-slate-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-200"
+                          aria-label={isZh ? '发送问题' : 'Send question'}
+                        >
+                          {assistantThinking ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </aside>
     </div>
   );
 }
