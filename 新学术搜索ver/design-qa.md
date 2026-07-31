@@ -1,65 +1,58 @@
-# Research canvas interaction design QA
+# Storage Purchase Dialog Design QA
 
 ## Evidence
 
-- Source visual truth: `/Users/trimeresurus/.codex/generated_images/019fa7d7-4b3c-70c3-aecd-0c7556ccb222/call_3y03s0ohoLqZaJdjLW2ZiGHD.png`
-- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-interactions-final.png`
-- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-interactions-comparison.png`
-- New-card menu state: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-new-card-menu.png`
-- Comments state: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/research-canvas-comments-state.png`
-- Route/state: Workspace → 科研画布；“位置偏置假设”选中；右侧“AI 建议”激活
-- Browser: Codex in-app browser at `http://127.0.0.1:3000/`
-- Source pixels: 1487 × 1058
-- Implementation pixels: 1868 × 1324
-- Browser CSS viewport: 1868 × 1324 at 1× density
-- Normalization: source resized to 1868 px width and top-cropped to 1868 × 1324; implementation retained at native size. Both are stacked in one 1868 × 2648 comparison.
+- Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-1bbcf776-205d-4598-bedb-23cba5d90f15.png`
+- Product requirements applied to the source:
+  - Remove the capacity slider.
+  - Keep exactly eight fixed capacity options from 10 GB to 1 TB.
+  - Remove Credits balance, Credits deductions, and Credits renewal copy.
+  - Use real-currency payment with Airwallex and Stripe.
+- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/storage-purchase-dialog-final.png`
+- Focused implementation region: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/storage-purchase-dialog-focused.png`
+- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/storage-purchase-dialog-comparison.png`
+- Browser viewport: 1869 × 1324 CSS px, device scale factor 1.
+- Source pixels: 1094 × 1338.
+- Implementation pixels: 1869 × 1324.
+- Focused implementation pixels: 577 × 540.
+- Normalization: the full-view source and implementation were proportionally downscaled into one comparison board; the focused implementation was also inspected at native pixel size.
+- State: purchase dialog open, 10 GB selected, Airwallex selected.
 
-## Full-view comparison evidence
+## Full-view Comparison
 
-The enhanced implementation preserves the selected concept’s project header, semantic research graph, left navigation, persistent inspector, restrained color system, compact card hierarchy, and bottom canvas controls. New Agent and comment cards extend the same graph rather than creating a disconnected dashboard.
+The implementation intentionally reduces the old tall Credits-based purchase sheet to a compact payment dialog. The modal remains centered over the existing account settings page, preserves the product's white surface, blue primary action, rounded corners, and subdued backdrop, while removing the obsolete dark slider panel and Credits summary blocks.
 
-At widths above 1700 px the canvas opens at 100%, at 1400–1699 px it opens at 92%, and below 1400 px it opens at 80%. This preserves readable card scale and prevents paper cards from clipping behind the inspector.
+## Focused-region Comparison
 
-## Focused interaction evidence
+The modal detail was inspected separately because capacity labels, prices, provider descriptions, selected states, and footer totals are too small to judge reliably in the full-view comparison. All eight capacity options are legible; selection uses both a blue surface and check indicator; Airwallex and Stripe are presented as mutually exclusive payment choices; the real-currency total and provider-specific CTA remain visible without scrolling.
 
-- The new-card capture shows a compact menu with five visually distinct types: research hypothesis, paper, Agent, comment, and experiment.
-- The comments capture shows the selected node’s discussion count, collaborator avatars, timestamps, replies, and comment composer.
-- The default capture shows the Agent running state with a live indicator, animated spinner, pulsing elevation, progress value, and task-specific copy.
+## Required Fidelity Surfaces
 
-## Required fidelity surfaces
+- Fonts and typography: matches the existing application font stack and hierarchy. Capacity and payment labels use readable 14 px weights; secondary payment descriptions remain legible at 11 px.
+- Spacing and layout rhythm: 4-column capacity grid, 2-column payment grid, 22 px modal radius, and compact footer create a consistent and substantially simpler flow with no overlap or clipping.
+- Colors and visual tokens: retains the application's slate neutral palette and blue selection/CTA token. Selected states have sufficient contrast and do not rely on color alone.
+- Image quality and asset fidelity: no raster assets are required by this component. Icons use the project's existing icon library; no placeholder, inline SVG, or CSS-drawn asset was introduced.
+- Copy and content: no Credits balance, Credits deduction, Credits renewal explanation, or slider copy remains. Currency is shown in RMB, and both Airwallex and Stripe are available.
+- Responsiveness and accessibility: capacity and payment choices are semantic buttons with `aria-pressed`; dialog labelling is intact; controls have hover, selected, active, and success states.
 
-- Fonts and typography: Keeps the existing sans-serif product stack, 10–13 px canvas metadata, 13–16 px node titles, and compact inspector hierarchy. New card types use the same optical weights and line heights.
-- Spacing and layout rhythm: Existing header and inspector dimensions are preserved. Agent, comment, experiment, and finding cards were separated into clear rows after visual QA to prevent collisions.
-- Colors and visual tokens: Paper uses blue, Agent violet, comment amber, experiment orange, and findings/methods emerald. Selected state remains blue and semantic link colors remain consistent.
-- Image quality and asset fidelity: Uses the existing WisPaper logo, generated collaborator portraits, and the product’s current icon library. No placeholder imagery was introduced.
-- Copy and content: New states use realistic research collaboration copy, including evidence screening, NeedleBench discussion, validation experiments, and AI recommendations.
-- Motion: Running Agent cards use restrained shadow pulsing, a spinning activity indicator, a live status dot, and progressive completion without moving the card’s geometry.
+## Interaction Verification
 
-## Interaction checks
+- Selected 1 TB and confirmed the total changed to ¥600.00 / month.
+- Switched payment from Airwallex to Stripe and confirmed the CTA changed to “使用 Stripe 支付”.
+- Completed the local prototype purchase and confirmed the success state displayed 1 TB, Stripe, and ¥600.00 / month.
+- Browser console errors checked: none.
+- Production build: passed.
 
-- Opened the left-sidebar “科研画布 · 实验” entry.
-- Opened the new-card menu and created a paper card.
-- Entered association mode, selected two cards, and confirmed a new “关联” edge was added.
-- Opened the comments tab, added a comment, and confirmed the count changed from 2 to 3.
-- Opened the running Agent from the header and confirmed the detail inspector shows real-time status and the Agent-workspace action.
-- Confirmed manual zoom controls update the scale.
-- Confirmed the implementation includes pointer-drag handlers with zoom-compensated card coordinates, dynamic edge recalculation, touch pinch handling, and trackpad pinch handling through modifier-wheel input.
-- Production build completed successfully.
+## Findings
 
-## Findings and comparison history
+- No actionable P0, P1, or P2 issues remain.
 
-- Pass 1 — P1: Paper, Agent, and comment objects did not have sufficient type distinction. Added dedicated icons, semantic surfaces, border colors, metadata, and type-specific content.
-- Pass 1 — P1: Static connectors would not follow dragged cards. Replaced hard-coded line positions with graph edges calculated from current node coordinates.
-- Pass 1 — P2: Agent and comment cards overlapped the experiment/finding row. Moved the bottom row down and repeated visual capture.
-- Pass 2 — P2: The graph appeared undersized on the 1868 px viewport. Added responsive initial zoom with a 100% large-desktop state.
-- Pass 3: Recaptured default, new-card, and comments states. No actionable P0, P1, or P2 findings remain.
+## Comparison History
 
-## Follow-up polish
+- Initial comparison: no P0/P1/P2 issues were found. The major visual differences from the source are intentional outcomes of the user's simplification and payment-model requirements, not implementation drift.
 
-- P3: Persist node coordinates, zoom, comments, and edges to a project API after usability validation.
-- P3: Add multiplayer cursors and conflict resolution when real-time collaboration enters scope.
-- P3: Add keyboard shortcuts and an undo history stack before production rollout.
+## Follow-up Polish
 
-## Final result
+- P3: provider brand marks could be added later if approved brand assets become available; the current text-first treatment is intentionally neutral and compact.
 
 final result: passed
