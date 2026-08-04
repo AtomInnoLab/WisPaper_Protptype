@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Globe, Bell, Settings, Gift, ArrowRight, Users, User, Download, LogOut, ChevronRight, ChevronDown, Mail, Coins, HelpCircle, Crown, UserPlus, MessageSquare, X } from 'lucide-react';
+import { Globe, Bell, Settings, Gift, ArrowRight, Users, User, Download, LogOut, ChevronRight, ChevronDown, Copy, Check, Coins, HelpCircle, Crown, UserPlus, MessageSquare, X } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { FeedbackModal } from './FeedbackModal';
 import { ShinyText } from './ShinyText';
@@ -14,12 +14,15 @@ interface UserPanelProps {
 }
 
 export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, onOpenSettings, isCollapsed = false }: UserPanelProps) {
+  const openId = 'tyqx1tdh3nwg';
   const { language, setLanguage, t } = useLanguage();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showInviteBanner, setShowInviteBanner] = useState(true);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [openIdCopied, setOpenIdCopied] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const downloadLinks = {
     windows: 'https://download.wispaper.com/windows',
     macApple: 'https://download.wispaper.com/mac-apple-silicon',
@@ -54,6 +57,21 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showUserMenu]);
+
+  useEffect(() => () => {
+    if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current);
+  }, []);
+
+  const handleCopyOpenId = async () => {
+    try {
+      await navigator.clipboard.writeText(openId);
+      setOpenIdCopied(true);
+      if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current);
+      copyResetTimerRef.current = setTimeout(() => setOpenIdCopied(false), 1800);
+    } catch (error) {
+      console.error('Failed to copy Open ID', error);
+    }
+  };
 
   const handleLogout = () => {
     console.log('Logout clicked');
@@ -164,9 +182,26 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-gray-900 truncate">添孬孬佛佛会员</div>
-                  <div className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
-                    <Mail className="w-3 h-3" />
-                    user@fudan.edu.cn
+                  <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                    <span className="truncate text-xs font-medium tracking-[0.02em] text-gray-500">
+                      {openId}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyOpenId}
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors ${
+                        openIdCopied
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'text-gray-400 hover:bg-gray-200 hover:text-gray-700'
+                      }`}
+                      aria-label={openIdCopied ? 'Open ID 已复制' : '复制 Open ID'}
+                      title={openIdCopied ? '已复制' : '复制 Open ID'}
+                    >
+                      {openIdCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    </button>
+                    <span className="sr-only" aria-live="polite">
+                      {openIdCopied ? 'Open ID 已复制' : ''}
+                    </span>
                   </div>
                 </div>
               </div>

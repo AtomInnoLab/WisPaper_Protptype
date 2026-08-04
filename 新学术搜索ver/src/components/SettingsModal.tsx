@@ -34,6 +34,11 @@ const creditPackages = [
   { id: 'pack-0524', purchasedAt: '2026 年 5 月 24 日', expiresAt: '2026 年 7 月 24 日', total: 2000, used: 1200 },
 ];
 
+const voucherCredits = [
+  { id: 'voucher-agent-0625', issuedAt: '2026 年 6 月 25 日', expiresAt: '2026 年 9 月 25 日', feature: 'Agent', total: 2000, used: 600 },
+  { id: 'voucher-search-0612', issuedAt: '2026 年 6 月 12 日', expiresAt: '2026 年 9 月 12 日', feature: 'Search', total: 3000, used: 1200 },
+];
+
 const tenGbStorageCredits = calculateStorageCredits(10);
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
@@ -260,6 +265,7 @@ function BasicInformation() {
 // Membership & Payment Tab
 function MembershipPayment() {
   const [showCreditPackages, setShowCreditPackages] = useState(false);
+  const [showVoucherCredits, setShowVoucherCredits] = useState(false);
   const [showUsage, setShowUsage] = React.useState(false);
   const [expandedDate, setExpandedDate] = React.useState('2026-06-02');
   const [expandedFeature, setExpandedFeature] = React.useState('2026-06-02-Search');
@@ -792,7 +798,7 @@ function MembershipPayment() {
           </div>
         </section>
 
-        <section className="mt-5">
+        <section className="mt-5 space-y-3">
           <article className="overflow-hidden rounded-xl border border-blue-100 bg-blue-50/50">
               <div className="flex items-start gap-3 p-4">
                 <button
@@ -874,6 +880,93 @@ function MembershipPayment() {
                   })}
                 </div>
               )}
+          </article>
+
+          <article className="overflow-hidden rounded-xl border border-violet-100 bg-violet-50/50">
+            <button
+              type="button"
+              onClick={() => setShowVoucherCredits((current) => !current)}
+              className="group flex w-full items-start justify-between gap-4 p-4 text-left"
+              aria-expanded={showVoucherCredits}
+              aria-controls="voucher-credit-details"
+            >
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-xs font-semibold text-slate-900">Voucher Credits</h4>
+                  <span className="rounded-md bg-teal-100 px-2 py-1 text-[9px] font-semibold text-teal-700">Agent</span>
+                  <span className="rounded-md bg-orange-100 px-2 py-1 text-[9px] font-semibold text-orange-700">Search</span>
+                  <span className="rounded-md bg-violet-100 px-2 py-1 text-[9px] font-semibold text-violet-700">{voucherCredits.length} 笔</span>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <p className="text-sm font-semibold text-slate-950 tabular-nums">3,200</p>
+                <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:text-slate-700 ${showVoucherCredits ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+
+            <div className="px-4 pb-4">
+              <div
+                className="h-2 overflow-hidden rounded-full bg-violet-100"
+                role="progressbar"
+                aria-label="Voucher Credits 池已使用额度"
+                aria-valuemin={0}
+                aria-valuemax={5000}
+                aria-valuenow={1800}
+              >
+                <div className="h-full w-[36%] rounded-full bg-violet-600" />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
+                <span className="tabular-nums">已使用 1,800 / 5,000</span>
+                <span>{showVoucherCredits ? '收起发放明细' : '展开查看每笔余额'}</span>
+              </div>
+            </div>
+
+            {showVoucherCredits && (
+              <div id="voucher-credit-details" className="border-t border-violet-100 bg-white">
+                {voucherCredits.map((voucher, index) => {
+                  const remaining = voucher.total - voucher.used;
+                  const usedPercentage = (voucher.used / voucher.total) * 100;
+                  const isAgent = voucher.feature === 'Agent';
+
+                  return (
+                    <div
+                      key={voucher.id}
+                      className={`px-4 py-3.5 ${index > 0 ? 'border-t border-slate-100' : ''}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-[11px] font-semibold text-slate-900">发放于 {voucher.issuedAt}</p>
+                            <span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${isAgent ? 'bg-teal-100 text-teal-700' : 'bg-orange-100 text-orange-700'}`}>
+                              {voucher.feature}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-[9px] text-slate-400">仅限 {voucher.feature} 使用 · 有效期至 {voucher.expiresAt}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-semibold text-violet-700 tabular-nums">{remaining.toLocaleString()} 剩余</p>
+                          <p className="mt-0.5 text-[9px] text-slate-400">共 {voucher.total.toLocaleString()} Credits</p>
+                        </div>
+                      </div>
+                      <div
+                        className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"
+                        role="progressbar"
+                        aria-label={`${voucher.feature} Voucher Credits 已使用额度`}
+                        aria-valuemin={0}
+                        aria-valuemax={voucher.total}
+                        aria-valuenow={voucher.used}
+                      >
+                        <div className="h-full rounded-full bg-violet-500" style={{ width: `${usedPercentage}%` }} />
+                      </div>
+                      <div className="mt-1.5 flex items-center justify-between text-[9px] text-slate-400">
+                        <span className="tabular-nums">已使用 {voucher.used.toLocaleString()}</span>
+                        <span className="tabular-nums">{remaining.toLocaleString()} / {voucher.total.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </article>
         </section>
 

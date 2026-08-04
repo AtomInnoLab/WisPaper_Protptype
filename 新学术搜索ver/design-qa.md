@@ -56,3 +56,36 @@ The modal detail was inspected separately because capacity labels, prices, provi
 - P3: provider brand marks could be added later if approved brand assets become available; the current text-first treatment is intentionally neutral and compact.
 
 final result: passed
+
+---
+
+# Voucher Credits Card Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-91aabbbd-2cc8-4746-a1b9-e14ad1eb3eca.png`
+- Browser-rendered implementation: `/Users/trimeresurus/Documents/wp原型/voucher-credits-card-expanded.png`
+- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/voucher-credits-comparison.png`
+- State: Account settings > Membership & Credits, Voucher Credits expanded.
+
+## Required Fidelity Surfaces
+
+- Structure: the new Voucher Credits card follows the Recharge Credits card's header, aggregate balance, progress, and expandable per-record hierarchy.
+- Functional targeting: `Agent` and `Search` tags appear in the aggregate header and on their corresponding records; each record explicitly states that it can only be used by its tagged feature.
+- Balance model: the collapsed state shows the aggregate remaining balance; the expanded state shows independent issued amount, used amount, remaining amount, issue date, expiry date, and progress for every voucher grant.
+- Visual distinction: the violet accent differentiates restricted voucher credits from blue general-purpose recharge credits while preserving the existing card tokens and spacing rhythm.
+- Accessibility: the expandable card exposes `aria-expanded`; aggregate and record-level usage meters expose progressbar semantics.
+
+## Interaction Verification
+
+- Opened Membership & Credits and confirmed the card appears directly below Recharge Credits.
+- Expanded Voucher Credits and confirmed both Agent and Search records render independently.
+- Confirmed targeted-use and expiry copy is visible for every record.
+- Browser console errors checked: none.
+- Production build: passed.
+
+## Findings
+
+- No actionable P0, P1, or P2 issues remain.
+
+final result: passed
