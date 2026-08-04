@@ -59,6 +59,42 @@ final result: passed
 
 ---
 
+# Agent Tier Switcher Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-a07c33d3-7936-4493-a4b6-bee0ec80bff1.png`
+- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/agent-tier-switcher-final.png`
+- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/agent-tier-switcher-comparison.png`
+- State: Agent launch page, tier switcher open, Balanced selected.
+
+## Required Fidelity Surfaces
+
+- Structure: compact floating menu above the composer with icon, Agent name, consumption multiplier, and selected check state.
+- Tier model: Fast, Balanced, Primary, and Deep replace the former Pro/Lite distinction.
+- Multiplier format: Fast, the lowest tier, intentionally shows no `1.00x`; all remaining values use two decimal places (`1.35x`, `2.00x`, `3.50x`).
+- Product consistency: existing neutral surfaces, rounded controls, icon library, spacing, and composer interaction patterns are preserved.
+- Continuity: the selected tier persists after task submission, appears in the working composer, and replaces the old Pro response badge.
+- Accessibility: the switcher exposes `aria-expanded`; each option exposes a descriptive accessible label and `aria-pressed` selected state.
+
+## Interaction Verification
+
+- Opened the Agent launch page and confirmed Balanced is selected by default.
+- Opened the tier menu and confirmed all four options and multiplier formats.
+- Selected Primary and confirmed the composer label updates immediately.
+- Submitted a research prompt and confirmed Primary remains selected and replaces the old Pro badge in the response header.
+- Browser console errors checked: none.
+- Production build: passed.
+
+## Findings
+
+- Initial capture clipped the Fast row at the top of the viewport; the menu was compacted to match the single-line reference structure and the full option list is now visible.
+- No actionable P0, P1, or P2 issues remain.
+
+final result: passed
+
+---
+
 # Voucher Credits Card Design QA
 
 ## Evidence

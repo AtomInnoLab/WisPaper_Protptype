@@ -3,8 +3,11 @@ import {
   ArrowUp,
   BookOpen,
   Bot,
+  Check,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  CircleGauge,
   Clock3,
   Code2,
   Cpu,
@@ -18,6 +21,7 @@ import {
   MessageSquareText,
   Moon,
   MoreHorizontal,
+  Orbit,
   Paperclip,
   PanelRight,
   Plus,
@@ -26,9 +30,24 @@ import {
   Sparkles,
   WandSparkles,
   X,
+  Zap,
 } from "lucide-react";
 
 type WorkbenchTab = "files" | "search" | "plan" | "gpu";
+type AgentTierId = "fast" | "balanced" | "primary" | "deep";
+
+const agentTiers: {
+  id: AgentTierId;
+  label: string;
+  description: string;
+  multiplier: string | null;
+  icon: React.ElementType;
+}[] = [
+  { id: "fast", label: "Fast", description: "快速响应", multiplier: null, icon: Zap },
+  { id: "balanced", label: "Balanced", description: "速度与深度平衡", multiplier: "1.35x", icon: CircleGauge },
+  { id: "primary", label: "Primary", description: "复杂研究任务", multiplier: "2.00x", icon: WandSparkles },
+  { id: "deep", label: "Deep", description: "长程深度研究", multiplier: "3.50x", icon: Orbit },
+];
 
 const quickTasks = [
   {
@@ -74,17 +93,24 @@ function AgentComposer({
   prompt,
   setPrompt,
   onSubmit,
+  selectedAgent,
+  onAgentChange,
   disabled = false,
   compact = false,
 }: {
   prompt: string;
   setPrompt: (value: string) => void;
   onSubmit: () => void;
+  selectedAgent: AgentTierId;
+  onAgentChange: (value: AgentTierId) => void;
   disabled?: boolean;
   compact?: boolean;
 }) {
   const [showTools, setShowTools] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [showAgents, setShowAgents] = useState(false);
+  const currentAgent = agentTiers.find((tier) => tier.id === selectedAgent) ?? agentTiers[1];
+  const CurrentAgentIcon = currentAgent.icon;
 
   return (
     <div className="relative">
@@ -144,6 +170,39 @@ function AgentComposer({
         </div>
       )}
 
+      {showAgents && (
+        <div className="absolute bottom-[calc(100%+12px)] left-11 z-40 w-[300px] rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_24px_70px_-28px_rgba(15,23,42,0.42)]">
+          {agentTiers.map((tier) => {
+            const Icon = tier.icon;
+            const active = tier.id === selectedAgent;
+            return (
+              <button
+                key={tier.id}
+                type="button"
+                onClick={() => {
+                  onAgentChange(tier.id);
+                  setShowAgents(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                  active ? "bg-slate-100" : "hover:bg-slate-50"
+                }`}
+                aria-pressed={active}
+                aria-label={`${tier.label} ${tier.description}${tier.multiplier ? ` ${tier.multiplier}` : ""}`}
+              >
+                <Icon className={`h-[18px] w-[18px] shrink-0 ${active ? "text-slate-950" : "text-slate-500"}`} />
+                <p className="min-w-0 flex-1 text-sm font-medium text-slate-800">{tier.label}</p>
+                {tier.multiplier && (
+                  <span className="tabular-nums text-xs text-slate-500">{tier.multiplier}</span>
+                )}
+                {active && <Check className="h-4 w-4 shrink-0 text-emerald-500" />}
+              </button>
+            );
+          })}
+          <div className="mx-3 mt-1 border-t border-slate-100" />
+          <p className="px-3 pb-1 pt-2 text-[10px] leading-4 text-slate-400">倍率代表 Credits 消耗系数</p>
+        </div>
+      )}
+
       <div
         className={`rounded-[22px] border border-slate-200 bg-white text-left shadow-[0_18px_55px_-30px_rgba(15,23,42,0.38)] transition focus-within:border-slate-300 focus-within:shadow-[0_22px_65px_-28px_rgba(15,23,42,0.44)] ${
           compact ? "p-2.5" : "p-3.5"
@@ -180,6 +239,25 @@ function AgentComposer({
               aria-expanded={showTools}
             >
               <Plus className={`h-5 w-5 transition-transform ${showTools ? "rotate-45" : ""}`} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAgents((value) => !value);
+                setShowTools(false);
+                setShowMore(false);
+              }}
+              className={`flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-medium transition active:scale-[0.98] ${
+                showAgents
+                  ? "border-slate-300 bg-slate-100 text-slate-950"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+              }`}
+              aria-label="切换 Agent"
+              aria-expanded={showAgents}
+            >
+              <CurrentAgentIcon className="h-4 w-4" />
+              {currentAgent.label}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAgents ? "rotate-180" : ""}`} />
             </button>
             {!compact && (
               <>
@@ -307,6 +385,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
   const [panelOpen, setPanelOpen] = useState(true);
   const [taskTitle, setTaskTitle] = useState("新研究任务");
   const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<AgentTierId>("balanced");
 
   const submit = (text = prompt) => {
     const value = text.trim();
@@ -359,7 +438,13 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
                 描述目标，Agent 会拆解步骤、调用研究工具，并把论文、计划与实验产物集中保存。
               </p>
               <div className="mt-9">
-                <AgentComposer prompt={prompt} setPrompt={setPrompt} onSubmit={() => submit()} />
+                <AgentComposer
+                  prompt={prompt}
+                  setPrompt={setPrompt}
+                  onSubmit={() => submit()}
+                  selectedAgent={selectedAgent}
+                  onAgentChange={setSelectedAgent}
+                />
               </div>
             </div>
 
@@ -430,7 +515,9 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
                           <Bot className="h-3.5 w-3.5" />
                         </span>
                         <span className="text-sm font-semibold">切问学术</span>
-                        <span className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500">Pro</span>
+                        <span className="rounded-md border border-slate-200 px-1.5 py-0.5 text-[10px] text-slate-500">
+                          {agentTiers.find((tier) => tier.id === selectedAgent)?.label}
+                        </span>
                       </div>
                       <div className="rounded-[18px] rounded-tl-md bg-slate-50 px-5 py-4 text-[15px] leading-7 text-slate-700">
                         {message.text}
@@ -457,6 +544,8 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
                 prompt={prompt}
                 setPrompt={setPrompt}
                 onSubmit={() => submit()}
+                selectedAgent={selectedAgent}
+                onAgentChange={setSelectedAgent}
                 disabled={running}
                 compact
               />
