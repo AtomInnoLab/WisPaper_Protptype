@@ -93,6 +93,8 @@ const basePapers: Paper[] = [
     categories: ['Machine Learning', 'Natural Language Processing', 'Deep Learning'],
     pdfUrl: '#',
     arxivId: '1706.03762',
+    doi: '10.48550/arXiv.1706.03762',
+    isOpenAccess: true,
     type: 'paper',
   },
   {
@@ -107,6 +109,8 @@ const basePapers: Paper[] = [
     categories: ['Natural Language Processing', 'Machine Learning', 'Deep Learning'],
     pdfUrl: '#',
     arxivId: '1810.04805',
+    doi: '10.48550/arXiv.1810.04805',
+    isOpenAccess: true,
     type: 'paper',
   },
   {

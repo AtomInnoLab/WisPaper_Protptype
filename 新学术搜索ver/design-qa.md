@@ -59,6 +59,85 @@ final result: passed
 
 ---
 
+# AI Feeds Search and Quick Open Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-baa324eb-0c8e-4f26-bb4d-9b91023a3a0b.png`
+- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/ai-feeds-search-shortcut.png`
+- Source pixels: 2776 × 2412.
+- Implementation pixels and CSS viewport: 1884 × 1324; browser device pixel ratio reported as 2.
+- Density normalization: not required for the scoped interaction review; the comparison evaluated the same responsive search-hero region rather than asserting full-page pixel parity across different sidebar and viewport crops.
+- State: AI Feeds / academic search workspace with a valid DOI entered and the conditional `立即查看` action visible.
+
+## Full-view Comparison Evidence
+
+- The updated implementation preserves the source hierarchy: greeting, large rounded search field, mode controls, right-aligned submission cluster, feed tabs, and paper cards.
+- The existing desktop workspace sidebar is intentionally retained; it is outside the scoped search-hero change shown in the source capture.
+
+## Focused Region Comparison Evidence
+
+- The search hero was reviewed at readable scale because the requested change is concentrated in the input and action cluster.
+- Typography remains consistent with the existing interface; input text and placeholder retain the established 15 px body hierarchy.
+- Spacing and layout rhythm remain consistent: the new action sits directly before the circular submit button and does not displace mode controls.
+- Colors and tokens reuse the existing sky accent, pale accent surface, neutral border, rounded-full action treatment, and focus ring.
+- Image quality is unchanged; this interaction adds no raster or custom illustrative assets. Icons continue to use the installed icon library.
+- Copy is concise and exact: the visible shortcut label is `立即查看`; its accessible name includes identifier type and normalized value.
+
+## Interaction Verification
+
+- Entered a normal keyword query and pressed Enter; confirmed navigation to Scholar Search results.
+- Entered `10.48550/arXiv.1706.03762`; confirmed `立即查看` appears beside the normal search action.
+- Clicked the shortcut; confirmed direct navigation to the existing quick-reading page for `Attention Is All You Need` without passing through results.
+- The shared detector also preserves DOI URL, modern/versioned arXiv, arXiv URL, and legacy arXiv support from the Scholar Search entry page.
+- Empty input keeps the normal submit button disabled.
+- Browser console errors checked: none.
+- Production build: passed.
+
+## Findings
+
+- No actionable P0, P1, or P2 issues remain.
+
+final result: passed
+
+---
+
+# Academic Identifier Search Shortcut Design QA
+
+## Evidence
+
+- Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-daa4d855-8f1f-44bd-ab61-fee088425a44.png`
+- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/search-shortcut-final.png`
+- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/search-shortcut-comparison.png`
+- State: Scholar Search landing page with a valid DOI URL entered and the quick-open action visible.
+
+## Required Fidelity Surfaces
+
+- Structure: the shortcut action appears beside the existing circular search button without changing the standard search controls.
+- Conditional behavior: the action remains hidden for ordinary queries and malformed identifiers, then animates into place only after a valid identifier is recognized.
+- Supported input: DOI values and DOI URLs; modern, versioned, URL-based, and legacy arXiv identifiers.
+- Action: clicking `立即查看` bypasses the search-results list and opens the existing quick-reading page for the resolved paper.
+- Visual consistency: the blue-tinted pill, book icon, 44 px control height, border, and hover state reuse the existing Scholar Search tokens.
+- Accessibility: the button's accessible name includes the detected identifier type and normalized value.
+
+## Interaction Verification
+
+- Entered `not-a-valid-id` and confirmed no quick-open action appeared.
+- Entered `1706.03762` and confirmed the arXiv quick-open action appeared.
+- Clicked the arXiv action and confirmed the existing quick-reading page opened for `Attention Is All You Need`.
+- Entered `https://doi.org/10.48550/arXiv.1706.03762`, confirmed DOI recognition, and confirmed the same direct reader flow.
+- Removed the landing-page floating task trigger from this state after it was found to overlap and intercept the new primary shortcut action.
+- Browser console errors checked: none.
+- Production build: passed.
+
+## Findings
+
+- No actionable P0, P1, or P2 issues remain.
+
+final result: passed
+
+---
+
 # Agent Tier Switcher Design QA
 
 ## Evidence
@@ -122,6 +201,49 @@ final result: passed
 
 ## Findings
 
+- No actionable P0, P1, or P2 issues remain.
+
+final result: passed
+
+---
+
+# Quick Paper Page and OA Reader Handoff Design QA
+
+## Evidence
+
+- Source URL: `https://dev.wispaper.ai/zh/paper?etd=73&rtd=b176a465-8739-49e9-91a9-21256c317b4b&rnd=5f6b1720-495e-4ac3-8e24-fc3b89c2c048`
+- Source desktop capture: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/source-quick-reader-desktop-top.png`
+- Source mobile capture: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/source-quick-reader-mobile.png`
+- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-desktop.png`
+- Mobile implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-mobile.png`
+- Desktop combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-comparison.png`
+- Mobile combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-mobile-comparison.png`
+- Desktop viewport: 1280 × 720 CSS px; screenshots 1280 × 720 px; device pixel ratio reported as 2.
+- Mobile viewport and screenshots: 390 × 844 CSS px / pixels.
+- State: OA paper quick page for `Attention Is All You Need`, with `从阅读器打开` visible.
+
+## Required Fidelity Surfaces
+
+- Fonts and typography: preserves the source's compact sans-serif hierarchy, semibold paper title, green metadata line, 14–15 px body copy, and readable mobile wrapping.
+- Spacing and layout rhythm: matches the centered desktop column, pale-blue page surface, 78 px header, breadcrumb spacing, TL;DR block, action row, and two-column abstract / validation layout. Mobile collapses the content to one column and hides desktop navigation.
+- Colors and tokens: reuses the source's near-black actions, light-blue canvas, white translucent content surfaces, slate dividers, muted metadata, and blue verification states.
+- Image quality and assets: uses the project's real WisPaper logo asset and the installed icon library; no placeholder imagery or handcrafted icons were introduced.
+- Copy and content: carries the source structure—title, authors, TL;DR, original-page action, citation action, abstract, validation criteria, references, and citations—while adding the requested OA-specific reader action.
+
+## Interaction Verification
+
+- A valid DOI/arXiv shortcut now opens the lightweight quick-paper page instead of entering the full reader immediately.
+- For the OA mock paper, `从阅读器打开` is present and clicking it opens the existing WisPaper reader.
+- For an unmatched DOI without OA metadata, the reader button is absent and `暂无可用的开放获取全文` is shown.
+- `以原网页打开` resolves to the DOI or arXiv source URL.
+- Reference and citation tabs switch in place; citation copy provides a visible success state.
+- Desktop and 390 px mobile layouts were captured and compared with the live source.
+- Browser console errors checked: none.
+- Production build: passed.
+
+## Findings
+
+- The live source page currently shows `以原网页打开` for this record. The implementation intentionally adds `从阅读器打开` because the user specified the OA state as the target product rule.
 - No actionable P0, P1, or P2 issues remain.
 
 final result: passed

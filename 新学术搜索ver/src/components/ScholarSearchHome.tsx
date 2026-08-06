@@ -4,9 +4,39 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 interface ScholarSearchHomeProps {
   onSearch: (query: string) => void;
+  onQuickOpen: (identifier: AcademicIdentifier) => void;
   showDeepSearchTooltip?: boolean;
   onTooltipDismiss?: () => void;
 }
+
+export interface AcademicIdentifier {
+  kind: 'DOI' | 'arXiv';
+  value: string;
+}
+
+export const detectAcademicIdentifier = (input: string): AcademicIdentifier | null => {
+  const raw = input.trim();
+  if (!raw) return null;
+
+  const doiValue = raw
+    .replace(/^doi:\s*/i, '')
+    .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '');
+  if (/^10\.\d{4,9}\/[\-._;()/:a-z0-9]+$/i.test(doiValue)) {
+    return { kind: 'DOI', value: doiValue };
+  }
+
+  const arxivValue = raw
+    .replace(/^arxiv:\s*/i, '')
+    .replace(/^https?:\/\/(?:www\.)?arxiv\.org\/(?:abs|pdf)\//i, '')
+    .replace(/\.pdf$/i, '');
+  const isModernArxiv = /^\d{4}\.\d{4,5}(?:v\d+)?$/i.test(arxivValue);
+  const isLegacyArxiv = /^[a-z-]+(?:\.[a-z]{2})?\/\d{7}(?:v\d+)?$/i.test(arxivValue);
+  if (isModernArxiv || isLegacyArxiv) {
+    return { kind: 'arXiv', value: arxivValue };
+  }
+
+  return null;
+};
 
 // Category keys for translation
 const categoryKeys = [
@@ -64,7 +94,7 @@ const getThesesCategoryExamples = (categoryKey: string): string[] => {
   return exampleMap[categoryKey] || [];
 };
 
-export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDismiss }: ScholarSearchHomeProps) {
+export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip, onTooltipDismiss }: ScholarSearchHomeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'quick' | 'deep' | 'books' | 'theses'>('deep');
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
@@ -72,6 +102,7 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
   const [selectedThesesCategory, setSelectedThesesCategory] = useState<string>('cs');
   const [selectedCategory, setSelectedCategory] = useState<string>('libraryCollections');
   const [selectedDatabase, setSelectedDatabase] = useState<string>('public');
+  const academicIdentifier = detectAcademicIdentifier(searchQuery);
 
   const visibleCategories = 8;
   const canScrollLeft = currentCategoryIndex > 0;
@@ -306,6 +337,36 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
           transform: translateY(-1px);
         }
 
+        .scholar-search-landing .quick-open-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 7px;
+          min-height: 44px;
+          padding: 10px 16px;
+          border: 1px solid rgba(0, 121, 255, 0.2);
+          border-radius: 999px;
+          background: var(--accent-soft);
+          color: var(--accent-deep);
+          font-size: 14px;
+          line-height: 16px;
+          font-weight: 600;
+          white-space: nowrap;
+          animation: shortcut-in 0.16s ease-out;
+          transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+        }
+
+        .scholar-search-landing .quick-open-button:hover {
+          border-color: rgba(0, 121, 255, 0.34);
+          background: var(--accent-soft-strong);
+          transform: translateY(-1px);
+        }
+
+        @keyframes shortcut-in {
+          from { opacity: 0; transform: translateX(6px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+
         .scholar-search-landing .examples-title {
           margin: 0 0 16px;
           text-align: center;
@@ -536,6 +597,18 @@ export function ScholarSearchHome({ onSearch, showDeepSearchTooltip, onTooltipDi
                 <Infinity className="w-4 h-4" />
                 <span>Unmetered</span>
               </button>
+
+              {academicIdentifier && (
+                <button
+                  type="button"
+                  onClick={() => onQuickOpen(academicIdentifier)}
+                  className="quick-open-button"
+                  aria-label={`立即查看 ${academicIdentifier.kind} ${academicIdentifier.value}`}
+                >
+                  <BookOpen className="h-4 w-4" />
+                  <span>立即查看</span>
+                </button>
+              )}
 
               {/* Search Button */}
               <button

@@ -10,6 +10,8 @@ export interface Paper {
   categories: string[];
   pdfUrl: string;
   arxivId?: string;
+  doi?: string;
+  isOpenAccess?: boolean;
   type?: 'paper' | 'book' | 'thesis' | 'special' | 'dataset'; // 资源类型
 }
 

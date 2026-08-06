@@ -6,7 +6,7 @@ import { LeftSidebar } from "./components/LeftSidebar";
 import { RightPanel } from "./components/RightPanel";
 import { PaperDetail } from "./components/PaperDetail";
 import { MyLibrary } from "./components/MyLibrary";
-import { ScholarSearchHome } from "./components/ScholarSearchHome";
+import { ScholarSearchHome, type AcademicIdentifier } from "./components/ScholarSearchHome";
 import { HomePage } from "./components/HomePage";
 import { ScholarQA } from "./components/ScholarQA";
 import { PaperReproduction } from "./components/PaperReproduction";
@@ -16,6 +16,7 @@ import { FudanCollectionResults } from "./components/FudanCollectionResults";
 import { AcademicAgent } from "./components/AcademicAgent";
 import { ResearchProjects } from "./components/ResearchProjects";
 import { ResearchCanvas } from "./components/ResearchCanvas";
+import { QuickPaperPage } from "./components/QuickPaperPage";
 import { FloatingTaskButton } from "./components/FloatingTaskButton";
 import { SearchMoreButton } from "./components/SearchMoreButton";
 import { NewbieTasksModal } from "./components/NewbieTasksModal";
@@ -57,7 +58,7 @@ export default function App() {
   const [selectedPaper, setSelectedPaper] =
     useState<Paper | null>(null);
   const [viewMode, setViewMode] = useState<
-    "home" | "list" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas"
+    "home" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas"
   >("home");
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -166,6 +167,41 @@ export default function App() {
     setHasSearched(true);
   };
 
+  const handleQuickOpen = (identifier: AcademicIdentifier) => {
+    const cleanValue = identifier.value.replace(/v\d+$/i, '');
+    const arxivFromDoi = identifier.kind === 'DOI'
+      ? cleanValue.match(/^10\.48550\/arxiv\.(.+)$/i)?.[1]
+      : null;
+    const matchedPaper = mockPapers.find((paper) => {
+      if (identifier.kind === 'arXiv') {
+        return paper.arxivId?.replace(/v\d+$/i, '').toLowerCase() === cleanValue.toLowerCase();
+      }
+      return paper.doi?.toLowerCase() === cleanValue.toLowerCase()
+        || Boolean(arxivFromDoi && paper.arxivId?.toLowerCase() === arxivFromDoi.toLowerCase());
+    });
+
+    const shortcutPaper: Paper = matchedPaper ?? {
+      id: `shortcut-${identifier.kind.toLowerCase()}-${cleanValue}`,
+      title: identifier.kind === 'DOI' ? `DOI: ${identifier.value}` : `arXiv: ${identifier.value}`,
+      authors: ['学术标识符解析'],
+      abstract: `已识别合法的 ${identifier.kind} 标识符。快速阅读页将在正式服务中加载该文献的元数据、全文与引用信息。`,
+      year: 2026,
+      publishedDate: '2026-08-05',
+      venue: identifier.kind,
+      citations: 0,
+      categories: ['Quick Open'],
+      pdfUrl: '#',
+      arxivId: identifier.kind === 'arXiv' ? identifier.value : undefined,
+      doi: identifier.kind === 'DOI' ? identifier.value : undefined,
+      type: 'paper',
+    };
+
+    setSearchQuery(identifier.value);
+    setSelectedPaper(shortcutPaper);
+    setHasSearched(false);
+    setViewMode('quick-paper');
+  };
+
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     if (!query.trim()) {
@@ -238,6 +274,7 @@ export default function App() {
             !hasSearched ? (
               <ScholarSearchHome
                 onSearch={handleSearch}
+                onQuickOpen={handleQuickOpen}
                 showDeepSearchTooltip={showDeepSearchTooltip}
                 onTooltipDismiss={() => setShowDeepSearchTooltip(false)}
               />
@@ -256,6 +293,7 @@ export default function App() {
               // Show Scholar Search Home when no search has been performed
               <ScholarSearchHome 
                 onSearch={handleSearch}
+                onQuickOpen={handleQuickOpen}
                 showDeepSearchTooltip={showDeepSearchTooltip}
                 onTooltipDismiss={() => setShowDeepSearchTooltip(false)}
               />
@@ -303,7 +341,19 @@ export default function App() {
           ) : viewMode === "scholar-qa" ? (
             <ScholarQA key={scholarQAKey} papersCount={mockPapers.length} onReset={handleResetScholarQA} />
           ) : viewMode === "all-feeds" ? (
-            <AllFeedsWorkspace />
+            <AllFeedsWorkspace
+              onSearch={(query) => {
+                setViewMode("list");
+                handleSearch(query);
+              }}
+              onQuickOpen={handleQuickOpen}
+            />
+          ) : viewMode === "quick-paper" && selectedPaper ? (
+            <QuickPaperPage
+              paper={selectedPaper}
+              onBack={() => setViewMode("all-feeds")}
+              onOpenReader={() => setViewMode("detail")}
+            />
           ) : viewMode === "paper-reproduction" ? (
             <PaperReproduction />
           ) : viewMode === "idea-discovery" ? (
@@ -334,7 +384,7 @@ export default function App() {
         )}
 
         {/* Floating Task Button - Show in list, library, and scholar-qa views */}
-        {(viewMode === "list" || viewMode === "library" || viewMode === "scholar-qa") && (
+        {((viewMode === "list" && hasSearched) || viewMode === "library" || viewMode === "scholar-qa") && (
           <FloatingTaskButton onClick={() => setShowTasksModal(true)} />
         )}
 

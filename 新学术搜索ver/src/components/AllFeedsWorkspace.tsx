@@ -21,6 +21,10 @@ import { cn } from './ui/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { isValidEmail } from '../utils/email';
 import {
+  detectAcademicIdentifier,
+  type AcademicIdentifier,
+} from './ScholarSearchHome';
+import {
   getAITrendDetail,
   aiFeedsAllTrends,
   aiFeedsFocusTags,
@@ -72,10 +76,18 @@ function PreferenceNotice({ message }: { message: string }) {
   );
 }
 
-function AIFeedsSearchHero() {
+function AIFeedsSearchHero({
+  onSearch,
+  onQuickOpen,
+}: {
+  onSearch: (query: string) => void;
+  onQuickOpen: (identifier: AcademicIdentifier) => void;
+}) {
   const { t } = useLanguage();
+  const [query, setQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<'search' | 'scholar-qa' | 'socratic' | 'paperclaw'>('search');
   const [searchMode, setSearchMode] = useState<'deep' | 'quick'>('deep');
+  const academicIdentifier = detectAcademicIdentifier(query);
   const heroTitle =
     selectedSkill === 'scholar-qa'
       ? t('aiFeeds.searchHero.scholarQaTitle')
@@ -84,6 +96,13 @@ function AIFeedsSearchHero() {
         : selectedSkill === 'paperclaw'
           ? 'Turn papers into actionable reproduction workflows...'
       : t('aiFeeds.searchHero.title');
+
+  const submitSearch = () => {
+    const normalizedQuery = query.trim();
+    if (normalizedQuery) {
+      onSearch(normalizedQuery);
+    }
+  };
 
   return (
     <section className="space-y-4">
@@ -94,9 +113,20 @@ function AIFeedsSearchHero() {
       </div>
       <Card className="w-full rounded-[26px] border-border/70 bg-background shadow-sm">
         <CardContent className="space-y-5 p-4 sm:p-5">
-          <div className="min-h-[78px] rounded-[20px] border border-border/60 bg-white px-4 py-3 text-left text-[15px] text-muted-foreground/90">
-            Find papers that introduce new RL algorithms for LLM post-training.
-          </div>
+          <textarea
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                submitSearch();
+              }
+            }}
+            rows={3}
+            aria-label="Search papers, DOI, or arXiv ID"
+            placeholder="Find papers that introduce new RL algorithms for LLM post-training."
+            className="min-h-[78px] w-full resize-none rounded-[20px] border border-border/60 bg-white px-4 py-3 text-left text-[15px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/90 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+          />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1 rounded-full border border-border/70 bg-white p-1">
@@ -182,9 +212,27 @@ function AIFeedsSearchHero() {
                 PaperClaw
               </Button>
             </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="hidden sm:inline">⌘K {t('search')}</span>
-              <Button type="button" size="icon" className="h-9 w-9 rounded-full bg-sky-500 text-white hover:bg-sky-600">
+              {academicIdentifier ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-full border-sky-200 bg-sky-50 px-4 font-medium text-sky-700 shadow-none hover:bg-sky-100 hover:text-sky-800"
+                  aria-label={`立即查看 ${academicIdentifier.kind} ${academicIdentifier.value}`}
+                  onClick={() => onQuickOpen(academicIdentifier)}
+                >
+                  立即查看
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                size="icon"
+                disabled={!query.trim()}
+                aria-label={t('search')}
+                className="h-9 w-9 rounded-full bg-sky-500 text-white hover:bg-sky-600 disabled:bg-slate-200 disabled:text-slate-400"
+                onClick={submitSearch}
+              >
                 <ArrowUp className="h-4 w-4" />
               </Button>
             </div>
@@ -531,7 +579,13 @@ function InlineFeedActivationCard({
   );
 }
 
-export function AllFeedsWorkspace() {
+export function AllFeedsWorkspace({
+  onSearch,
+  onQuickOpen,
+}: {
+  onSearch: (query: string) => void;
+  onQuickOpen: (identifier: AcademicIdentifier) => void;
+}) {
   const { t } = useLanguage();
   const resolveSourceSelection = (sourceIds: string[]): FeedPreferenceState['sourceSelection'] => {
     const hasArxiv = sourceIds.includes('arxiv');
@@ -900,7 +954,7 @@ export function AllFeedsWorkspace() {
     <div className="h-full overflow-y-auto bg-muted/30">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6 lg:px-8">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'trends' | 'latest' | 'for-you')} className="gap-6">
-            <AIFeedsSearchHero />
+            <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <CardNavTabs
                 items={[
