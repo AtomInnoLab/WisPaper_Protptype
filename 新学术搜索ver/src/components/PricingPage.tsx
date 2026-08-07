@@ -8,6 +8,7 @@ type LocalizedText = { zh: string; en: string };
 type LocalizedPrice = { zh: number; en: number };
 type ComparisonValue = boolean | string | LocalizedText;
 type StoragePlanKey = 'pro' | 'maxX2' | 'maxX5';
+type MaxTier = 'x2' | 'x5';
 
 const createStorageOptions = (baseStorageGb: number) =>
   Array.from({ length: 4 }, (_, index) => baseStorageGb * (index + 1));
@@ -96,30 +97,30 @@ const planPrices = {
     annualTotal: { zh: 0, en: 0 },
   },
   plus: {
-    monthly: { zh: 35, en: 5 },
-    annual: { zh: 29.2, en: 4.2 },
-    annualTotal: { zh: 350, en: 50 },
+    monthly: { zh: 30, en: 5 },
+    annual: { zh: 30, en: 4.2 },
+    annualTotal: { zh: 360, en: 50 },
   },
   pro: {
-    monthly: { zh: 150, en: 20 },
-    annual: { zh: 112.5, en: 15 },
-    annualTotal: { zh: 1350, en: 180 },
+    monthly: { zh: 105, en: 20 },
+    annual: { zh: 105, en: 15 },
+    annualTotal: { zh: 1260, en: 180 },
   },
 };
 
 const maxPlans = {
   x2: {
-    price: { zh: 300, en: 40 },
-    annualPrice: { zh: 225, en: 30 },
-    annualTotal: { zh: 2700, en: 360 },
+    price: { zh: 210, en: 40 },
+    annualPrice: { zh: 210, en: 30 },
+    annualTotal: { zh: 2520, en: 360 },
     monthly: '320,000',
     passive: '1,000',
     projectStorage: '400GB',
   },
   x5: {
-    price: { zh: 750, en: 100 },
-    annualPrice: { zh: 565, en: 75 },
-    annualTotal: { zh: 6780, en: 900 },
+    price: { zh: 525, en: 100 },
+    annualPrice: { zh: 525, en: 75 },
+    annualTotal: { zh: 6300, en: 900 },
     monthly: '800,000',
     passive: '2,500',
     projectStorage: '1TB',
@@ -244,6 +245,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
   const [billingCycle, setBillingCycle] = React.useState<BillingCycle>('monthly');
   const [autoRenew, setAutoRenew] = React.useState(true);
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('airwallex');
+  const [maxTier, setMaxTier] = React.useState<MaxTier>('x2');
   const [openStoragePlan, setOpenStoragePlan] = React.useState<StoragePlanKey | null>(null);
   const [planStorage, setPlanStorage] = React.useState<Record<StoragePlanKey, number>>({
     pro: 50,
@@ -252,6 +254,11 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
   });
   const isAnnual = billingCycle === 'annual';
   const text = (localized: LocalizedText) => copy(localized, language);
+  const activeMaxPlan = maxPlans[maxTier];
+  const activeMaxStorageKey: StoragePlanKey = maxTier === 'x2' ? 'maxX2' : 'maxX5';
+  const activeMaxBaseStorage = maxTier === 'x2' ? 400 : 1000;
+  const activeMaxStorage = planStorage[activeMaxStorageKey];
+  const activeMaxName = maxTier === 'x2' ? 'Max x2' : 'Max x5';
 
   return (
     <div className="uber-pricing-page">
@@ -421,41 +428,24 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
         }
 
         .uber-pricing-page .pricing-grid {
-          display: flex;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
           align-items: flex-start;
           gap: 24px;
-          overflow-x: auto;
-          overflow-y: hidden;
-          padding: 0 0 16px;
+          padding: 0;
           margin: 0;
-          scroll-snap-type: x mandatory;
-          scroll-padding: 0;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        .uber-pricing-page .pricing-grid::-webkit-scrollbar { height: 10px; }
-        .uber-pricing-page .pricing-grid::-webkit-scrollbar-track {
-          background: transparent;
-          border-radius: 999px;
-        }
-        .uber-pricing-page .pricing-grid::-webkit-scrollbar-thumb {
-          background: rgba(110, 121, 137, 0.2);
-          border-radius: 999px;
-        }
-        .uber-pricing-page .pricing-grid::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 121, 255, 0.58);
         }
 
         .uber-pricing-page .plan {
           display: flex;
           flex-direction: column;
-          flex: 0 0 280px;
+          width: 100%;
+          min-width: 0;
           min-height: 424px;
           border-radius: 12px;
           padding: 20px;
           background: var(--canvas);
           color: var(--ink);
-          scroll-snap-align: start;
           border: 1px solid var(--line);
         }
 
@@ -483,6 +473,92 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
         .uber-pricing-page .plan.max-x5 {
           background: var(--canvas);
           border-color: var(--line);
+        }
+
+        .uber-pricing-page .max-tier-switch {
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
+          margin-left: auto;
+          padding: 3px;
+          border-radius: 999px;
+          background: var(--canvas-soft);
+        }
+
+        .uber-pricing-page .max-tier-switch button {
+          min-width: 42px;
+          min-height: 26px;
+          border: 0;
+          border-radius: 999px;
+          padding: 3px 10px;
+          background: transparent;
+          color: var(--body);
+          font: inherit;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .uber-pricing-page .max-tier-switch button:hover {
+          color: var(--ink);
+        }
+
+        .uber-pricing-page .max-tier-switch button.active {
+          background: var(--canvas);
+          color: var(--ink);
+          box-shadow: rgba(35, 40, 47, 0.1) 0 2px 8px;
+        }
+
+        .uber-pricing-page .max-tier-switch button:focus-visible,
+        .uber-pricing-page .downgrade-button:focus-visible {
+          outline: 2px solid var(--accent);
+          outline-offset: 2px;
+        }
+
+        .uber-pricing-page .free-downgrade-row {
+          display: flex;
+          justify-content: flex-end;
+          margin-top: 16px;
+        }
+
+        .uber-pricing-page .downgrade-button {
+          min-height: 40px;
+          border: 1px solid var(--line);
+          border-radius: 999px;
+          padding: 8px 18px;
+          background: transparent;
+          color: var(--body);
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+        }
+
+        .uber-pricing-page .downgrade-button:hover {
+          border-color: #cbd1d8;
+          background: var(--canvas-soft);
+          color: var(--ink);
+        }
+
+        .uber-pricing-page .recharge-products-section {
+          margin-top: 48px;
+          padding-top: 32px;
+          border-top: 1px solid var(--line);
+        }
+
+        .uber-pricing-page .recharge-products-section > h3 {
+          margin: 0 0 20px;
+          color: var(--ink);
+          font-size: 20px;
+          line-height: 28px;
+          font-weight: 700;
+        }
+
+        .uber-pricing-page .recharge-products-grid {
+          display: grid;
+          grid-template-columns: minmax(280px, 360px);
+          gap: 24px;
         }
 
         .uber-pricing-page .plan.mini-pack h3,
@@ -1531,7 +1607,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
 
         @media (max-width: 1120px) {
           .uber-pricing-page .page { padding-left: 24px; padding-right: 24px; }
-          .uber-pricing-page .plan { flex-basis: 280px; }
+          .uber-pricing-page .pricing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
 
         @media (max-width: 720px) {
@@ -1563,7 +1639,9 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
 
           .uber-pricing-page .recharge-card,
           .uber-pricing-page .payment-grid,
-          .uber-pricing-page .storage-pricing-section {
+          .uber-pricing-page .storage-pricing-section,
+          .uber-pricing-page .pricing-grid,
+          .uber-pricing-page .recharge-products-grid {
             grid-template-columns: 1fr;
           }
 
@@ -1571,9 +1649,8 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
             grid-template-columns: 1fr;
           }
 
-          .uber-pricing-page .plan {
-            flex-basis: min(86vw, 280px);
-          }
+          .uber-pricing-page .free-downgrade-row { justify-content: stretch; }
+          .uber-pricing-page .downgrade-button { width: 100%; }
         }
       `}</style>
 
@@ -1596,7 +1673,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
                   onClick={() => setBillingCycle('annual')}
                 >
                   {text({ zh: '年付', en: 'Annual' })}
-                  <span className="billing-discount">-15%</span>
+                  {language === 'en' ? <span className="billing-discount">-15%</span> : null}
                 </button>
               </div>
               <button
@@ -1613,33 +1690,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
           </div>
 
           <div className="pricing-grid">
-            <article className="plan free">
-              <div className="plan-title-row">
-                <h3>Free</h3>
-                <span className="plan-tag">Free</span>
-              </div>
-              <p className="plan-subtitle">{text({ zh: '体验搜索与基础问答，Agent 需升级后使用', en: 'Try search and basic QA. Upgrade to use Agent' })}</p>
-              <div className="price-action">
-                <p className="price"><strong>{formatPlanPrice(isAnnual ? planPrices.free.annual : planPrices.free.monthly, language)}</strong><span>{text({ zh: '/ 月', en: '/ month' })}</span></p>
-                <p className="muted">{text({ zh: '免费使用', en: 'Free to use' })}</p>
-                <a className="plan-cta secondary" href="#">{text({ zh: '开始体验', en: 'Get started' })}</a>
-              </div>
-              <div className="info-list">
-                <div className="info-row">
-                  <InfoLabel label={text({ zh: '每月积分', en: 'Monthly credits' })} tooltip={text({ zh: '每月一次性发放，用于体验基础搜索和问答。', en: 'Issued once per month for basic search and QA.' })} language={language} />
-                  <strong>1,000</strong>
-                </div>
-                <div className="info-row">
-                  <InfoLabel label={text({ zh: 'Agent', en: 'Agent' })} tooltip={text({ zh: 'Free 用户不可启动 Agent。', en: 'Agent is unavailable on Free.' })} language={language} />
-                  <strong>{text({ zh: '需升级', en: 'Upgrade' })}</strong>
-                </div>
-                <div className="info-row">
-                  <InfoLabel label={text({ zh: '基础高速存储', en: 'Base high-speed storage' })} tooltip={text({ zh: '新上传文件默认进入高速存储，保留满 6 个月后自动转入归档存储。', en: 'New uploads enter high-speed storage and move to archive storage after six months.' })} language={language} />
-                  <strong>1 GB</strong>
-                </div>
-              </div>
-            </article>
-
             <article className="plan plus">
               <div className="plan-title-row">
                 <h3>Plus</h3>
@@ -1706,24 +1756,40 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
               </div>
             </article>
 
-            <article className="plan max max-x2">
+            <article className="plan max">
               <div className="plan-title-row">
-                <h3>Max x2</h3>
-                <span className="plan-tag">{text({ zh: '团队适用', en: 'For teams' })}</span>
+                <h3>Max</h3>
+                <div className="max-tier-switch" role="tablist" aria-label={text({ zh: 'Max 规格', en: 'Max tier' })}>
+                  {(['x2', 'x5'] as MaxTier[]).map((tier) => (
+                    <button
+                      key={tier}
+                      type="button"
+                      role="tab"
+                      aria-selected={maxTier === tier}
+                      className={maxTier === tier ? 'active' : ''}
+                      onClick={() => {
+                        setMaxTier(tier);
+                        setOpenStoragePlan(null);
+                      }}
+                    >
+                      {tier}
+                    </button>
+                  ))}
+                </div>
               </div>
               <p className="plan-subtitle">{text({ zh: '高频 Agent 使用、多项目协作和高存储需求', en: 'For frequent Agent usage, multi-project collaboration, and high storage needs' })}</p>
               <div className="price-action">
-                <p className="price"><strong>{formatPlanPrice(isAnnual ? maxPlans.x2.annualPrice : maxPlans.x2.price, language, planStorage.maxX2, 400)}</strong><span>{text({ zh: '/ 月', en: '/ month' })}</span></p>
-                {isAnnual ? <p className="muted">{formatAnnualBilling(formatAnnualTotal(maxPlans.x2.annualTotal, language, planStorage.maxX2, 400), language)}</p> : null}
-                <a className="plan-cta" href="#">{text({ zh: '订阅 Max x2', en: 'Subscribe to Max x2' })}</a>
+                <p className="price"><strong>{formatPlanPrice(isAnnual ? activeMaxPlan.annualPrice : activeMaxPlan.price, language, activeMaxStorage, activeMaxBaseStorage)}</strong><span>{text({ zh: '/ 月', en: '/ month' })}</span></p>
+                {isAnnual ? <p className="muted">{formatAnnualBilling(formatAnnualTotal(activeMaxPlan.annualTotal, language, activeMaxStorage, activeMaxBaseStorage), language)}</p> : null}
+                <a className="plan-cta" href="#">{text({ zh: `订阅 ${activeMaxName}`, en: `Subscribe to ${activeMaxName}` })}</a>
                 <PlanStorageSelector
-                  baseStorageGb={400}
-                  value={planStorage.maxX2}
-                  isOpen={openStoragePlan === 'maxX2'}
+                  baseStorageGb={activeMaxBaseStorage}
+                  value={activeMaxStorage}
+                  isOpen={openStoragePlan === activeMaxStorageKey}
                   language={language}
-                  onToggle={() => setOpenStoragePlan((current) => current === 'maxX2' ? null : 'maxX2')}
+                  onToggle={() => setOpenStoragePlan((current) => current === activeMaxStorageKey ? null : activeMaxStorageKey)}
                   onChange={(value) => {
-                    setPlanStorage((current) => ({ ...current, maxX2: value }));
+                    setPlanStorage((current) => ({ ...current, [activeMaxStorageKey]: value }));
                     setOpenStoragePlan(null);
                   }}
                 />
@@ -1731,57 +1797,37 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
               <div className="info-list">
                 <div className="info-row">
                   <InfoLabel label={text({ zh: '每月积分', en: 'Monthly credits' })} tooltip={text({ zh: '按订阅周期发放，到期后未使用余额将清零。', en: 'Issued per billing cycle. Unused balance expires when the cycle ends.' })} language={language} />
-                  <strong>{maxPlans.x2.monthly}</strong>
+                  <strong>{activeMaxPlan.monthly}</strong>
                 </div>
                 <div className="info-row">
                   <InfoLabel label={text({ zh: '发放方式', en: 'Issuance' })} tooltip={text({ zh: '每个订阅周期开始时一次性发放。', en: 'Issued once at the start of each billing cycle.' })} language={language} />
                   <strong>{text({ zh: '周期一次', en: 'Once per cycle' })}</strong>
                 </div>
                 <div className="info-row">
-                  <InfoLabel label={text({ zh: '基础高速存储', en: 'Base high-speed storage' })} tooltip={text({ zh: 'Max x2 包含 400GB 基础高速存储，归档存储用于长期保存低频文件。', en: 'Max x2 includes 400GB of base high-speed storage. Archive storage keeps lower-frequency files long term.' })} language={language} />
-                  <strong>400 GB</strong>
+                  <InfoLabel
+                    label={text({ zh: '基础高速存储', en: 'Base high-speed storage' })}
+                    tooltip={text({
+                      zh: `${activeMaxName} 包含 ${formatStorage(activeMaxBaseStorage)} 基础高速存储，归档存储用于长期保存低频文件。`,
+                      en: `${activeMaxName} includes ${formatStorage(activeMaxBaseStorage)} of base high-speed storage. Archive storage keeps lower-frequency files long term.`,
+                    })}
+                    language={language}
+                  />
+                  <strong>{formatStorage(activeMaxBaseStorage)}</strong>
                 </div>
               </div>
             </article>
+          </div>
 
-            <article className="plan max max-x5">
-              <div className="plan-title-row">
-                <h3>Max x5</h3>
-              </div>
-              <p className="plan-subtitle">{text({ zh: '高频 Agent 使用、多项目协作和高存储需求', en: 'For frequent Agent usage, multi-project collaboration, and high storage needs' })}</p>
-              <div className="price-action">
-                <p className="price"><strong>{formatPlanPrice(isAnnual ? maxPlans.x5.annualPrice : maxPlans.x5.price, language, planStorage.maxX5, 1000)}</strong><span>{text({ zh: '/ 月', en: '/ month' })}</span></p>
-                {isAnnual ? <p className="muted">{formatAnnualBilling(formatAnnualTotal(maxPlans.x5.annualTotal, language, planStorage.maxX5, 1000), language)}</p> : null}
-                <a className="plan-cta" href="#">{text({ zh: '订阅 Max x5', en: 'Subscribe to Max x5' })}</a>
-                <PlanStorageSelector
-                  baseStorageGb={1000}
-                  value={planStorage.maxX5}
-                  isOpen={openStoragePlan === 'maxX5'}
-                  language={language}
-                  onToggle={() => setOpenStoragePlan((current) => current === 'maxX5' ? null : 'maxX5')}
-                  onChange={(value) => {
-                    setPlanStorage((current) => ({ ...current, maxX5: value }));
-                    setOpenStoragePlan(null);
-                  }}
-                />
-              </div>
-              <div className="info-list">
-                <div className="info-row">
-                  <InfoLabel label={text({ zh: '每月积分', en: 'Monthly credits' })} tooltip={text({ zh: '按订阅周期发放，到期后未使用余额将清零。', en: 'Issued per billing cycle. Unused balance expires when the cycle ends.' })} language={language} />
-                  <strong>{maxPlans.x5.monthly}</strong>
-                </div>
-                <div className="info-row">
-                  <InfoLabel label={text({ zh: '发放方式', en: 'Issuance' })} tooltip={text({ zh: '每个订阅周期开始时一次性发放。', en: 'Issued once at the start of each billing cycle.' })} language={language} />
-                  <strong>{text({ zh: '周期一次', en: 'Once per cycle' })}</strong>
-                </div>
-                <div className="info-row">
-                  <InfoLabel label={text({ zh: '基础高速存储', en: 'Base high-speed storage' })} tooltip={text({ zh: 'Max x5 包含 1TB 基础高速存储，归档存储用于长期保存低频文件。', en: 'Max x5 includes 1TB of base high-speed storage. Archive storage keeps lower-frequency files long term.' })} language={language} />
-                  <strong>1 TB</strong>
-                </div>
-              </div>
-            </article>
+          <div className="free-downgrade-row">
+            <button type="button" className="downgrade-button">
+              {text({ zh: '降级为 Free', en: 'Downgrade to Free' })}
+            </button>
+          </div>
 
-            <article className="plan mini-pack">
+          <section className="recharge-products-section" aria-labelledby="recharge-products-title">
+            <h3 id="recharge-products-title">{text({ zh: '充值包', en: 'Credit packs' })}</h3>
+            <div className="recharge-products-grid">
+              <article className="plan mini-pack">
               <div className="plan-title-row">
                 <h3>Mini Pack</h3>
               </div>
@@ -1814,8 +1860,9 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
                   <strong>50 + {miniPack.projectStorage}</strong>
                 </div>
               </div>
-            </article>
-          </div>
+              </article>
+            </div>
+          </section>
 
           <div className="payment-methods" aria-label={text({ zh: '选择支付方式', en: 'Choose payment method' })}>
             <h3>{text({ zh: '选择支付方式', en: 'Choose payment method' })}</h3>
