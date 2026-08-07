@@ -813,21 +813,21 @@ function MembershipPayment() {
                   <span className="rounded-md bg-white/10 px-2 py-1 text-[9px] font-semibold text-slate-300">月度额度</span>
                 </div>
               </div>
-              <p className="text-xs font-semibold text-white tabular-nums">36,600 剩余</p>
+              <p className="text-xs font-semibold text-white tabular-nums">76,600 剩余</p>
             </div>
             <div
               className="mt-4 h-2 overflow-hidden rounded-full bg-white/10"
               role="progressbar"
               aria-label="Pro 会员 Credits 已使用额度"
               aria-valuemin={0}
-              aria-valuemax={160000}
+              aria-valuemax={200000}
               aria-valuenow={123400}
             >
-              <div className="h-full w-[77.125%] rounded-full bg-white" />
+              <div className="h-full w-[61.7%] rounded-full bg-white" />
             </div>
             <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
               <span>将在 2026 年 7 月 10 日重置</span>
-              <span>22.9% 可用</span>
+              <span>38.3% 可用</span>
             </div>
           </div>
         </section>
