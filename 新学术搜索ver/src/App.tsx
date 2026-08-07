@@ -6,7 +6,7 @@ import { LeftSidebar } from "./components/LeftSidebar";
 import { RightPanel } from "./components/RightPanel";
 import { PaperDetail } from "./components/PaperDetail";
 import { MyLibrary } from "./components/MyLibrary";
-import { ScholarSearchHome, type AcademicIdentifier } from "./components/ScholarSearchHome";
+import { ScholarSearchHome, extractAcademicIdentifiers, type AcademicIdentifier } from "./components/ScholarSearchHome";
 import { HomePage } from "./components/HomePage";
 import { ScholarQA } from "./components/ScholarQA";
 import { PaperReproduction } from "./components/PaperReproduction";
@@ -69,12 +69,43 @@ export default function App() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
   const [readerInitialFile, setReaderInitialFile] = useState<File | null>(null);
+  const [shortcutResults, setShortcutResults] = useState<Paper[] | null>(null);
+
+  const resolveShortcutPaper = (identifier: AcademicIdentifier): Paper => {
+    const cleanValue = identifier.value.replace(/v\d+$/i, '');
+    const arxivFromDoi = identifier.kind === 'DOI'
+      ? cleanValue.match(/^10\.48550\/arxiv\.(.+)$/i)?.[1]
+      : null;
+    const matchedPaper = mockPapers.find((paper) => {
+      if (identifier.kind === 'arXiv') {
+        return paper.arxivId?.replace(/v\d+$/i, '').toLowerCase() === cleanValue.toLowerCase();
+      }
+      return paper.doi?.toLowerCase() === cleanValue.toLowerCase()
+        || Boolean(arxivFromDoi && paper.arxivId?.toLowerCase() === arxivFromDoi.toLowerCase());
+    });
+
+    return matchedPaper ?? {
+      id: `shortcut-${identifier.kind.toLowerCase()}-${cleanValue}`,
+      title: identifier.kind === 'DOI' ? `DOI: ${identifier.value}` : `arXiv: ${identifier.value}`,
+      authors: ['学术标识符解析'],
+      abstract: `已识别 ${identifier.kind} 标识符。正式服务将从快速搜索接口加载该论文的元数据。`,
+      year: 2026,
+      publishedDate: '2026-08-05',
+      venue: identifier.kind,
+      citations: 0,
+      categories: ['Quick Open'],
+      pdfUrl: '#',
+      arxivId: identifier.kind === 'arXiv' ? identifier.value : undefined,
+      doi: identifier.kind === 'DOI' ? identifier.value : undefined,
+      type: 'paper',
+    };
+  };
 
   const filteredPapers = useMemo(() => {
-    let results = mockPapers;
+    let results = shortcutResults ?? mockPapers;
 
     // Search filter
-    if (searchQuery) {
+    if (searchQuery && !shortcutResults) {
       const query = searchQuery.toLowerCase();
       const queryWords = query.split(/\s+/).filter(w => w.length > 1); // Filter out single characters
       
@@ -147,7 +178,7 @@ export default function App() {
     }
 
     return results;
-  }, [searchQuery, filters]);
+  }, [searchQuery, filters, shortcutResults]);
 
   const handleSelectPaper = (paper: Paper) => {
     setSelectedPaper(paper);
@@ -163,40 +194,17 @@ export default function App() {
   };
 
   const handleSearch = (query: string) => {
+    const identifiers = extractAcademicIdentifiers(query);
+    setShortcutResults(identifiers.length > 0 ? identifiers.map(resolveShortcutPaper) : null);
     setSearchQuery(query);
     setHasSearched(true);
   };
 
   const handleQuickOpen = (identifier: AcademicIdentifier) => {
-    const cleanValue = identifier.value.replace(/v\d+$/i, '');
-    const arxivFromDoi = identifier.kind === 'DOI'
-      ? cleanValue.match(/^10\.48550\/arxiv\.(.+)$/i)?.[1]
-      : null;
-    const matchedPaper = mockPapers.find((paper) => {
-      if (identifier.kind === 'arXiv') {
-        return paper.arxivId?.replace(/v\d+$/i, '').toLowerCase() === cleanValue.toLowerCase();
-      }
-      return paper.doi?.toLowerCase() === cleanValue.toLowerCase()
-        || Boolean(arxivFromDoi && paper.arxivId?.toLowerCase() === arxivFromDoi.toLowerCase());
-    });
-
-    const shortcutPaper: Paper = matchedPaper ?? {
-      id: `shortcut-${identifier.kind.toLowerCase()}-${cleanValue}`,
-      title: identifier.kind === 'DOI' ? `DOI: ${identifier.value}` : `arXiv: ${identifier.value}`,
-      authors: ['学术标识符解析'],
-      abstract: `已识别合法的 ${identifier.kind} 标识符。快速阅读页将在正式服务中加载该文献的元数据、全文与引用信息。`,
-      year: 2026,
-      publishedDate: '2026-08-05',
-      venue: identifier.kind,
-      citations: 0,
-      categories: ['Quick Open'],
-      pdfUrl: '#',
-      arxivId: identifier.kind === 'arXiv' ? identifier.value : undefined,
-      doi: identifier.kind === 'DOI' ? identifier.value : undefined,
-      type: 'paper',
-    };
+    const shortcutPaper = resolveShortcutPaper(identifier);
 
     setSearchQuery(identifier.value);
+    setShortcutResults(null);
     setSelectedPaper(shortcutPaper);
     setHasSearched(false);
     setViewMode('quick-paper');
@@ -204,6 +212,7 @@ export default function App() {
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
+    setShortcutResults(null);
     if (!query.trim()) {
       setHasSearched(false);
     }
@@ -223,11 +232,13 @@ export default function App() {
     setSearchQuery('');
     setHasSearched(false);
     setFilters(defaultFilters);
+    setShortcutResults(null);
   };
 
   const handleStartSearchFromHome = (query?: string) => {
     setSelectedPaper(null);
     setFilters(defaultFilters);
+    setShortcutResults(null);
     setViewMode("list");
 
     if (query?.trim()) {
@@ -309,7 +320,7 @@ export default function App() {
                   />
                 </div>
 
-                <SearchThinkingPanel query={searchQuery} />
+                {!shortcutResults && <SearchThinkingPanel query={searchQuery} />}
 
                 <div className="flex-1 overflow-hidden">
                   <SearchResults
@@ -374,12 +385,12 @@ export default function App() {
         </div>
 
         {/* Right Panel - Only show in list view with search results */}
-        {viewMode === "list" && hasSearched && (
+        {viewMode === "list" && hasSearched && !shortcutResults && (
           <RightPanel selectedPaper={selectedPaper} />
         )}
 
         {/* Search More Button - Show only in list view with search results */}
-        {viewMode === "list" && hasSearched && filteredPapers.length > 0 && (
+        {viewMode === "list" && hasSearched && !shortcutResults && filteredPapers.length > 0 && (
           <SearchMoreButton onSearchMore={handleSearchMore} isLoading={isLoadingMore} />
         )}
 

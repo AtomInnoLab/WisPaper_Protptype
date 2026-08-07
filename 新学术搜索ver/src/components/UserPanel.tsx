@@ -224,9 +224,12 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
                     </span>
                   </div>
 
-                  <p className="mt-2.5 text-[9px] text-slate-400">
-                    {language === 'zh' ? '7 月 10 日到期' : 'Expires Jul 10'}
-                  </p>
+                  <div className="mt-2.5 flex flex-wrap gap-x-2 gap-y-1 text-[9px] text-slate-400">
+                    <span>{language === 'zh' ? '月付' : 'Monthly'}</span>
+                    <span>Stripe</span>
+                    <span>{language === 'zh' ? '自动续费中' : 'Auto-renew on'}</span>
+                    <span>{language === 'zh' ? '7 月 10 日到期' : 'Expires Jul 10'}</span>
+                  </div>
 
                   <div className="mt-3 flex items-end justify-between gap-2">
                     <span className="text-[10px] text-slate-400">
@@ -238,7 +241,7 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
                     <div className="h-full w-[77.125%] rounded-full bg-white" />
                   </div>
                   <div className="mt-1.5 flex items-center justify-between text-[9px] text-slate-400">
-                    <span>{language === 'zh' ? '将在 7 月 3 日重置' : 'Resets Jul 3'}</span>
+                    <span>{language === 'zh' ? '将在 7 月 10 日重置' : 'Resets Jul 10'}</span>
                     <span>{language === 'zh' ? '22.9% 可用' : '22.9% available'}</span>
                   </div>
                 </div>

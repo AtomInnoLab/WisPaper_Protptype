@@ -16,9 +16,11 @@ import {
   ExternalLink,
   Loader2,
   Download,
+  HardDrive,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { isValidEmail } from '../utils/email';
-import { calculateStorageCredits } from '../utils/storagePricing';
 import { StorageManagementSection } from './StorageManagementSection';
 
 interface SettingsModalProps {
@@ -26,7 +28,7 @@ interface SettingsModalProps {
   onClose: () => void;
 }
 
-type TabType = 'basic' | 'membership' | 'payment' | 'account';
+type TabType = 'basic' | 'membership' | 'storage' | 'payment' | 'account';
 
 const creditPackages = [
   { id: 'pack-0618', purchasedAt: '2026 年 6 月 18 日', expiresAt: '2026 年 8 月 18 日', total: 5000, used: 1200 },
@@ -39,17 +41,32 @@ const voucherCredits = [
   { id: 'voucher-search-0612', issuedAt: '2026 年 6 月 12 日', expiresAt: '2026 年 9 月 12 日', feature: 'Search', total: 3000, used: 1200 },
 ];
 
-const tenGbStorageCredits = calculateStorageCredits(10);
-
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const [activeTab, setActiveTab] = useState<TabType>('basic');
+  const [activeTab, setActiveTab] = useState<TabType>('membership');
+  const [openIdCopied, setOpenIdCopied] = useState(false);
+  const openId = 'tyqx1tdh3nwg';
   const navigationItems = [
+    { id: 'membership' as const, label: '会员与 Credits', icon: Crown },
     { id: 'basic' as const, label: '个人资料', icon: User },
-    { id: 'membership' as const, label: '会员与额度', icon: Crown },
-    { id: 'payment' as const, label: '订单与发票', icon: CreditCard },
-    { id: 'account' as const, label: '安全与偏好', icon: Settings },
+    { id: 'storage' as const, label: '存储空间', icon: HardDrive },
+    { id: 'payment' as const, label: '订单与账单', icon: CreditCard },
+    { id: 'account' as const, label: '安全设置', icon: Settings },
   ];
   const activePage = navigationItems.find((item) => item.id === activeTab) ?? navigationItems[0];
+
+  useEffect(() => {
+    if (isOpen) setActiveTab('membership');
+  }, [isOpen]);
+
+  const copyOpenId = async () => {
+    try {
+      await navigator.clipboard.writeText(openId);
+      setOpenIdCopied(true);
+      window.setTimeout(() => setOpenIdCopied(false), 1600);
+    } catch {
+      setOpenIdCopied(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -72,7 +89,19 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-slate-950">张涛</p>
-                <p className="mt-0.5 truncate text-xs text-slate-500">zhangtao@example.com</p>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                  <span className="truncate text-[11px] text-slate-500">Open ID: {openId}</span>
+                  <button
+                    type="button"
+                    onClick={copyOpenId}
+                    className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    aria-label={openIdCopied ? 'Open ID 已复制' : '复制 Open ID'}
+                    title={openIdCopied ? '已复制' : '复制 Open ID'}
+                  >
+                    {openIdCopied ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                  <span className="sr-only" aria-live="polite">{openIdCopied ? 'Open ID 已复制' : ''}</span>
+                </div>
               </div>
             </div>
             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
@@ -125,6 +154,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <main className="min-h-0 flex-1 overflow-y-auto bg-white">
             {activeTab === 'basic' && <BasicInformation />}
             {activeTab === 'membership' && <MembershipPayment />}
+            {activeTab === 'storage' && <div className="p-8"><div className="mx-auto max-w-3xl"><StorageManagementSection /></div></div>}
             {activeTab === 'payment' && <PaymentTab />}
             {activeTab === 'account' && <AccountSettings onFinish={onClose} />}
           </main>
@@ -765,10 +795,14 @@ function MembershipPayment() {
                 <span className="rounded-md bg-emerald-400/15 px-2 py-1 text-[10px] font-medium text-emerald-300">生效中</span>
               </div>
               <h3 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Pro 月度版</h3>
-              <p className="mt-2 text-xs leading-5 text-slate-400">2026 年 7 月 10 日到期</p>
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs leading-5 text-slate-400">
+                <span>月付 · 2026 年 7 月 10 日到期</span>
+                <span>自动续费中</span>
+                <span>Stripe</span>
+              </div>
             </div>
             <button className="self-center rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-slate-950 transition-all hover:bg-slate-100 active:scale-[0.98]">
-              升级为年度版
+              升级
             </button>
           </div>
           <div className="border-t border-white/10 px-6 py-5">
@@ -776,7 +810,7 @@ function MembershipPayment() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="text-xs font-semibold text-white">会员 Credits</p>
-                  <span className="rounded-md bg-white/10 px-2 py-1 text-[9px] font-semibold text-slate-300">周期额度</span>
+                  <span className="rounded-md bg-white/10 px-2 py-1 text-[9px] font-semibold text-slate-300">月度额度</span>
                 </div>
               </div>
               <p className="text-xs font-semibold text-white tabular-nums">36,600 剩余</p>
@@ -792,7 +826,7 @@ function MembershipPayment() {
               <div className="h-full w-[77.125%] rounded-full bg-white" />
             </div>
             <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
-              <span>将在 2026 年 7 月 3 日重置</span>
+              <span>将在 2026 年 7 月 10 日重置</span>
               <span>22.9% 可用</span>
             </div>
           </div>
@@ -970,8 +1004,6 @@ function MembershipPayment() {
           </article>
         </section>
 
-        <StorageManagementSection />
-
         {/* Usage */}
         <button 
           onClick={() => setShowUsage(true)}
@@ -1000,54 +1032,48 @@ function MembershipPayment() {
 
 // Payment Tab
 function PaymentTab() {
+  const [market, setMarket] = useState<'global' | 'cn'>('global');
   const [visibleCount, setVisibleCount] = useState(4);
 
-  const orderHistory = [
-    { id: 'storage-1', date: '2026年6月10日', type: '高速存储 10GB 续费', method: 'Credits 余额', amount: `${tenGbStorageCredits.toLocaleString()} Credits`, status: 'paid' as const },
-    { id: '1', date: '2026年3月10日', type: 'Pro 月度', method: '支付宝', amount: '—', status: 'paid' as const },
-    { id: '2', date: '2026年2月10日', type: 'Pro 月度', method: 'Stripe', amount: '—', status: 'paid' as const },
-    { id: '3', date: '2026年1月15日', type: 'Credits 充值', method: 'Airwallex', amount: '—', status: 'paid' as const },
-    { id: '4', date: '2025年12月10日', type: 'Pro 月度', method: '支付宝', amount: '—', status: 'paid' as const },
-    { id: '5', date: '2025年11月10日', type: 'Pro 月度', method: 'Stripe', amount: '—', status: 'paid' as const },
-    { id: '6', date: '2025年10月20日', type: 'Credits 充值', method: 'Airwallex', amount: '—', status: 'paid' as const },
+  const globalOrders = [
+    { id: 'g1', date: '2026年6月10日', type: 'Pro 月度', method: 'Stripe', amount: '-', action: '前往账单' },
+    { id: 'g2', date: '2026年5月10日', type: 'Pro 月度', method: 'Stripe', amount: '-', action: '前往账单' },
+    { id: 'g3', date: '2026年4月18日', type: '充值包 Credits', method: 'Airwallex', amount: '-', action: '下载' },
+    { id: 'g4', date: '2026年4月10日', type: 'Pro 月度', method: 'Stripe', amount: '-', action: '前往账单' },
+    { id: 'g5', date: '2026年3月12日', type: '充值包 Credits', method: 'Airwallex', amount: '-', action: '下载' },
+  ];
+  const cnOrders = [
+    { id: 'c1', date: '2026年6月10日', type: 'Pro 月度', amount: '-', action: '申请发票' },
+    { id: 'c2', date: '2026年5月10日', type: 'Pro 月度', amount: '-', action: '下载发票' },
+    { id: 'c3', date: '2026年4月18日', type: '充值包 Credits', amount: '-', action: '申请发票' },
   ];
 
+  const orderHistory = market === 'global' ? globalOrders : cnOrders;
   const visibleOrders = orderHistory.slice(0, visibleCount);
   const hasMore = visibleCount < orderHistory.length;
 
   return (
     <div className="p-8">
       <div className="mx-auto max-w-3xl">
-        <div className="grid grid-cols-2 gap-4">
-          {/* Invoice Button */}
-          <button className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left transition-all hover:border-slate-300 hover:bg-slate-50/70 active:scale-[0.99]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-                <FileText className="h-4 w-4 text-slate-600" />
-              </div>
-              <div>
-                <span className="text-sm font-semibold text-slate-950">发票管理</span>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
-          </button>
-
-          <button className="group flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 text-left transition-all hover:border-slate-300 hover:bg-slate-50/70 active:scale-[0.99]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-                <CreditCard className="h-4 w-4 text-slate-600" />
-              </div>
-              <div>
-                <span className="text-sm font-semibold text-slate-950">支付方式</span>
-                <p className="mt-0.5 text-xs text-slate-500">支付宝 · 自动续费</p>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
-          </button>
+        <div className="inline-flex rounded-lg bg-slate-100 p-1" role="tablist" aria-label="订单地区">
+          {([
+            ['global', '海外订单'],
+            ['cn', '国内订单'],
+          ] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={market === id}
+              onClick={() => { setMarket(id); setVisibleCount(4); }}
+              className={`rounded-md px-4 py-2 text-xs font-semibold transition ${market === id ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        {/* Order History */}
-        <section className="mt-7">
+        <section className="mt-6">
           <div className="mb-4 flex items-end justify-between">
             <div>
               <h3 className="text-sm font-semibold text-slate-950">订单记录</h3>
@@ -1058,36 +1084,36 @@ function PaymentTab() {
           {/* Table */}
           <div className="overflow-hidden rounded-xl border border-slate-200">
             {/* Table Header */}
-            <div className="grid grid-cols-[1.05fr_1.2fr_0.8fr_4rem_5rem_3.5rem] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
+            <div className={`grid ${market === 'global' ? 'grid-cols-[1fr_1.2fr_0.8fr_4rem_4rem_5rem]' : 'grid-cols-[1fr_1.35fr_4rem_4rem_6rem]'} gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5`}>
               <span className="text-[11px] font-medium text-slate-500">日期</span>
               <span className="text-[11px] font-medium text-slate-500">订单类型</span>
-              <span className="text-[11px] font-medium text-slate-500">支付方式</span>
+              {market === 'global' && <span className="text-[11px] font-medium text-slate-500">支付渠道</span>}
               <span className="text-[11px] font-medium text-slate-500">状态</span>
               <span className="text-right text-[11px] font-medium text-slate-500">金额</span>
-              <span className="text-right text-[11px] font-medium text-slate-500">账单</span>
+              <span className="text-right text-[11px] font-medium text-slate-500">{market === 'global' ? '账单' : '发票'}</span>
             </div>
 
             {/* Table Rows */}
             {visibleOrders.map((order, index) => (
               <div
                 key={order.id}
-                className={`grid grid-cols-[1.05fr_1.2fr_0.8fr_4rem_5rem_3.5rem] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-slate-50/70 ${
+                className={`grid ${market === 'global' ? 'grid-cols-[1fr_1.2fr_0.8fr_4rem_4rem_5rem]' : 'grid-cols-[1fr_1.35fr_4rem_4rem_6rem]'} items-center gap-3 px-4 py-3.5 transition-colors hover:bg-slate-50/70 ${
                   index !== visibleOrders.length - 1 ? 'border-b border-slate-100' : ''
                 }`}
               >
                 <span className="text-xs text-slate-600">{order.date}</span>
                 <span className="text-sm font-medium text-slate-900">{order.type}</span>
-                <span className="text-xs text-slate-600">{order.method}</span>
+                {market === 'global' && <span className="text-xs text-slate-600">{'method' in order ? order.method : ''}</span>}
                 <span className="text-xs text-emerald-600">已支付</span>
-                <span className="text-right text-sm font-medium text-slate-950 tabular-nums">{order.amount || '—'}</span>
+                <span className="text-right text-sm font-medium text-slate-950 tabular-nums">{order.amount}</span>
                 <button
                   type="button"
-                  onClick={() => console.info('Download billing statement', { orderId: order.id })}
-                  className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 transition-colors hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                  aria-label={`下载账单 ${order.date} ${order.type}`}
+                  onClick={() => console.info(market === 'global' ? 'Open billing statement' : 'Open invoice management', { orderId: order.id })}
+                  className="ml-auto inline-flex items-center gap-1 whitespace-nowrap text-[11px] font-medium text-slate-500 transition-colors hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  aria-label={`${order.action} ${order.date} ${order.type}`}
                 >
-                  <Download className="h-3.5 w-3.5" />
-                  <span>下载</span>
+                  {market === 'global' && order.action === '下载' ? <Download className="h-3.5 w-3.5" /> : market === 'global' ? <ExternalLink className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+                  <span>{order.action}</span>
                 </button>
               </div>
             ))}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, ArrowRight, ChevronRight, ChevronLeft, BookOpen, GraduationCap, Infinity, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -14,29 +14,56 @@ export interface AcademicIdentifier {
   value: string;
 }
 
-export const detectAcademicIdentifier = (input: string): AcademicIdentifier | null => {
+const normalizeDoi = (value: string) => value.replace(/[\s,，。；;]+$/g, '');
+const normalizeArxiv = (value: string) => value.replace(/\.pdf$/i, '');
+
+export const extractAcademicIdentifiers = (input: string): AcademicIdentifier[] => {
   const raw = input.trim();
-  if (!raw) return null;
+  if (!raw) return [];
 
-  const doiValue = raw
-    .replace(/^doi:\s*/i, '')
-    .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '');
-  if (/^10\.\d{4,9}\/[\-._;()/:a-z0-9]+$/i.test(doiValue)) {
-    return { kind: 'DOI', value: doiValue };
+  const found: AcademicIdentifier[] = [];
+  const seen = new Set<string>();
+  const add = (identifier: AcademicIdentifier) => {
+    const key = `${identifier.kind}:${identifier.value.toLowerCase()}`;
+    if (!seen.has(key) && found.length < 10) {
+      seen.add(key);
+      found.push(identifier);
+    }
+  };
+
+  const doiPattern = /(?:https?:\/\/(?:dx\.)?doi\.org\/|doi\s*:\s*)?(10\.\d{4,9}\/[\-._;()/:a-z0-9]+)/gi;
+  for (const match of raw.matchAll(doiPattern)) {
+    add({ kind: 'DOI', value: normalizeDoi(match[1]) });
   }
 
-  const arxivValue = raw
-    .replace(/^arxiv:\s*/i, '')
-    .replace(/^https?:\/\/(?:www\.)?arxiv\.org\/(?:abs|pdf)\//i, '')
-    .replace(/\.pdf$/i, '');
-  const isModernArxiv = /^\d{4}\.\d{4,5}(?:v\d+)?$/i.test(arxivValue);
-  const isLegacyArxiv = /^[a-z-]+(?:\.[a-z]{2})?\/\d{7}(?:v\d+)?$/i.test(arxivValue);
-  if (isModernArxiv || isLegacyArxiv) {
-    return { kind: 'arXiv', value: arxivValue };
+  const arxivUrlPattern = /https?:\/\/(?:www\.)?arxiv\.org\/(?:abs|pdf)\/([a-z-]+(?:\.[a-z]{2})?\/\d{7}(?:v\d+)?|\d{4}\.\d{4,5}(?:v\d+)?)(?:\.pdf)?/gi;
+  for (const match of raw.matchAll(arxivUrlPattern)) {
+    add({ kind: 'arXiv', value: normalizeArxiv(match[1]) });
   }
 
-  return null;
+  const prefixedArxivPattern = /arxiv\s*:\s*([a-z-]+(?:\.[a-z]{2})?\/\d{7}(?:v\d+)?|\d{4}\.\d{4,5}(?:v\d+)?)/gi;
+  for (const match of raw.matchAll(prefixedArxivPattern)) {
+    add({ kind: 'arXiv', value: match[1] });
+  }
+
+  const modernArxivPattern = /(?<![.\d])\d{4}\.\d{4,5}(?:v\d+)?(?!\d)/gi;
+  for (const match of raw.matchAll(modernArxivPattern)) {
+    add({ kind: 'arXiv', value: match[0] });
+  }
+
+  const legacyArxivPattern = /(?<![a-z0-9.-])[a-z-]+(?:\.[a-z]{2})?\/\d{7}(?:v\d+)?(?!\d)/gi;
+  for (const match of raw.matchAll(legacyArxivPattern)) {
+    add({ kind: 'arXiv', value: match[0] });
+  }
+
+  const identifierCharacters = found.reduce((total, item) => total + item.value.length, 0);
+  if (raw.length > 280 && identifierCharacters / raw.length < 0.35) return [];
+
+  return found;
 };
+
+export const detectAcademicIdentifier = (input: string): AcademicIdentifier | null =>
+  extractAcademicIdentifiers(input)[0] ?? null;
 
 // Category keys for translation
 const categoryKeys = [
@@ -102,7 +129,25 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
   const [selectedThesesCategory, setSelectedThesesCategory] = useState<string>('cs');
   const [selectedCategory, setSelectedCategory] = useState<string>('libraryCollections');
   const [selectedDatabase, setSelectedDatabase] = useState<string>('public');
-  const academicIdentifier = detectAcademicIdentifier(searchQuery);
+  const detectedIdentifiers = extractAcademicIdentifiers(searchQuery);
+  const [verifiedIdentifiers, setVerifiedIdentifiers] = useState<AcademicIdentifier[]>([]);
+  const [isVerifyingIdentifiers, setIsVerifyingIdentifiers] = useState(false);
+
+  useEffect(() => {
+    setVerifiedIdentifiers([]);
+    if (detectedIdentifiers.length === 0) {
+      setIsVerifyingIdentifiers(false);
+      return;
+    }
+
+    setIsVerifyingIdentifiers(true);
+    const timer = window.setTimeout(() => {
+      setVerifiedIdentifiers(detectedIdentifiers);
+      setIsVerifyingIdentifiers(false);
+    }, 260);
+
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
 
   const visibleCategories = 8;
   const canScrollLeft = currentCategoryIndex > 0;
@@ -209,6 +254,7 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
         .scholar-search-landing .search-input-wrap {
           position: relative;
           margin-bottom: 14px;
+          padding-bottom: 12px;
           border-radius: 14px;
           background: var(--canvas-softer);
           border: 1px solid rgba(0, 121, 255, 0.1);
@@ -237,6 +283,68 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
           justify-content: space-between;
           gap: 16px;
           padding-top: 2px;
+        }
+
+        .scholar-search-landing .identifier-results {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin: -2px 14px 0;
+          overflow-x: auto;
+          padding: 2px 1px 3px;
+          scrollbar-width: thin;
+        }
+
+        .scholar-search-landing .identifier-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 36px;
+          max-width: 420px;
+          padding: 7px 11px;
+          border: 1px solid rgba(0, 121, 255, 0.22);
+          border-radius: 10px;
+          background: rgba(0, 121, 255, 0.1);
+          color: var(--accent-deep);
+          cursor: pointer;
+          font-size: 13px;
+          line-height: 18px;
+          font-weight: 600;
+          text-align: left;
+          white-space: nowrap;
+          animation: shortcut-in 0.16s ease-out;
+          transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+        }
+
+        .scholar-search-landing .identifier-chip:hover {
+          border-color: rgba(0, 121, 255, 0.4);
+          background: rgba(0, 121, 255, 0.15);
+          transform: translateY(-1px);
+        }
+
+        .scholar-search-landing .identifier-chip:focus-visible {
+          outline: 3px solid rgba(0, 121, 255, 0.2);
+          outline-offset: 2px;
+        }
+
+        .scholar-search-landing .identifier-chip-kind {
+          flex-shrink: 0;
+          padding-right: 8px;
+          border-right: 1px solid rgba(17, 31, 164, 0.18);
+          font-size: 11px;
+          letter-spacing: 0.04em;
+        }
+
+        .scholar-search-landing .identifier-chip-value {
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .scholar-search-landing .identifier-verifying {
+          cursor: default;
+          border-color: rgba(0, 121, 255, 0.12);
+          background: rgba(0, 121, 255, 0.06);
+          color: var(--body);
         }
 
         .scholar-search-landing .control-left,
@@ -548,6 +656,30 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
               rows={3}
               className="search-textarea"
             />
+            {(isVerifyingIdentifiers || verifiedIdentifiers.length > 0) && (
+              <div className="identifier-results" aria-label="已识别论文标识符">
+                {isVerifyingIdentifiers && (
+                  <span className="identifier-chip identifier-verifying" aria-live="polite">
+                  <span className="h-3.5 w-3.5 animate-pulse rounded bg-blue-200" />
+                    <span>正在识别论文</span>
+                  </span>
+                )}
+                {!isVerifyingIdentifiers && verifiedIdentifiers.map((identifier) => (
+                  <button
+                    key={`${identifier.kind}-${identifier.value}`}
+                    type="button"
+                    onClick={() => onQuickOpen(identifier)}
+                    className="identifier-chip"
+                    aria-label={`打开 ${identifier.kind} ${identifier.value}`}
+                    title={`点击查看 ${identifier.value}`}
+                  >
+                    <BookOpen className="h-4 w-4 shrink-0" />
+                    <span className="identifier-chip-kind">{identifier.kind}</span>
+                    <span className="identifier-chip-value">{identifier.value}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Mode Toggle and Options */}
@@ -597,18 +729,6 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
                 <Infinity className="w-4 h-4" />
                 <span>Unmetered</span>
               </button>
-
-              {academicIdentifier && (
-                <button
-                  type="button"
-                  onClick={() => onQuickOpen(academicIdentifier)}
-                  className="quick-open-button"
-                  aria-label={`立即查看 ${academicIdentifier.kind} ${academicIdentifier.value}`}
-                >
-                  <BookOpen className="h-4 w-4" />
-                  <span>立即查看</span>
-                </button>
-              )}
 
               {/* Search Button */}
               <button

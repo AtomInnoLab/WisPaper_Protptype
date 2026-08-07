@@ -21,7 +21,7 @@ import { cn } from './ui/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { isValidEmail } from '../utils/email';
 import {
-  detectAcademicIdentifier,
+  extractAcademicIdentifiers,
   type AcademicIdentifier,
 } from './ScholarSearchHome';
 import {
@@ -87,7 +87,9 @@ function AIFeedsSearchHero({
   const [query, setQuery] = useState('');
   const [selectedSkill, setSelectedSkill] = useState<'search' | 'scholar-qa' | 'socratic' | 'paperclaw'>('search');
   const [searchMode, setSearchMode] = useState<'deep' | 'quick'>('deep');
-  const academicIdentifier = detectAcademicIdentifier(query);
+  const detectedIdentifiers = extractAcademicIdentifiers(query);
+  const [verifiedIdentifiers, setVerifiedIdentifiers] = useState<AcademicIdentifier[]>([]);
+  const [isVerifyingIdentifiers, setIsVerifyingIdentifiers] = useState(false);
   const heroTitle =
     selectedSkill === 'scholar-qa'
       ? t('aiFeeds.searchHero.scholarQaTitle')
@@ -104,6 +106,21 @@ function AIFeedsSearchHero({
     }
   };
 
+  useEffect(() => {
+    setVerifiedIdentifiers([]);
+    if (detectedIdentifiers.length === 0) {
+      setIsVerifyingIdentifiers(false);
+      return;
+    }
+
+    setIsVerifyingIdentifiers(true);
+    const timer = window.setTimeout(() => {
+      setVerifiedIdentifiers(detectedIdentifiers);
+      setIsVerifyingIdentifiers(false);
+    }, 260);
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
   return (
     <section className="space-y-4">
       <div className="text-center">
@@ -113,20 +130,45 @@ function AIFeedsSearchHero({
       </div>
       <Card className="w-full rounded-[26px] border-border/70 bg-background shadow-sm">
         <CardContent className="space-y-5 p-4 sm:p-5">
-          <textarea
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                submitSearch();
-              }
-            }}
-            rows={3}
-            aria-label="Search papers, DOI, or arXiv ID"
-            placeholder="Find papers that introduce new RL algorithms for LLM post-training."
-            className="min-h-[78px] w-full resize-none rounded-[20px] border border-border/60 bg-white px-4 py-3 text-left text-[15px] text-foreground outline-none transition-colors placeholder:text-muted-foreground/90 focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
-          />
+          <div className="rounded-[20px] border border-border/60 bg-white transition-colors focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-100">
+            <textarea
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                  event.preventDefault();
+                  submitSearch();
+                }
+              }}
+              rows={3}
+              aria-label="Search papers, DOI, or arXiv ID"
+              placeholder="Find papers that introduce new RL algorithms for LLM post-training."
+              className="min-h-[78px] w-full resize-none rounded-[20px] bg-transparent px-4 py-3 text-left text-[15px] text-foreground outline-none placeholder:text-muted-foreground/90"
+            />
+            {(isVerifyingIdentifiers || verifiedIdentifiers.length > 0) ? (
+              <div className="flex gap-2 overflow-x-auto px-4 pb-3" aria-label="已识别论文标识符">
+                {isVerifyingIdentifiers ? (
+                  <span className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 text-xs font-medium text-sky-700" aria-live="polite">
+                    <span className="h-3 w-3 animate-pulse rounded bg-sky-200" />
+                    正在识别论文
+                  </span>
+                ) : null}
+                {!isVerifyingIdentifiers && verifiedIdentifiers.map((identifier) => (
+                  <button
+                    key={`${identifier.kind}-${identifier.value}`}
+                    type="button"
+                    className="inline-flex h-9 max-w-[360px] shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 text-left text-xs font-semibold text-sky-800 transition-colors hover:border-sky-300 hover:bg-sky-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 active:scale-[0.98]"
+                    aria-label={`打开 ${identifier.kind} ${identifier.value}`}
+                    title={`点击查看 ${identifier.value}`}
+                    onClick={() => onQuickOpen(identifier)}
+                  >
+                    <span className="border-r border-sky-200 pr-2 text-[11px] tracking-wide">{identifier.kind}</span>
+                    <span className="truncate">{identifier.value}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1 rounded-full border border-border/70 bg-white p-1">
@@ -214,17 +256,6 @@ function AIFeedsSearchHero({
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="hidden sm:inline">⌘K {t('search')}</span>
-              {academicIdentifier ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-9 rounded-full border-sky-200 bg-sky-50 px-4 font-medium text-sky-700 shadow-none hover:bg-sky-100 hover:text-sky-800"
-                  aria-label={`立即查看 ${academicIdentifier.kind} ${academicIdentifier.value}`}
-                  onClick={() => onQuickOpen(academicIdentifier)}
-                >
-                  立即查看
-                </Button>
-              ) : null}
               <Button
                 type="button"
                 size="icon"
