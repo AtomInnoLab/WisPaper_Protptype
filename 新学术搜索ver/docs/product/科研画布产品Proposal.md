@@ -80,7 +80,7 @@ MVP 不以复刻 Miro 或通用思维导图为目标，而是验证一个更窄�
 
 不同颜色和虚实线帮助用户区分证据方向、执行链与协作信息。后续可在关系层累计置信度、引用片段和变更记录。
 
-![科研画布 MVP 原型](research-canvas-interactions-final.png)
+![科研画布 MVP 原型](../screenshots/qa/research-canvas-interactions-final.png)
 
 ## 5. MVP 用户体验
 

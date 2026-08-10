@@ -8,9 +8,9 @@
   - Keep exactly eight fixed capacity options from 10 GB to 1 TB.
   - Remove Credits balance, Credits deductions, and Credits renewal copy.
   - Use real-currency payment with Airwallex and Stripe.
-- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/storage-purchase-dialog-final.png`
-- Focused implementation region: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/storage-purchase-dialog-focused.png`
-- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/storage-purchase-dialog-comparison.png`
+- Browser-rendered implementation: `../screenshots/qa/storage-purchase-dialog-final.png`
+- Focused implementation region: `../screenshots/qa/storage-purchase-dialog-focused.png`
+- Combined comparison: `../screenshots/qa/storage-purchase-dialog-comparison.png`
 - Browser viewport: 1869 × 1324 CSS px, device scale factor 1.
 - Source pixels: 1094 × 1338.
 - Implementation pixels: 1869 × 1324.
@@ -64,7 +64,7 @@ final result: passed
 ## Evidence
 
 - Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-baa324eb-0c8e-4f26-bb4d-9b91023a3a0b.png`
-- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/ai-feeds-search-shortcut.png`
+- Browser-rendered implementation: `../screenshots/qa/ai-feeds-search-shortcut.png`
 - Source pixels: 2776 × 2412.
 - Implementation pixels and CSS viewport: 1884 × 1324; browser device pixel ratio reported as 2.
 - Density normalization: not required for the scoped interaction review; the comparison evaluated the same responsive search-hero region rather than asserting full-page pixel parity across different sidebar and viewport crops.
@@ -107,8 +107,8 @@ final result: passed
 ## Evidence
 
 - Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-daa4d855-8f1f-44bd-ab61-fee088425a44.png`
-- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/search-shortcut-final.png`
-- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/search-shortcut-comparison.png`
+- Browser-rendered implementation: `../screenshots/qa/search-shortcut-final.png`
+- Combined comparison: `../screenshots/qa/search-shortcut-comparison.png`
 - State: Scholar Search landing page with a valid DOI URL entered and the quick-open action visible.
 
 ## Required Fidelity Surfaces
@@ -143,8 +143,8 @@ final result: passed
 ## Evidence
 
 - Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-a07c33d3-7936-4493-a4b6-bee0ec80bff1.png`
-- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/agent-tier-switcher-final.png`
-- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/agent-tier-switcher-comparison.png`
+- Browser-rendered implementation: `../screenshots/qa/agent-tier-switcher-final.png`
+- Combined comparison: `../screenshots/qa/agent-tier-switcher-comparison.png`
 - State: Agent launch page, tier switcher open, Balanced selected.
 
 ## Required Fidelity Surfaces
@@ -180,7 +180,7 @@ final result: passed
 
 - Source visual truth: `/var/folders/fg/_4m5sn993xbcb9244d3d96_m0000gn/T/codex-clipboard-91aabbbd-2cc8-4746-a1b9-e14ad1eb3eca.png`
 - Browser-rendered implementation: `/Users/trimeresurus/Documents/wp原型/voucher-credits-card-expanded.png`
-- Combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/voucher-credits-comparison.png`
+- Combined comparison: `../screenshots/qa/voucher-credits-comparison.png`
 - State: Account settings > Membership & Credits, Voucher Credits expanded.
 
 ## Required Fidelity Surfaces
@@ -212,12 +212,12 @@ final result: passed
 ## Evidence
 
 - Source URL: `https://dev.wispaper.ai/zh/paper?etd=73&rtd=b176a465-8739-49e9-91a9-21256c317b4b&rnd=5f6b1720-495e-4ac3-8e24-fc3b89c2c048`
-- Source desktop capture: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/source-quick-reader-desktop-top.png`
-- Source mobile capture: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/source-quick-reader-mobile.png`
-- Browser-rendered implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-desktop.png`
-- Mobile implementation: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-mobile.png`
-- Desktop combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-comparison.png`
-- Mobile combined comparison: `/Users/trimeresurus/Desktop/-1/新学术搜索ver/quick-paper-page-mobile-comparison.png`
+- Source desktop capture: `../screenshots/qa/source-quick-reader-desktop-top.png`
+- Source mobile capture: `../screenshots/qa/source-quick-reader-mobile.png`
+- Browser-rendered implementation: `../screenshots/qa/quick-paper-page-desktop.png`
+- Mobile implementation: `../screenshots/qa/quick-paper-page-mobile.png`
+- Desktop combined comparison: `../screenshots/qa/quick-paper-page-comparison.png`
+- Mobile combined comparison: `../screenshots/qa/quick-paper-page-mobile-comparison.png`
 - Desktop viewport: 1280 × 720 CSS px; screenshots 1280 × 720 px; device pixel ratio reported as 2.
 - Mobile viewport and screenshots: 390 × 844 CSS px / pixels.
 - State: OA paper quick page for `Attention Is All You Need`, with `从阅读器打开` visible.
