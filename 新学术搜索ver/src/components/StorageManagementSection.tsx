@@ -4,7 +4,11 @@ import { Archive, ChevronDown, ChevronRight, HardDrive } from 'lucide-react';
 const planStorageGb = 60;
 const usedStorageGb = 46.8;
 
-export function StorageManagementSection() {
+interface StorageManagementSectionProps {
+  onOpenPricing?: () => void;
+}
+
+export function StorageManagementSection({ onOpenPricing }: StorageManagementSectionProps = {}) {
   const [expandedTier, setExpandedTier] = useState<'high-speed' | 'archive' | null>(null);
   const highSpeedExpanded = expandedTier === 'high-speed';
   const archiveExpanded = expandedTier === 'archive';
@@ -45,7 +49,7 @@ export function StorageManagementSection() {
                 <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => console.info('Open pricing storage tiers')}
+                    onClick={onOpenPricing}
                     className="shrink-0 whitespace-nowrap rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
                   >
                     升级容量

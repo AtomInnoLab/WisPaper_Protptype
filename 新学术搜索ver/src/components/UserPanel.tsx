@@ -94,13 +94,6 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
     setShowDownloadMenu(false);
   };
 
-  const handleCreditsHistory = () => {
-    console.log('Credits history clicked');
-    // Implement credits history logic here
-    setShowUserMenu(false);
-    setShowDownloadMenu(false);
-  };
-
   return (
     <div className="border-t border-gray-100">
       {/* Invite Banner */}
@@ -243,6 +236,13 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
                   <div className="mt-1.5 flex items-center justify-between text-[9px] text-slate-400">
                     <span>{language === 'zh' ? '将在 7 月 10 日重置' : 'Resets Jul 10'}</span>
                     <span>{language === 'zh' ? '22.9% 可用' : '22.9% available'}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-2.5 text-[9px] text-slate-500">
+                    <div className="flex items-center gap-1.5">
+                      <Coins className="h-3 w-3 text-slate-500" />
+                      <span>{language === 'zh' ? '已领取 Voucher' : 'Claimed vouchers'}</span>
+                    </div>
+                    <span className="tabular-nums text-slate-400">2 {language === 'zh' ? '笔' : 'items'} · 3,200 Credits</span>
                   </div>
                 </div>
 

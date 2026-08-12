@@ -19,6 +19,9 @@ import {
   HardDrive,
   Copy,
   Check,
+  Plus,
+  MoreVertical,
+  WalletCards,
 } from 'lucide-react';
 import { isValidEmail } from '../utils/email';
 import { StorageManagementSection } from './StorageManagementSection';
@@ -26,6 +29,7 @@ import { StorageManagementSection } from './StorageManagementSection';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenPricing?: () => void;
 }
 
 type TabType = 'basic' | 'membership' | 'storage' | 'payment' | 'account';
@@ -41,7 +45,7 @@ const voucherCredits = [
   { id: 'voucher-search-0612', issuedAt: '2026 年 6 月 12 日', expiresAt: '2026 年 9 月 12 日', feature: 'Search', total: 3000, used: 1200 },
 ];
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, onOpenPricing }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('membership');
   const [openIdCopied, setOpenIdCopied] = useState(false);
   const openId = 'tyqx1tdh3nwg';
@@ -153,8 +157,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           {/* Content */}
           <main className="min-h-0 flex-1 overflow-y-auto bg-white">
             {activeTab === 'basic' && <BasicInformation />}
-            {activeTab === 'membership' && <MembershipPayment />}
-            {activeTab === 'storage' && <div className="p-8"><div className="mx-auto max-w-3xl"><StorageManagementSection /></div></div>}
+            {activeTab === 'membership' && <MembershipPayment onOpenPricing={onOpenPricing} />}
+            {activeTab === 'storage' && <div className="p-8"><div className="mx-auto max-w-3xl"><StorageManagementSection onOpenPricing={onOpenPricing} /></div></div>}
             {activeTab === 'payment' && <PaymentTab />}
             {activeTab === 'account' && <AccountSettings onFinish={onClose} />}
           </main>
@@ -293,495 +297,9 @@ function BasicInformation() {
 }
 
 // Membership & Payment Tab
-function MembershipPayment() {
+function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
   const [showCreditPackages, setShowCreditPackages] = useState(false);
   const [showVoucherCredits, setShowVoucherCredits] = useState(false);
-  const [showUsage, setShowUsage] = React.useState(false);
-  const [expandedDate, setExpandedDate] = React.useState('2026-06-02');
-  const [expandedFeature, setExpandedFeature] = React.useState('2026-06-02-Search');
-  const [showAllUsageDates, setShowAllUsageDates] = React.useState(false);
-  const featureMeta: Record<string, { color: string; featureClass: string }> = {
-    Search: { color: '#ff8a1f', featureClass: 'bg-orange-100 text-orange-700' },
-    Survey: { color: '#2f80ed', featureClass: 'bg-blue-100 text-blue-700' },
-    QA: { color: '#8b5cf6', featureClass: 'bg-purple-100 text-purple-700' },
-    Feeds: { color: '#94a3b8', featureClass: 'bg-slate-100 text-slate-700' },
-    Agent: { color: '#14b8a6', featureClass: 'bg-teal-100 text-teal-700' },
-  };
-  const makeRecord = (title: string, time: string, amount: number) => ({ title, detail: '', time, amount });
-  const makeFeature = (
-    feature: string,
-    requests: number,
-    credits: number,
-    records: Array<{ title: string; time: string; amount: number }>
-  ) => ({
-    feature,
-    ...featureMeta[feature],
-    requests,
-    credits,
-    records: records.map((record) => ({ ...record, detail: '' })),
-  });
-  const usageGroups = [
-    {
-      date: '2026-06-02',
-      label: '今天',
-      total: 248,
-      dayLimit: 500,
-      features: [
-        {
-          feature: 'Search',
-          color: '#ff8a1f',
-          featureClass: 'bg-orange-100 text-orange-700',
-          requests: 12,
-          credits: 150,
-          records: [
-            { title: '论文翻译', detail: '"Attention Is All You Need" - 全文翻译', time: '2026-06-02 14:32', amount: -30 },
-            { title: '文献检索', detail: '搜索“深度学习在医学图像中的应用”相关论文', time: '2026-06-02 14:05', amount: -20 },
-            { title: 'Quick Search', detail: '检索 Transformer 综述论文', time: '2026-06-02 13:48', amount: -15 },
-            { title: 'Deep Search', detail: '深度检索 Agent 评估方法', time: '2026-06-02 13:20', amount: -15 },
-            { title: '论文翻译', detail: '摘要翻译', time: '2026-06-02 12:52', amount: -10 },
-            { title: '文献检索', detail: '搜索 RAG survey', time: '2026-06-02 12:15', amount: -10 },
-            { title: 'Quick Search', detail: '检索 benchmark 数据集', time: '2026-06-02 11:58', amount: -10 },
-            { title: '文献检索', detail: '搜索 AI workflow', time: '2026-06-02 11:30', amount: -10 },
-            { title: '论文翻译', detail: '方法章节翻译', time: '2026-06-02 10:56', amount: -10 },
-            { title: 'Quick Search', detail: '检索 tool use 论文', time: '2026-06-02 10:34', amount: -10 },
-            { title: '文献检索', detail: '搜索 multimodal retrieval', time: '2026-06-02 10:22', amount: -10 },
-            { title: 'Deep Search', detail: '扩展检索研究空白', time: '2026-06-02 09:55', amount: -10 },
-          ],
-        },
-        {
-          feature: 'Survey',
-          color: '#2f80ed',
-          featureClass: 'bg-blue-100 text-blue-700',
-          requests: 1,
-          credits: 53,
-          records: [
-            { title: 'AI Survey', detail: '生成多模态推理 benchmark 综述', time: '2026-06-02 09:48', amount: -53 },
-          ],
-        },
-        {
-          feature: 'QA',
-          color: '#8b5cf6',
-          featureClass: 'bg-purple-100 text-purple-700',
-          requests: 1,
-          credits: 45,
-          records: [
-            { title: 'AI问答', detail: '关于 Transformer 架构的详细解释', time: '2026-06-02 11:15', amount: -45 },
-          ],
-        },
-        {
-          feature: 'Feeds',
-          color: '#94a3b8',
-          featureClass: 'bg-slate-100 text-slate-700',
-          requests: 1,
-          credits: 0,
-          records: [
-            { title: '订阅更新', detail: '查看本周高相关论文推送', time: '2026-06-02 08:40', amount: 0 },
-          ],
-        },
-      ],
-    },
-    {
-      date: '2026-06-01',
-      label: '昨天',
-      total: 380,
-      dayLimit: 500,
-      features: [
-        {
-          feature: 'Search',
-          color: '#ff8a1f',
-          featureClass: 'bg-orange-100 text-orange-700',
-          requests: 4,
-          credits: 210,
-          records: [
-            { title: 'Deep Search', detail: '检索“LLM Agent evaluation”相关论文', time: '2026-06-01 18:12', amount: -90 },
-            { title: '论文翻译', detail: '"Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" - 摘要翻译', time: '2026-06-01 15:30', amount: -40 },
-            { title: 'Quick Search', detail: '检索“AI research workflow”相关论文', time: '2026-06-01 10:06', amount: -80 },
-          ],
-        },
-        {
-          feature: 'Survey',
-          color: '#2f80ed',
-          featureClass: 'bg-blue-100 text-blue-700',
-          requests: 1,
-          credits: 80,
-          records: [
-            { title: 'AI Survey', detail: '生成 Agentic RAG 研究综述', time: '2026-06-01 16:44', amount: -80 },
-          ],
-        },
-        {
-          feature: 'QA',
-          color: '#8b5cf6',
-          featureClass: 'bg-purple-100 text-purple-700',
-          requests: 2,
-          credits: 70,
-          records: [
-            { title: 'AI问答', detail: '解释 chain-of-thought 与 tool use 的区别', time: '2026-06-01 13:20', amount: -35 },
-            { title: 'AI问答', detail: '总结 MoE 架构的训练优势', time: '2026-06-01 11:42', amount: -35 },
-          ],
-        },
-        {
-          feature: 'Agent',
-          color: '#14b8a6',
-          featureClass: 'bg-teal-100 text-teal-700',
-          requests: 1,
-          credits: 70,
-          records: [
-            { title: 'Agent任务', detail: '整理三篇论文的对比分析框架', time: '2026-06-01 09:18', amount: -70 },
-          ],
-        },
-        {
-          feature: 'Feeds',
-          color: '#94a3b8',
-          featureClass: 'bg-slate-100 text-slate-700',
-          requests: 1,
-          credits: 20,
-          records: [
-            { title: '订阅更新', detail: '刷新 AI Agent 方向订阅', time: '2026-06-01 08:10', amount: -20 },
-          ],
-        },
-      ],
-    },
-    {
-      date: '2026-05-31',
-      label: '05月31日',
-      total: 70,
-      dayLimit: 500,
-      features: [
-        {
-          feature: 'Search',
-          color: '#ff8a1f',
-          featureClass: 'bg-orange-100 text-orange-700',
-          requests: 1,
-          credits: 30,
-          records: [
-            { title: '文献检索', detail: '搜索“multimodal retrieval benchmark”相关论文', time: '2026-05-31 17:24', amount: -30 },
-          ],
-        },
-        {
-          feature: 'QA',
-          color: '#8b5cf6',
-          featureClass: 'bg-purple-100 text-purple-700',
-          requests: 1,
-          credits: 40,
-          records: [
-            { title: 'AI问答', detail: '解释 contrastive learning 的核心机制', time: '2026-05-31 14:02', amount: -40 },
-          ],
-        },
-      ],
-    },
-    {
-      date: '2026-05-30',
-      label: '05月30日',
-      total: 312,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 3, 160, [
-          makeRecord('Deep Search', '2026-05-30 16:18', -90),
-          makeRecord('论文翻译', '2026-05-30 14:46', -40),
-          makeRecord('Quick Search', '2026-05-30 10:25', -30),
-        ]),
-        makeFeature('Survey', 1, 72, [makeRecord('AI Survey', '2026-05-30 12:10', -72)]),
-        makeFeature('QA', 2, 80, [
-          makeRecord('AI问答', '2026-05-30 15:42', -40),
-          makeRecord('AI问答', '2026-05-30 11:36', -40),
-        ]),
-      ],
-    },
-    {
-      date: '2026-05-29',
-      label: '05月29日',
-      total: 196,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 2, 110, [
-          makeRecord('文献检索', '2026-05-29 18:08', -60),
-          makeRecord('论文翻译', '2026-05-29 13:35', -50),
-        ]),
-        makeFeature('Agent', 1, 56, [makeRecord('Agent任务', '2026-05-29 16:20', -56)]),
-        makeFeature('Feeds', 1, 30, [makeRecord('订阅更新', '2026-05-29 09:18', -30)]),
-      ],
-    },
-    {
-      date: '2026-05-28',
-      label: '05月28日',
-      total: 428,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 5, 240, [
-          makeRecord('Deep Search', '2026-05-28 19:02', -100),
-          makeRecord('文献检索', '2026-05-28 16:17', -50),
-          makeRecord('Quick Search', '2026-05-28 14:22', -30),
-          makeRecord('论文翻译', '2026-05-28 11:40', -40),
-          makeRecord('Quick Search', '2026-05-28 09:30', -20),
-        ]),
-        makeFeature('Survey', 1, 88, [makeRecord('AI Survey', '2026-05-28 13:12', -88)]),
-        makeFeature('QA', 2, 100, [
-          makeRecord('AI问答', '2026-05-28 17:25', -45),
-          makeRecord('AI问答', '2026-05-28 10:18', -55),
-        ]),
-      ],
-    },
-    {
-      date: '2026-05-27',
-      label: '05月27日',
-      total: 145,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 2, 75, [
-          makeRecord('文献检索', '2026-05-27 15:08', -35),
-          makeRecord('论文翻译', '2026-05-27 11:12', -40),
-        ]),
-        makeFeature('QA', 1, 45, [makeRecord('AI问答', '2026-05-27 16:30', -45)]),
-        makeFeature('Feeds', 1, 25, [makeRecord('订阅更新', '2026-05-27 08:55', -25)]),
-      ],
-    },
-    {
-      date: '2026-05-26',
-      label: '05月26日',
-      total: 260,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 2, 100, [
-          makeRecord('Deep Search', '2026-05-26 17:55', -70),
-          makeRecord('Quick Search', '2026-05-26 10:24', -30),
-        ]),
-        makeFeature('Survey', 1, 95, [makeRecord('AI Survey', '2026-05-26 14:10', -95)]),
-        makeFeature('Agent', 1, 65, [makeRecord('Agent任务', '2026-05-26 11:45', -65)]),
-      ],
-    },
-    {
-      date: '2026-05-25',
-      label: '05月25日',
-      total: 88,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 1, 40, [makeRecord('文献检索', '2026-05-25 13:52', -40)]),
-        makeFeature('QA', 1, 48, [makeRecord('AI问答', '2026-05-25 10:05', -48)]),
-      ],
-    },
-    {
-      date: '2026-05-24',
-      label: '05月24日',
-      total: 334,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 4, 190, [
-          makeRecord('Deep Search', '2026-05-24 18:40', -80),
-          makeRecord('论文翻译', '2026-05-24 15:16', -50),
-          makeRecord('文献检索', '2026-05-24 11:28', -40),
-          makeRecord('Quick Search', '2026-05-24 09:22', -20),
-        ]),
-        makeFeature('Survey', 1, 84, [makeRecord('AI Survey', '2026-05-24 14:05', -84)]),
-        makeFeature('Agent', 1, 60, [makeRecord('Agent任务', '2026-05-24 10:30', -60)]),
-      ],
-    },
-    {
-      date: '2026-05-23',
-      label: '05月23日',
-      total: 174,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 2, 92, [
-          makeRecord('文献检索', '2026-05-23 16:18', -42),
-          makeRecord('论文翻译', '2026-05-23 10:36', -50),
-        ]),
-        makeFeature('QA', 1, 46, [makeRecord('AI问答', '2026-05-23 14:22', -46)]),
-        makeFeature('Feeds', 1, 36, [makeRecord('订阅更新', '2026-05-23 09:05', -36)]),
-      ],
-    },
-    {
-      date: '2026-05-22',
-      label: '05月22日',
-      total: 286,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 3, 150, [
-          makeRecord('Deep Search', '2026-05-22 18:15', -80),
-          makeRecord('文献检索', '2026-05-22 13:52', -35),
-          makeRecord('Quick Search', '2026-05-22 09:48', -35),
-        ]),
-        makeFeature('Survey', 1, 76, [makeRecord('AI Survey', '2026-05-22 15:20', -76)]),
-        makeFeature('Agent', 1, 60, [makeRecord('Agent任务', '2026-05-22 11:14', -60)]),
-      ],
-    },
-    {
-      date: '2026-05-21',
-      label: '05月21日',
-      total: 119,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 1, 54, [makeRecord('论文翻译', '2026-05-21 15:44', -54)]),
-        makeFeature('QA', 1, 45, [makeRecord('AI问答', '2026-05-21 12:18', -45)]),
-        makeFeature('Feeds', 1, 20, [makeRecord('订阅更新', '2026-05-21 08:50', -20)]),
-      ],
-    },
-    {
-      date: '2026-05-20',
-      label: '05月20日',
-      total: 402,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 4, 220, [
-          makeRecord('Deep Search', '2026-05-20 19:10', -100),
-          makeRecord('论文翻译', '2026-05-20 16:02', -50),
-          makeRecord('文献检索', '2026-05-20 13:18', -40),
-          makeRecord('Quick Search', '2026-05-20 10:22', -30),
-        ]),
-        makeFeature('Survey', 1, 92, [makeRecord('AI Survey', '2026-05-20 14:40', -92)]),
-        makeFeature('QA', 2, 90, [
-          makeRecord('AI问答', '2026-05-20 17:28', -45),
-          makeRecord('AI问答', '2026-05-20 11:35', -45),
-        ]),
-      ],
-    },
-    {
-      date: '2026-05-19',
-      label: '05月19日',
-      total: 63,
-      dayLimit: 500,
-      features: [
-        makeFeature('Search', 1, 28, [makeRecord('Quick Search', '2026-05-19 10:16', -28)]),
-        makeFeature('QA', 1, 35, [makeRecord('AI问答', '2026-05-19 09:42', -35)]),
-      ],
-    },
-  ];
-  const dailyUsage = usageGroups.map((day) => ({
-    date: day.date,
-    label: day.label,
-    used: day.total,
-    total: day.dayLimit,
-    featureCount: day.features.length,
-  }));
-  const visibleUsageGroups = showAllUsageDates ? usageGroups : usageGroups.slice(0, 10);
-  const hasMoreUsageDates = usageGroups.length > 10 && !showAllUsageDates;
-
-  if (showUsage) {
-    return (
-      <div className="p-6">
-        <div className="max-w-2xl">
-          {/* Back Button */}
-          <button 
-            onClick={() => setShowUsage(false)}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4 rotate-180" />
-            <span>返回</span>
-          </button>
-
-          {/* Usage Details */}
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-[0_18px_50px_-44px_rgba(15,23,42,0.22)]">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-gray-900">Usage 明细</h4>
-            </div>
-
-            <div className="divide-y divide-gray-100">
-              {visibleUsageGroups.map((day) => {
-                const isDateOpen = expandedDate === day.date;
-
-                return (
-                  <div key={day.date}>
-                    <button
-                      onClick={() => {
-                        const nextDate = isDateOpen ? '' : day.date;
-                        setExpandedDate(nextDate);
-                        if (!isDateOpen && day.features[0]) {
-                          setExpandedFeature(`${day.date}-${day.features[0].feature}`);
-                        }
-                      }}
-                      className="w-full px-5 py-4 flex items-center justify-between gap-4 text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isDateOpen ? 'rotate-90' : ''}`} />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-gray-900">{day.label}</span>
-                            <span className="text-xs text-gray-500">{day.date}</span>
-                          </div>
-                          <p className="mt-1 text-xs text-gray-500">{day.features.length} 个功能</p>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-sm font-semibold text-gray-900">{day.total.toLocaleString()} Credits</p>
-                      </div>
-                    </button>
-
-                    {isDateOpen && (
-                      <div className="px-4 pb-4 bg-gray-50/70">
-                        <div className="space-y-2 pt-2">
-                          {day.features.map((item) => {
-                            const featureKey = `${day.date}-${item.feature}`;
-                            const isFeatureOpen = expandedFeature === featureKey;
-                            const featurePercent = day.total > 0 ? Math.round((item.credits / day.total) * 100) : 0;
-
-                            return (
-                              <div key={featureKey} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                                <button
-                                  onClick={() => setExpandedFeature(isFeatureOpen ? '' : featureKey)}
-                                  className="w-full px-4 py-3 flex items-center justify-between gap-4 text-left hover:bg-gray-50 transition-colors"
-                                >
-                                  <div className="flex min-w-0 items-center gap-3">
-                                    <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isFeatureOpen ? 'rotate-90' : ''}`} />
-                                    <span className="inline-flex h-4 w-4 items-center justify-center rounded-full" style={{ backgroundColor: item.color }}>
-                                      <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                                    </span>
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-gray-900">{item.feature}</span>
-                                        <span className="text-xs text-gray-500">{featurePercent}%</span>
-                                        <span className="text-xs text-gray-400">· {item.requests} 次使用</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <p className="shrink-0 text-sm font-medium text-gray-900">{item.credits.toLocaleString()} Credits</p>
-                                </button>
-
-                                {isFeatureOpen && (
-                                  <div className="border-t border-gray-100 divide-y divide-gray-100">
-                                    {item.records.map((record) => (
-                                      <div key={`${featureKey}-${record.title}-${record.time}`} className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                                        <div className="flex items-start justify-between gap-3">
-                                          <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                              <span className="text-xs font-medium text-gray-900">{record.title}</span>
-                                            </div>
-                                            <p className="text-xs text-gray-400 mt-1">{record.time.slice(11, 16)}</p>
-                                          </div>
-                                          <div className="text-right flex-shrink-0">
-                                            <p className={`text-sm font-semibold ${record.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                              {record.amount > 0 ? '+' : ''}{record.amount.toLocaleString()}
-                                            </p>
-                                            <p className="text-xs text-gray-500">Credits</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {hasMoreUsageDates && (
-                <div className="px-5 py-3 bg-gray-50">
-                  <button
-                    onClick={() => setShowAllUsageDates(true)}
-                    className="w-full text-xs font-medium text-gray-600 hover:text-gray-900 transition-colors"
-                  >
-                    更多
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="p-8">
@@ -801,7 +319,11 @@ function MembershipPayment() {
                 <span>Stripe</span>
               </div>
             </div>
-            <button className="self-center rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-slate-950 transition-all hover:bg-slate-100 active:scale-[0.98]">
+            <button
+              type="button"
+              onClick={onOpenPricing}
+              className="self-center rounded-lg bg-white px-4 py-2.5 text-xs font-semibold text-slate-950 transition-all hover:bg-slate-100 active:scale-[0.98]"
+            >
               升级
             </button>
           </div>
@@ -828,6 +350,10 @@ function MembershipPayment() {
             <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400">
               <span>将在 2026 年 7 月 10 日重置</span>
               <span>38.3% 可用</span>
+            </div>
+            <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[10px] text-slate-500">
+              <span>已领取 Voucher</span>
+              <span className="tabular-nums text-slate-400">2 笔 · 3,200 Credits</span>
             </div>
           </div>
         </section>
@@ -857,7 +383,7 @@ function MembershipPayment() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => console.info('Open credit package purchase')}
+                  onClick={onOpenPricing}
                   className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98]"
                 >
                   购买充值包
@@ -1004,27 +530,6 @@ function MembershipPayment() {
           </article>
         </section>
 
-        {/* Usage */}
-        <button 
-          onClick={() => setShowUsage(true)}
-          className="group mt-5 w-full rounded-xl border border-slate-200 bg-white p-5 text-left transition-all hover:border-slate-300 hover:bg-slate-50/70 active:scale-[0.995]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-sm font-semibold text-slate-950">额度使用明细</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-700" />
-          </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {dailyUsage.slice(0, 3).map((day) => (
-              <div key={day.date} className="rounded-lg bg-slate-100/80 px-3.5 py-3">
-                <p className="text-[11px] text-slate-500">{day.label}</p>
-                <p className="mt-1 text-sm font-semibold text-slate-950 tabular-nums">{day.used} Credits</p>
-                <p className="mt-0.5 text-[10px] text-slate-400">{day.featureCount} 个功能</p>
-              </div>
-            ))}
-          </div>
-        </button>
       </div>
     </div>
   );
@@ -1034,18 +539,20 @@ function MembershipPayment() {
 function PaymentTab() {
   const [market, setMarket] = useState<'global' | 'cn'>('global');
   const [visibleCount, setVisibleCount] = useState(4);
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [openPaymentMenu, setOpenPaymentMenu] = useState<string | null>(null);
 
   const globalOrders = [
-    { id: 'g1', date: '2026年6月10日', type: 'Pro 月度', method: 'Stripe', amount: '-', action: '前往账单' },
-    { id: 'g2', date: '2026年5月10日', type: 'Pro 月度', method: 'Stripe', amount: '-', action: '前往账单' },
-    { id: 'g3', date: '2026年4月18日', type: '充值包 Credits', method: 'Airwallex', amount: '-', action: '下载' },
-    { id: 'g4', date: '2026年4月10日', type: 'Pro 月度', method: 'Stripe', amount: '-', action: '前往账单' },
-    { id: 'g5', date: '2026年3月12日', type: '充值包 Credits', method: 'Airwallex', amount: '-', action: '下载' },
+    { id: 'g1', date: '2026年6月10日', type: 'Pro 月度', method: 'Stripe', account: 'Visa ···· 4242', amount: '-', action: '前往账单' },
+    { id: 'g2', date: '2026年5月10日', type: 'Pro 月度', method: 'Stripe', account: 'Visa ···· 4242', amount: '-', action: '前往账单' },
+    { id: 'g3', date: '2026年4月18日', type: '充值包 Credits', method: 'Airwallex', account: 'Mastercard ···· 8821', amount: '-', action: '下载' },
+    { id: 'g4', date: '2026年4月10日', type: 'Pro 月度', method: 'Stripe', account: 'Visa ···· 4242', amount: '-', action: '前往账单' },
+    { id: 'g5', date: '2026年3月12日', type: '充值包 Credits', method: 'Airwallex', account: 'Mastercard ···· 8821', amount: '-', action: '下载' },
   ];
   const cnOrders = [
-    { id: 'c1', date: '2026年6月10日', type: 'Pro 月度', amount: '-', action: '申请发票' },
-    { id: 'c2', date: '2026年5月10日', type: 'Pro 月度', amount: '-', action: '下载发票' },
-    { id: 'c3', date: '2026年4月18日', type: '充值包 Credits', amount: '-', action: '申请发票' },
+    { id: 'c1', date: '2026年6月10日', type: 'Pro 月度', account: '银联 ···· 6288', amount: '-', action: '申请发票' },
+    { id: 'c2', date: '2026年5月10日', type: 'Pro 月度', account: '银联 ···· 6288', amount: '-', action: '下载发票' },
+    { id: 'c3', date: '2026年4月18日', type: '充值包 Credits', account: '银联 ···· 0916', amount: '-', action: '申请发票' },
   ];
 
   const orderHistory = market === 'global' ? globalOrders : cnOrders;
@@ -1055,6 +562,77 @@ function PaymentTab() {
   return (
     <div className="p-8">
       <div className="mx-auto max-w-3xl">
+        <section aria-labelledby="payment-methods-title">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h3 id="payment-methods-title" className="text-sm font-semibold text-slate-950">支付方式</h3>
+            <button
+              type="button"
+              onClick={() => setShowAddPayment(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 active:scale-[0.98]"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              新增支付方式
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <article className="relative flex min-h-[92px] items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_14px_36px_-30px_rgba(15,23,42,0.38)]">
+              <div className="flex h-10 w-14 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-blue-50 text-xs font-black italic tracking-tight text-blue-900">
+                VISA
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-semibold text-slate-950">Visa ···· 4242</p>
+                  <span className="rounded-md bg-blue-50 px-2 py-1 text-[9px] font-semibold text-blue-700">默认</span>
+                </div>
+                <p className="mt-1 text-[10px] text-slate-500">有效期至 10/28</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenPaymentMenu((current) => current === 'visa' ? null : 'visa')}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="管理 Visa 支付方式"
+                aria-expanded={openPaymentMenu === 'visa'}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+              {openPaymentMenu === 'visa' && (
+                <div className="absolute right-3 top-[68px] z-10 w-32 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
+                  <button type="button" className="w-full rounded-md px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50">编辑支付方式</button>
+                  <button type="button" className="w-full rounded-md px-3 py-2 text-left text-[11px] text-red-600 hover:bg-red-50">移除</button>
+                </div>
+              )}
+            </article>
+
+            <article className="relative flex min-h-[92px] items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-[0_14px_36px_-30px_rgba(15,23,42,0.38)]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#1677ff] text-lg font-bold text-white">
+                支
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-slate-950">支付宝</p>
+                <p className="mt-1 text-[10px] text-slate-500">已授权账户</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenPaymentMenu((current) => current === 'alipay' ? null : 'alipay')}
+                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="管理支付宝支付方式"
+                aria-expanded={openPaymentMenu === 'alipay'}
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+              {openPaymentMenu === 'alipay' && (
+                <div className="absolute right-3 top-[68px] z-10 w-32 overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
+                  <button type="button" className="w-full rounded-md px-3 py-2 text-left text-[11px] text-blue-700 hover:bg-blue-50">设为默认</button>
+                  <button type="button" className="w-full rounded-md px-3 py-2 text-left text-[11px] text-red-600 hover:bg-red-50">解除授权</button>
+                </div>
+              )}
+            </article>
+          </div>
+        </section>
+
+        <div className="my-6 border-t border-slate-200" />
+
         <div className="inline-flex rounded-lg bg-slate-100 p-1" role="tablist" aria-label="订单地区">
           {([
             ['global', '海外订单'],
@@ -1084,10 +662,11 @@ function PaymentTab() {
           {/* Table */}
           <div className="overflow-hidden rounded-xl border border-slate-200">
             {/* Table Header */}
-            <div className={`grid ${market === 'global' ? 'grid-cols-[1fr_1.2fr_0.8fr_4rem_4rem_5rem]' : 'grid-cols-[1fr_1.35fr_4rem_4rem_6rem]'} gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2.5`}>
+            <div className={`grid ${market === 'global' ? 'grid-cols-[0.9fr_1.1fr_0.72fr_1fr_3.4rem_3rem_4.7rem]' : 'grid-cols-[0.9fr_1.15fr_1fr_3.4rem_3rem_5.5rem]'} gap-2.5 border-b border-slate-200 bg-slate-50 px-4 py-2.5`}>
               <span className="text-[11px] font-medium text-slate-500">日期</span>
               <span className="text-[11px] font-medium text-slate-500">订单类型</span>
               {market === 'global' && <span className="text-[11px] font-medium text-slate-500">支付渠道</span>}
+              <span className="text-[11px] font-medium text-slate-500">支付账户</span>
               <span className="text-[11px] font-medium text-slate-500">状态</span>
               <span className="text-right text-[11px] font-medium text-slate-500">金额</span>
               <span className="text-right text-[11px] font-medium text-slate-500">{market === 'global' ? '账单' : '发票'}</span>
@@ -1097,13 +676,14 @@ function PaymentTab() {
             {visibleOrders.map((order, index) => (
               <div
                 key={order.id}
-                className={`grid ${market === 'global' ? 'grid-cols-[1fr_1.2fr_0.8fr_4rem_4rem_5rem]' : 'grid-cols-[1fr_1.35fr_4rem_4rem_6rem]'} items-center gap-3 px-4 py-3.5 transition-colors hover:bg-slate-50/70 ${
+                className={`grid ${market === 'global' ? 'grid-cols-[0.9fr_1.1fr_0.72fr_1fr_3.4rem_3rem_4.7rem]' : 'grid-cols-[0.9fr_1.15fr_1fr_3.4rem_3rem_5.5rem]'} items-center gap-2.5 px-4 py-3.5 transition-colors hover:bg-slate-50/70 ${
                   index !== visibleOrders.length - 1 ? 'border-b border-slate-100' : ''
                 }`}
               >
                 <span className="text-xs text-slate-600">{order.date}</span>
                 <span className="text-sm font-medium text-slate-900">{order.type}</span>
                 {market === 'global' && <span className="text-xs text-slate-600">{'method' in order ? order.method : ''}</span>}
+                <span className="whitespace-nowrap text-[11px] text-slate-600 tabular-nums">{order.account}</span>
                 <span className="text-xs text-emerald-600">已支付</span>
                 <span className="text-right text-sm font-medium text-slate-950 tabular-nums">{order.amount}</span>
                 <button
@@ -1129,6 +709,38 @@ function PaymentTab() {
             </button>
           )}
         </section>
+
+        {showAddPayment && (
+          <div className="fixed inset-0 z-[10020] flex items-center justify-center bg-slate-950/45 p-4" onClick={() => setShowAddPayment(false)}>
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-payment-title"
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 id="add-payment-title" className="text-base font-semibold text-slate-950">新增支付方式</h3>
+                  <p className="mt-1 text-xs text-slate-500">选择要绑定的支付方式</p>
+                </div>
+                <button type="button" onClick={() => setShowAddPayment(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="关闭">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <button type="button" className="flex items-center gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/50">
+                  <WalletCards className="h-5 w-5 text-blue-600" />
+                  <span className="text-xs font-semibold text-slate-900">信用卡 / 借记卡</span>
+                </button>
+                <button type="button" className="flex items-center gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-blue-300 hover:bg-blue-50/50">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-[#1677ff] text-xs font-bold text-white">支</span>
+                  <span className="text-xs font-semibold text-slate-900">支付宝</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </div>
   );

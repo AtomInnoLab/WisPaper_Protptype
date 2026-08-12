@@ -394,8 +394,8 @@ export default function App() {
           <SearchMoreButton onSearchMore={handleSearchMore} isLoading={isLoadingMore} />
         )}
 
-        {/* Floating Task Button - Show in list, library, and scholar-qa views */}
-        {((viewMode === "list" && hasSearched) || viewMode === "library" || viewMode === "scholar-qa") && (
+        {/* Floating Task Button - Keep the focused Scholar QA workspace unobstructed. */}
+        {((viewMode === "list" && hasSearched) || viewMode === "library") && (
           <FloatingTaskButton onClick={() => setShowTasksModal(true)} />
         )}
 

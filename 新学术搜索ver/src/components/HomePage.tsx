@@ -11,6 +11,7 @@ import { HomeSearchLanding } from './HomeSearchLanding';
 import { LogoLoop } from './LogoLoop';
 import { MarketingSeoPage } from './MarketingSeoPage';
 import { PricingPage } from './PricingPage';
+import { ResearchLanding } from './ResearchLanding';
 import { TranslationLandingPage } from './TranslationLandingPage';
 import { cn } from './ui/utils';
 
@@ -898,6 +899,20 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onO
 
   const isFeaturePage = featureMenuItems.some((item) => item.key === activePage);
   const isResourcePage = resourceMenuItems.some((item) => item.key === activePage);
+
+  if (isHomePage) {
+    return (
+      <ResearchLanding
+        language={language}
+        onLanguageChange={setLanguage}
+        onSearch={() => setActivePage('search')}
+        onOpenWorkspace={onNavigateToWorkspace}
+        onOpenLibrary={() => onNavigate?.('library')}
+        onOpenAgent={() => onNavigate?.('idea-discovery')}
+        onOpenPricing={() => setActivePage('pricing')}
+      />
+    );
+  }
 
   return (
     <div

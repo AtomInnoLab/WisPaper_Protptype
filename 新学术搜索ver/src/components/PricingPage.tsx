@@ -3,7 +3,6 @@ import { Check, ChevronDown, HelpCircle, Minus } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type BillingCycle = 'monthly' | 'annual';
-type PaymentMethod = 'airwallex' | 'stripe' | 'airwallex-wallets' | 'stripe-wallets';
 type LocalizedText = { zh: string; en: string };
 type LocalizedPrice = { zh: number; en: number };
 type ComparisonValue = boolean | string | LocalizedText;
@@ -11,9 +10,11 @@ type StoragePlanKey = 'pro' | 'maxX2' | 'maxX5';
 type MaxTier = 'x2' | 'x5';
 
 const ANNUAL_STORAGE_DISCOUNT = 0.85;
-
-const createStorageOptions = (baseStorageGb: number) =>
-  Array.from({ length: 4 }, (_, index) => baseStorageGb * (index + 1));
+const STORAGE_OPTIONS: Record<StoragePlanKey, number[]> = {
+  pro: [50, 75, 100],
+  maxX2: [100, 150, 200, 250],
+  maxX5: [250, 500, 750, 1000],
+};
 
 const formatStorage = (storageGb: number) => {
   if (storageGb < 1000) return `${storageGb} GB`;
@@ -131,15 +132,15 @@ const maxPlans = {
 };
 
 const comparisonRows = [
-  { label: { zh: '快速搜索', en: 'Quick Search' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true, miniPack: false, standard: false },
-  { label: { zh: '深度搜索', en: 'Deep Search' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true, miniPack: false, standard: false },
-  { label: { zh: '问答', en: 'QA' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true, miniPack: false, standard: false },
-  { label: { zh: '信息流', en: 'Feeds' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true, miniPack: { zh: '额外 XXXX 积分', en: 'Extra XXXX credits' }, standard: { zh: '额外 XXXX 积分', en: 'Extra XXXX credits' } },
-  { label: { zh: '调研综述', en: 'Survey' }, free: false, plus: false, pro: true, maxX2: true, maxX5: true, miniPack: false, standard: false },
-  { label: { zh: 'Agent', en: 'Agent' }, free: false, plus: true, pro: true, maxX2: true, maxX5: true, miniPack: false, standard: false },
-  { label: { zh: 'AI 索引', en: 'AI Index' }, free: '50K', plus: { zh: '全部', en: 'All' }, pro: { zh: '全部', en: 'All' }, maxX2: { zh: '全部', en: 'All' }, maxX5: { zh: '全部', en: 'All' }, miniPack: false, standard: false },
-  { label: { zh: '基础高速存储', en: 'Base high-speed storage' }, free: '1GB', plus: '10GB', pro: '50GB', maxX2: '100GB', maxX5: '250GB', miniPack: false, standard: false },
-  { label: { zh: '额外充值折扣', en: 'Top-up discount' }, free: false, plus: { zh: '8.8 折', en: '12% off' }, pro: { zh: '5 折', en: '50% off' }, maxX2: { zh: '5 折', en: '50% off' }, maxX5: { zh: '5 折', en: '50% off' }, miniPack: false, standard: false },
+  { label: { zh: '快速搜索', en: 'Quick Search' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true },
+  { label: { zh: '深度搜索', en: 'Deep Search' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true },
+  { label: { zh: '问答', en: 'QA' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true },
+  { label: { zh: '信息流', en: 'Feeds' }, free: true, plus: true, pro: true, maxX2: true, maxX5: true },
+  { label: { zh: '调研综述', en: 'Survey' }, free: false, plus: false, pro: true, maxX2: true, maxX5: true },
+  { label: { zh: 'Agent', en: 'Agent' }, free: false, plus: true, pro: true, maxX2: true, maxX5: true },
+  { label: { zh: 'AI 索引', en: 'AI Index' }, free: '50K', plus: { zh: '全部', en: 'All' }, pro: { zh: '全部', en: 'All' }, maxX2: { zh: '全部', en: 'All' }, maxX5: { zh: '全部', en: 'All' } },
+  { label: { zh: '基础高速存储', en: 'Base high-speed storage' }, free: '1GB', plus: '10GB', pro: '50GB', maxX2: '100GB', maxX5: '250GB' },
+  { label: { zh: '额外充值折扣', en: 'Top-up discount' }, free: false, plus: { zh: '8.8 折', en: '12% off' }, pro: { zh: '5 折', en: '50% off' }, maxX2: { zh: '5 折', en: '50% off' }, maxX5: { zh: '5 折', en: '50% off' } },
 ];
 
 function InfoLabel({ label, tooltip, dark = false, language }: { label: string; tooltip: string; dark?: boolean; language: 'zh' | 'en' }) {
@@ -179,6 +180,7 @@ function Availability({ value, language }: { value: ComparisonValue; language: '
 }
 
 function PlanStorageSelector({
+  planKey,
   baseStorageGb,
   value,
   isOpen,
@@ -187,6 +189,7 @@ function PlanStorageSelector({
   onToggle,
   onChange,
 }: {
+  planKey: StoragePlanKey;
   baseStorageGb: number;
   value: number;
   isOpen: boolean;
@@ -196,7 +199,7 @@ function PlanStorageSelector({
   onChange: (value: number) => void;
 }) {
   const label = language === 'zh' ? '高速存储' : 'High-speed storage';
-  const storageOptions = createStorageOptions(baseStorageGb);
+  const storageOptions = STORAGE_OPTIONS[planKey];
 
   return (
     <div className={`plan-storage-selector ${dark ? 'dark' : ''}`}>
@@ -245,8 +248,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
   const { language: contextLanguage } = useLanguage();
   const language = controlledLanguage ?? contextLanguage;
   const [billingCycle, setBillingCycle] = React.useState<BillingCycle>('monthly');
-  const [autoRenew, setAutoRenew] = React.useState(true);
-  const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('airwallex');
   const [maxTier, setMaxTier] = React.useState<MaxTier>('x2');
   const [openStoragePlan, setOpenStoragePlan] = React.useState<StoragePlanKey | null>(null);
   const [planStorage, setPlanStorage] = React.useState<Record<StoragePlanKey, number>>({
@@ -380,12 +381,8 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
         }
 
         .uber-pricing-page .renew-switch {
-          position: absolute;
-          right: 0;
-          top: 8px;
           display: inline-flex;
           align-items: center;
-          flex-direction: row-reverse;
           gap: 12px;
           min-height: 20px;
           border: 0;
@@ -395,8 +392,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
           font-size: 14px;
           line-height: 20px;
           font-weight: 500;
-          cursor: pointer;
-          pointer-events: auto;
+          cursor: default;
         }
 
         .uber-pricing-page .renew-track {
@@ -513,45 +509,119 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
         }
 
         .uber-pricing-page .max-tier-switch button:focus-visible,
-        .uber-pricing-page .downgrade-button:focus-visible {
+        .uber-pricing-page .cancel-subscription-button:focus-visible {
           outline: 2px solid var(--accent);
           outline-offset: 2px;
         }
 
-        .uber-pricing-page .current-plan-status {
-          position: absolute;
-          top: 8px;
-          right: 0;
+        .uber-pricing-page .subscription-management {
+          margin-top: 32px;
+          overflow: hidden;
+          border: 1px solid var(--line);
+          border-radius: 12px;
+          background: var(--canvas);
+        }
+
+        .uber-pricing-page .subscription-management-head {
           display: flex;
           align-items: center;
-          gap: 10px;
+          justify-content: space-between;
+          gap: 20px;
+          padding: 18px 20px;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .uber-pricing-page .subscription-management-head h3 {
+          margin: 0;
+          font-size: 16px;
+          line-height: 22px;
+          font-weight: 700;
+        }
+
+        .uber-pricing-page .subscription-management-head span {
           color: var(--body);
-          font-size: 14px;
-          line-height: 20px;
+          font-size: 12px;
+        }
+
+        .uber-pricing-page .subscription-management-grid {
+          display: grid;
+          grid-template-columns: 1.15fr 0.9fr 1.2fr 0.85fr;
+        }
+
+        .uber-pricing-page .subscription-management-item {
+          min-width: 0;
+          min-height: 104px;
+          padding: 18px 20px;
+          border-right: 1px solid var(--line);
+        }
+
+        .uber-pricing-page .subscription-management-item:last-child { border-right: 0; }
+
+        .uber-pricing-page .subscription-label {
+          display: block;
+          margin-bottom: 10px;
+          color: var(--body);
+          font-size: 11px;
+          line-height: 16px;
           font-weight: 500;
         }
 
-        .uber-pricing-page .downgrade-button {
-          min-height: 32px;
-          border: 0;
-          border-radius: 8px;
-          padding: 6px 10px;
-          background: transparent;
+        .uber-pricing-page .subscription-value {
+          display: block;
           color: var(--ink);
           font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+          line-height: 20px;
+          font-weight: 700;
         }
 
-        .uber-pricing-page .downgrade-button:hover {
-          border-color: #cbd1d8;
-          background: var(--canvas-soft);
-          color: var(--ink);
+        .uber-pricing-page .subscription-note {
+          display: block;
+          margin-top: 4px;
+          color: var(--mute);
+          font-size: 10px;
+          line-height: 15px;
+        }
+
+        .uber-pricing-page .locked-payment {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .uber-pricing-page .card-brand {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 42px;
+          height: 28px;
+          border-radius: 6px;
+          background: var(--canvas-softer);
+          color: var(--accent-deep);
+          font-size: 10px;
+          font-style: italic;
+          font-weight: 900;
+        }
+
+        .uber-pricing-page .cancel-subscription-button {
+          min-height: 36px;
+          border: 1px solid #f0c7c7;
+          border-radius: 8px;
+          padding: 7px 12px;
+          background: #fff;
+          color: #b42318;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.16s ease, border-color 0.16s ease;
+        }
+
+        .uber-pricing-page .cancel-subscription-button:hover {
+          border-color: #e9a8a8;
+          background: #fff7f7;
         }
 
         .uber-pricing-page .recharge-products-section {
-          margin-top: 48px;
+          margin-top: 32px;
           padding-top: 32px;
           border-top: 1px solid var(--line);
         }
@@ -1171,113 +1241,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
           transform: translateY(-1px);
         }
 
-        .uber-pricing-page .payment-methods {
-          margin: 40px 0 0;
-          padding: 0;
-          border-top: 0;
-        }
-
-        .uber-pricing-page .payment-methods h3 {
-          margin: 0 0 24px;
-          text-align: center;
-          color: var(--ink);
-          font-size: 16px;
-          line-height: 20px;
-          font-weight: 500;
-        }
-
-        .uber-pricing-page .payment-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 24px;
-        }
-
-        .uber-pricing-page .payment-option {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 16px;
-          height: 88px;
-          border: 1px solid var(--line);
-          border-radius: 12px;
-          background: rgba(255, 255, 255, 0.6);
-          color: var(--ink);
-          cursor: pointer;
-          transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background 0.16s ease;
-        }
-
-        .uber-pricing-page .payment-option:hover {
-          border-color: rgba(0, 121, 255, 0.34);
-          background: var(--canvas);
-          transform: translateY(-1px);
-        }
-
-        .uber-pricing-page .payment-option.active {
-          border-color: var(--primary);
-          box-shadow: rgba(35, 40, 47, 0.08) 0 10px 28px;
-        }
-
-        .uber-pricing-page .airwallex-brand,
-        .uber-pricing-page .stripe-brand {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .uber-pricing-page .airwallex-brand {
-          gap: 8px;
-          font-size: 18px;
-          line-height: 20px;
-          font-weight: 800;
-          letter-spacing: -0.02em;
-        }
-
-        .uber-pricing-page .airwallex-mark {
-          display: inline-flex;
-          align-items: center;
-          color: #f05245;
-          font-size: 18px;
-          font-weight: 900;
-          transform: rotate(-8deg);
-        }
-
-        .uber-pricing-page .stripe-brand {
-          color: #635bff;
-          font-size: 22px;
-          line-height: 24px;
-          font-weight: 800;
-          letter-spacing: -0.05em;
-        }
-
-        .uber-pricing-page .payment-plus {
-          color: var(--body);
-          font-size: 22px;
-          line-height: 24px;
-          font-weight: 500;
-        }
-
-        .uber-pricing-page .wallets {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .uber-pricing-page .wallet-badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 30px;
-          height: 30px;
-          border-radius: 999px;
-          color: #fff;
-          font-size: 16px;
-          line-height: 16px;
-          font-weight: 800;
-        }
-
-        .uber-pricing-page .wallet-badge.wechat { background: #19a83a; }
-        .uber-pricing-page .wallet-badge.alipay { background: var(--accent); }
-
         .uber-pricing-page .compare {
           margin-top: 120px;
         }
@@ -1629,26 +1592,32 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
             top: 104px;
           }
 
-          .uber-pricing-page .current-plan-status {
-            top: 56px;
-          }
-
           .uber-pricing-page .billing-toggle {
             width: min(100%, 228px);
           }
 
-          .uber-pricing-page .renew-switch {
-            top: 54px;
-            right: 0;
-          }
-
           .uber-pricing-page .recharge-card,
-          .uber-pricing-page .payment-grid,
           .uber-pricing-page .storage-pricing-section,
           .uber-pricing-page .pricing-grid,
           .uber-pricing-page .recharge-products-grid {
             grid-template-columns: 1fr;
           }
+
+          .uber-pricing-page .subscription-management-head {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .uber-pricing-page .subscription-management-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .uber-pricing-page .subscription-management-item {
+            border-right: 0;
+            border-bottom: 1px solid var(--line);
+          }
+
+          .uber-pricing-page .subscription-management-item:last-child { border-bottom: 0; }
 
           .uber-pricing-page .redeem-ticket {
             grid-template-columns: 1fr;
@@ -1661,12 +1630,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
         <section id="plans" aria-label={text({ zh: '定价套餐', en: 'Pricing plans' })}>
           <div className="section-head">
             <h2>{text({ zh: '定价与套餐', en: 'Pricing & Plans' })}</h2>
-            <div className="current-plan-status">
-              <span>{text({ zh: '当前等级：Pro', en: 'Current plan: Pro' })}</span>
-              <button type="button" className="downgrade-button">
-                {text({ zh: '降级为 Free', en: 'Downgrade to Free' })}
-              </button>
-            </div>
             <div className="section-controls">
               <div className="billing-toggle" role="group" aria-label={text({ zh: '计费周期', en: 'Billing cycle' })}>
                 <button
@@ -1685,16 +1648,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
                   <span className="billing-discount">-15%</span>
                 </button>
               </div>
-              <button
-                type="button"
-                className={`renew-switch ${autoRenew ? 'active' : ''}`}
-                role="switch"
-                aria-checked={autoRenew}
-                onClick={() => setAutoRenew((current) => !current)}
-              >
-                <span>{text({ zh: '连续订阅', en: 'Auto-renew' })}</span>
-                <span className="renew-track" aria-hidden="true" />
-              </button>
             </div>
           </div>
 
@@ -1733,6 +1686,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
                 {isAnnual ? <p className="muted">{formatAnnualBilling(formatAnnualTotal(planPrices.pro.annualTotal, language, planStorage.pro, 50), language)}</p> : null}
                 <a className="plan-cta secondary" href="#">{text({ zh: '订阅 Pro', en: 'Subscribe to Pro' })}</a>
                 <PlanStorageSelector
+                  planKey="pro"
                   baseStorageGb={50}
                   value={planStorage.pro}
                   isOpen={openStoragePlan === 'pro'}
@@ -1784,6 +1738,7 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
                 {isAnnual ? <p className="muted">{formatAnnualBilling(formatAnnualTotal(activeMaxPlan.annualTotal, language, activeMaxStorage, activeMaxBaseStorage), language)}</p> : null}
                 <a className="plan-cta" href="#">{text({ zh: `订阅 ${activeMaxName}`, en: `Subscribe to ${activeMaxName}` })}</a>
                 <PlanStorageSelector
+                  planKey={activeMaxStorageKey}
                   baseStorageGb={activeMaxBaseStorage}
                   value={activeMaxStorage}
                   isOpen={openStoragePlan === activeMaxStorageKey}
@@ -1814,6 +1769,43 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
               </div>
             </article>
           </div>
+
+          <section className="subscription-management" aria-labelledby="subscription-management-title">
+            <div className="subscription-management-head">
+              <h3 id="subscription-management-title">{text({ zh: '会员信息', en: 'Membership' })}</h3>
+              <span>{text({ zh: '当前订阅由 Stripe 管理', en: 'Current subscription is managed by Stripe' })}</span>
+            </div>
+            <div className="subscription-management-grid">
+              <div className="subscription-management-item">
+                <span className="subscription-label">{text({ zh: '当前会员', en: 'Current membership' })}</span>
+                <span className="subscription-value">Pro · {text({ zh: '月付', en: 'Monthly' })}</span>
+                <span className="subscription-note">{text({ zh: '2026 年 7 月 10 日到期', en: 'Expires Jul 10, 2026' })}</span>
+              </div>
+              <div className="subscription-management-item">
+                <span className="subscription-label">{text({ zh: '连续订阅', en: 'Auto-renew' })}</span>
+                <div className="renew-switch active" role="status" aria-label={text({ zh: '连续订阅已开启', en: 'Auto-renew is on' })}>
+                  <span className="renew-track" aria-hidden="true" />
+                  <span className="subscription-value">{text({ zh: '已开启', en: 'On' })}</span>
+                </div>
+                <span className="subscription-note">{text({ zh: '下个周期自动续费', en: 'Renews next billing cycle' })}</span>
+              </div>
+              <div className="subscription-management-item">
+                <span className="subscription-label">{text({ zh: '支付方式', en: 'Payment method' })}</span>
+                <div className="locked-payment">
+                  <span className="card-brand">VISA</span>
+                  <span className="subscription-value">Visa ···· 4242</span>
+                </div>
+                <span className="subscription-note">{text({ zh: '订阅期间不可更改', en: 'Locked while subscribed' })}</span>
+              </div>
+              <div className="subscription-management-item">
+                <span className="subscription-label">{text({ zh: '订阅管理', en: 'Subscription actions' })}</span>
+                <button type="button" className="cancel-subscription-button">
+                  {text({ zh: '取消订阅', en: 'Cancel subscription' })}
+                </button>
+                <span className="subscription-note">{text({ zh: '取消后可更换支付方式', en: 'Change payment after canceling' })}</span>
+              </div>
+            </div>
+          </section>
 
           <section className="recharge-products-section" aria-label={text({ zh: '充值包商品', en: 'Credit pack products' })}>
             <div className="recharge-products-grid">
@@ -1854,39 +1846,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
             </div>
           </section>
 
-          <div className="payment-methods" aria-label={text({ zh: '选择支付方式', en: 'Choose payment method' })}>
-            <h3>{text({ zh: '选择支付方式', en: 'Choose payment method' })}</h3>
-            <div className="payment-grid" role="radiogroup" aria-label={text({ zh: '支付方式', en: 'Payment method' })}>
-              <button type="button" className={`payment-option ${paymentMethod === 'airwallex' ? 'active' : ''}`} role="radio" aria-checked={paymentMethod === 'airwallex'} onClick={() => setPaymentMethod('airwallex')}>
-                <span className="airwallex-brand" aria-label="Airwallex">
-                  <span className="airwallex-mark">A</span>
-                  <span>Airwallex</span>
-                </span>
-              </button>
-              <button type="button" className={`payment-option ${paymentMethod === 'stripe' ? 'active' : ''}`} role="radio" aria-checked={paymentMethod === 'stripe'} onClick={() => setPaymentMethod('stripe')}>
-                <span className="stripe-brand">stripe</span>
-              </button>
-              <button type="button" className={`payment-option ${paymentMethod === 'airwallex-wallets' ? 'active' : ''}`} role="radio" aria-checked={paymentMethod === 'airwallex-wallets'} onClick={() => setPaymentMethod('airwallex-wallets')}>
-                <span className="airwallex-brand" aria-label="Airwallex">
-                  <span className="airwallex-mark">A</span>
-                  <span>Airwallex</span>
-                </span>
-                <span className="payment-plus">+</span>
-                <span className="wallets" aria-label={text({ zh: '微信支付和支付宝', en: 'WeChat Pay and Alipay' })}>
-                  <span className="wallet-badge wechat">微</span>
-                  <span className="wallet-badge alipay">支</span>
-                </span>
-              </button>
-              <button type="button" className={`payment-option ${paymentMethod === 'stripe-wallets' ? 'active' : ''}`} role="radio" aria-checked={paymentMethod === 'stripe-wallets'} onClick={() => setPaymentMethod('stripe-wallets')}>
-                <span className="stripe-brand">stripe</span>
-                <span className="payment-plus">+</span>
-                <span className="wallets" aria-label={text({ zh: '微信支付和支付宝', en: 'WeChat Pay and Alipay' })}>
-                  <span className="wallet-badge wechat">微</span>
-                  <span className="wallet-badge alipay">支</span>
-                </span>
-              </button>
-            </div>
-          </div>
         </section>
 
         <section className="redeem-section" aria-label={text({ zh: '兑换会员码', en: 'Redeem membership code' })}>
@@ -1914,8 +1873,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
                   <th>Pro<a className="table-plan-action" href="#">{text({ zh: '升级 ↗', en: 'Upgrade ↗' })}</a></th>
                   <th>Max x2<a className="table-plan-action" href="#">{text({ zh: '升级 ↗', en: 'Upgrade ↗' })}</a></th>
                   <th>Max x5<a className="table-plan-action" href="#">{text({ zh: '升级 ↗', en: 'Upgrade ↗' })}</a></th>
-                  <th>Mini Pack<a className="table-plan-action" href="#">{text({ zh: '充值 ↗', en: 'Recharge ↗' })}</a></th>
-                  <th>Standard<a className="table-plan-action" href="#">{text({ zh: '充值 ↗', en: 'Recharge ↗' })}</a></th>
                 </tr>
               </thead>
               <tbody>
@@ -1927,8 +1884,6 @@ export function PricingPage({ onOpenRecharge, language: controlledLanguage }: Pr
                     <td><Availability value={row.pro} language={language} /></td>
                     <td><Availability value={row.maxX2} language={language} /></td>
                     <td><Availability value={row.maxX5} language={language} /></td>
-                    <td><Availability value={row.miniPack} language={language} /></td>
-                    <td><Availability value={row.standard} language={language} /></td>
                   </tr>
                 ))}
               </tbody>

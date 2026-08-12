@@ -46,6 +46,13 @@ const recentItems: RecentItem[] = [
   { id: '6', title: 'circular economyစ့...', truncated: true },
 ];
 
+const qaRecentItems: RecentItem[] = [
+  { id: 'qa-1', title: '自然语言研究' },
+  { id: 'qa-2', title: '生物植物学研究的底层逻辑' },
+  { id: 'qa-3', title: 'RAG 与长上下文的区别' },
+  { id: 'qa-4', title: '造血干细胞研究的思考路径' },
+];
+
 interface LLMSItem {
   id: string;
   title: string;
@@ -73,7 +80,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
       setActiveNav('my-library');
     } else if (currentView === 'scholar-qa') {
       setActiveNav('scholar-qa');
-      setShowMoreMenu(true);
+      setShowHistoryMenu(true);
     } else if (currentView === 'all-feeds') {
       setActiveNav('all-feeds');
     } else if (currentView === 'paper-reproduction') {
@@ -112,6 +119,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
   // Close history menu when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      if (activeNav === 'scholar-qa') return;
       if (historyMenuRef.current && !historyMenuRef.current.contains(event.target as Node)) {
         setShowHistoryMenu(false);
       }
@@ -120,7 +128,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showHistoryMenu]);
+  }, [activeNav, showHistoryMenu]);
 
   const handleNavClick = (itemId: string) => {
     setActiveNav(itemId);
@@ -174,6 +182,8 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
     }
   };
 
+  const displayedRecentItems = activeNav === 'scholar-qa' ? qaRecentItems : recentItems;
+
   return (
     <aside className={`${isCollapsed ? 'w-14' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-200 ${isCollapsed ? 'overflow-visible' : ''}`}>
       {/* Logo */}
@@ -205,22 +215,6 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             title="展开侧边栏"
           >
             <PanelLeftOpen className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* New Scholar QA Button - Only show when Scholar QA is active */}
-      {activeNav === 'scholar-qa' && !isCollapsed && (
-        <div className="px-3 py-3">
-          <button 
-            onClick={onNewScholarQA}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
-          >
-            <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              <span>{t('nav.newScholarQA')}</span>
-            </div>
-            <span className="text-xs">⌘K</span>
           </button>
         </div>
       )}
@@ -339,6 +333,25 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
 
           <div className="relative group">
             <button
+              onClick={() => handleNavClick('scholar-qa')}
+              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${
+                activeNav === 'scholar-qa'
+                  ? 'bg-gray-100 text-gray-900 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              {!isCollapsed && <span>{t('nav.scholarQA')}</span>}
+            </button>
+            {isCollapsed && (
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="inline-block px-2 py-1 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap shadow-lg">{t('nav.scholarQA')}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="relative group">
+            <button
               onClick={() => handleNavClick('research-canvas')}
               className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${
                 activeNav === 'research-canvas'
@@ -391,7 +404,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             <button
               onClick={() => { if (!isCollapsed) setShowMoreMenu(!showMoreMenu); }}
               className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${
-                showMoreMenu || ['scholar-qa', 'idea-discovery', 'truecite', 'scholar-search', 'fudan-collection-search'].includes(activeNav)
+                showMoreMenu || ['idea-discovery', 'truecite', 'scholar-search', 'fudan-collection-search'].includes(activeNav)
                   ? 'bg-gray-100 text-gray-900 font-medium'
                   : 'text-gray-600 hover:bg-gray-50'
               }`}
@@ -408,19 +421,6 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             {/* Expanded sidebar: inline sub-items */}
             {showMoreMenu && !isCollapsed && (
               <div className="ml-3 mt-0.5 pl-3.5 border-l border-gray-200 space-y-0.5">
-                <button
-                  onClick={() => { handleNavClick('scholar-qa'); }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-sm ${
-                    activeNav === 'scholar-qa'
-                      ? 'bg-gray-100 text-gray-900 font-medium'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>{t('nav.scholarQA')}</span>
-                  <span className="ml-auto px-1.5 py-0.5 bg-cyan-100 text-cyan-700 text-xs rounded font-medium">Beta</span>
-                </button>
-
                 <button
                   onClick={() => { handleNavClick('idea-discovery'); }}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-sm ${
@@ -483,19 +483,6 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             {showMoreMenu && isCollapsed && (
               <div className="absolute left-full top-0 ml-0 z-50 pl-3">
                 <div className="w-56 bg-white border border-gray-200 rounded-lg shadow-lg py-1 mt-8">
-                      <button
-                        onClick={() => { handleNavClick('scholar-qa'); setShowMoreMenu(false); }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                          activeNav === 'scholar-qa'
-                            ? 'bg-gray-100 text-gray-900 font-medium'
-                            : 'text-gray-600 hover:bg-gray-50'
-                        }`}
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        <span>{t('nav.scholarQA')}</span>
-                        <span className="ml-auto px-1.5 py-0.5 bg-cyan-100 text-cyan-700 text-xs rounded font-medium">Beta</span>
-                      </button>
-
                       <button
                         onClick={() => { handleNavClick('idea-discovery'); setShowMoreMenu(false); }}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
@@ -604,27 +591,34 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             onMouseEnter={() => { if (isCollapsed) setShowHistoryMenu(true); }}
             onMouseLeave={() => { if (isCollapsed) setShowHistoryMenu(false); }}
           >
-            <button
-              onClick={() => { if (!isCollapsed) setShowHistoryMenu(!showHistoryMenu); }}
-              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${
-                showHistoryMenu
-                  ? 'bg-gray-100 text-gray-900 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              {!isCollapsed && (
-                <>
-                  <span>{t('nav.history')}</span>
-                  <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showHistoryMenu ? '' : '-rotate-90'}`} />
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => { if (!isCollapsed) setShowHistoryMenu(!showHistoryMenu); }}
+                className={`flex flex-1 items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${
+                  showHistoryMenu
+                    ? 'text-gray-900 font-medium'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                {!isCollapsed && (
+                  <>
+                    <span>{t('nav.history')}</span>
+                    <ChevronDown className={`w-3 h-3 ml-auto transition-transform ${showHistoryMenu ? '' : '-rotate-90'}`} />
+                  </>
+                )}
+              </button>
+              {activeNav === 'scholar-qa' && !isCollapsed ? (
+                <button type="button" onClick={onNewScholarQA} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-100">
+                  <span>新问答</span><Plus className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
 
             {/* Expanded sidebar: inline sub-items */}
             {showHistoryMenu && !isCollapsed && (
               <div className="ml-3 mt-0.5 pl-3.5 border-l border-gray-200 space-y-0.5">
-                {recentItems.slice(0, 5).map((item) => (
+                {displayedRecentItems.slice(0, 5).map((item) => (
                   <button
                     key={item.id}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md transition-colors text-sm text-gray-600 hover:bg-gray-50"
@@ -647,7 +641,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             {showHistoryMenu && isCollapsed && (
               <div className="absolute left-full top-0 ml-0 z-50 pl-3">
                 <div className="w-64 bg-white border border-gray-200 rounded-lg shadow-lg py-1 mt-8">
-                  {recentItems.slice(0, 5).map((item) => (
+                  {displayedRecentItems.slice(0, 5).map((item) => (
                     <button
                       key={item.id}
                       onClick={() => { setShowHistoryMenu(false); }}
@@ -686,6 +680,10 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
       <SettingsModal 
         isOpen={showSettingsModal} 
         onClose={() => setShowSettingsModal(false)} 
+        onOpenPricing={() => {
+          setShowSettingsModal(false);
+          onOpenPaywall?.();
+        }}
       />
     </aside>
   );
