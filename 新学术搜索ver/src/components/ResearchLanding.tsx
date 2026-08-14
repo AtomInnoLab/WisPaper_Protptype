@@ -8,7 +8,11 @@ import {
   BookOpen,
   Bot,
   Boxes,
+  ChevronDown,
+  Download,
   Library,
+  Laptop,
+  Monitor,
   Search,
   Sparkles,
 } from 'lucide-react';
@@ -95,6 +99,12 @@ const researchFeedback = [
   },
 ];
 
+const clientDownloadLinks = {
+  windows: 'https://download.wispaper.com/windows',
+  macApple: 'https://download.wispaper.com/mac-apple-silicon',
+  macIntel: 'https://download.wispaper.com/mac-intel',
+} as const;
+
 export function ResearchLanding({
   language,
   onLanguageChange,
@@ -106,7 +116,9 @@ export function ResearchLanding({
 }: ResearchLandingProps) {
   const rootRef = React.useRef<HTMLDivElement>(null);
   const journeyRef = React.useRef<HTMLElement>(null);
+  const downloadMenuRef = React.useRef<HTMLDivElement>(null);
   const [feedbackIndex, setFeedbackIndex] = React.useState(0);
+  const [downloadMenuOpen, setDownloadMenuOpen] = React.useState(false);
   const isZh = language === 'zh';
 
   React.useEffect(() => {
@@ -114,6 +126,31 @@ export function ResearchLanding({
       ? 'WisPaper：从问题到可信的研究结果'
       : 'WisPaper: From Questions to Credible Research';
   }, [isZh]);
+
+  React.useEffect(() => {
+    if (!downloadMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!downloadMenuRef.current?.contains(event.target as Node)) {
+        setDownloadMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setDownloadMenuOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [downloadMenuOpen]);
+
+  const handleClientDownload = (platform: keyof typeof clientDownloadLinks) => {
+    window.open(clientDownloadLinks[platform], '_blank', 'noopener,noreferrer');
+    setDownloadMenuOpen(false);
+  };
 
   useGSAP(
     () => {
@@ -268,6 +305,65 @@ export function ResearchLanding({
                 >
                   {isZh ? '查看工作台' : 'View workspace'}
                 </button>
+              </div>
+
+              <div
+                ref={downloadMenuRef}
+                className="relative mt-6 flex w-full max-w-[520px] items-center gap-3 rounded-2xl border border-[#050b1c]/10 bg-white/88 p-2.5 pl-3 shadow-[0_18px_44px_-30px_rgba(11,87,255,0.42)] backdrop-blur"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e7f0ff] text-[#0b57ff]">
+                  <Download className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[#050b1c]">{isZh ? 'WisPaper 桌面客户端' : 'WisPaper desktop app'}</p>
+                  <p className="truncate text-xs text-[#64718a]">Windows / macOS</p>
+                </div>
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={downloadMenuOpen}
+                  onClick={() => setDownloadMenuOpen((open) => !open)}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#050b1c] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#14203a] active:scale-[0.98]"
+                >
+                  {isZh ? '选择版本' : 'Choose version'}
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${downloadMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {downloadMenuOpen ? (
+                  <div
+                    role="menu"
+                    aria-label={isZh ? '选择客户端版本' : 'Choose app version'}
+                    className="absolute left-0 top-[calc(100%+0.75rem)] z-20 w-full overflow-hidden rounded-2xl border border-[#050b1c]/10 bg-white p-2 text-[#050b1c] shadow-[0_24px_60px_-28px_rgba(2,8,23,0.48)]"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleClientDownload('windows')}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[#eef5ff] active:scale-[0.98]"
+                    >
+                      <Monitor className="h-5 w-5 text-[#0b57ff]" />
+                      <span className="flex-1 text-sm font-semibold">Windows</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleClientDownload('macApple')}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[#eef5ff] active:scale-[0.98]"
+                    >
+                      <Laptop className="h-5 w-5 text-[#0b57ff]" />
+                      <span className="flex-1 text-sm font-semibold">macOS (Apple Silicon)</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => handleClientDownload('macIntel')}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-[#eef5ff] active:scale-[0.98]"
+                    >
+                      <Laptop className="h-5 w-5 text-[#0b57ff]" />
+                      <span className="flex-1 text-sm font-semibold">macOS (Intel)</span>
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
 

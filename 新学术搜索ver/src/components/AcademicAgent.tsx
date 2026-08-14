@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowUp,
+  Ban,
   BookOpen,
   Bot,
   Check,
@@ -24,10 +25,15 @@ import {
   Orbit,
   Paperclip,
   PanelRight,
+  Pause,
+  Play,
   Plus,
+  RotateCcw,
   Search,
   Share2,
+  SkipForward,
   Sparkles,
+  TriangleAlert,
   WandSparkles,
   X,
   Zap,
@@ -35,6 +41,16 @@ import {
 
 type WorkbenchTab = "files" | "search" | "plan" | "gpu";
 type AgentTierId = "fast" | "balanced" | "primary" | "deep";
+type AgentTodoStatus = "pending" | "active" | "waiting" | "blocked" | "done" | "skipped" | "failed";
+type AgentTodoType = "agent" | "approval" | "user";
+
+interface AgentTodo {
+  id: string;
+  title: string;
+  detail: string;
+  type: AgentTodoType;
+  status: AgentTodoStatus;
+}
 
 const agentTiers: {
   id: AgentTierId;
@@ -87,6 +103,44 @@ const tabs: { id: WorkbenchTab; label: string; icon: React.ElementType }[] = [
   { id: "files", label: "任务文件", icon: FolderKanban },
   { id: "search", label: "检索结果", icon: Search },
   { id: "gpu", label: "运行环境", icon: Cpu },
+];
+
+const initialAgentTodos: AgentTodo[] = [
+  {
+    id: "scope",
+    title: "明确问题与检索范围",
+    detail: "确认研究对象、时间范围与核心概念。",
+    type: "agent",
+    status: "pending",
+  },
+  {
+    id: "search",
+    title: "检索并筛选相关论文",
+    detail: "搜索高相关文献，并按主题与证据质量完成初筛。",
+    type: "agent",
+    status: "pending",
+  },
+  {
+    id: "criteria",
+    title: "确认论文纳入标准",
+    detail: "需要你确认是否只纳入近五年的英文全文论文。",
+    type: "approval",
+    status: "pending",
+  },
+  {
+    id: "evidence",
+    title: "建立证据表与方法分类",
+    detail: "提取方法、数据、指标与主要结论，形成结构化证据表。",
+    type: "agent",
+    status: "pending",
+  },
+  {
+    id: "output",
+    title: "提炼研究空白并输出方案",
+    detail: "综合证据与冲突，输出可继续推进的研究计划。",
+    type: "agent",
+    status: "pending",
+  },
 ];
 
 function AgentComposer({
@@ -294,37 +348,233 @@ function AgentComposer({
   );
 }
 
-function WorkbenchPanel({ activeTab, running }: { activeTab: WorkbenchTab; running: boolean }) {
+function WorkbenchPanel({
+  activeTab,
+  running,
+  planReady,
+  planAccepted,
+  todos,
+  onAcceptPlan,
+  onToggleRunning,
+  onTodoStatusChange,
+  onAddTodo,
+}: {
+  activeTab: WorkbenchTab;
+  running: boolean;
+  planReady: boolean;
+  planAccepted: boolean;
+  todos: AgentTodo[];
+  onAcceptPlan: () => void;
+  onToggleRunning: () => void;
+  onTodoStatusChange: (id: string, status: AgentTodoStatus) => void;
+  onAddTodo: (title: string) => void;
+}) {
+  const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
+  const [menuTodoId, setMenuTodoId] = useState<string | null>(null);
+  const [addingTodo, setAddingTodo] = useState(false);
+  const [newTodoTitle, setNewTodoTitle] = useState("");
+  const completedCount = todos.filter((todo) => todo.status === "done" || todo.status === "skipped").length;
+  const attentionCount = todos.filter((todo) => todo.status === "waiting" || todo.status === "blocked" || todo.status === "failed").length;
+
+  const statusMeta: Record<AgentTodoStatus, { label: string; icon: React.ElementType; color: string }> = {
+    pending: { label: "待执行", icon: Clock3, color: "text-slate-400" },
+    active: { label: running ? "进行中" : "已暂停", icon: running ? LoaderCircle : Pause, color: "text-blue-600" },
+    waiting: { label: "等待确认", icon: CircleGauge, color: "text-amber-600" },
+    blocked: { label: "已阻塞", icon: Ban, color: "text-amber-700" },
+    done: { label: "已完成", icon: CheckCircle2, color: "text-emerald-600" },
+    skipped: { label: "已跳过", icon: SkipForward, color: "text-slate-400" },
+    failed: { label: "执行失败", icon: TriangleAlert, color: "text-red-600" },
+  };
+
+  const submitNewTodo = () => {
+    const title = newTodoTitle.trim();
+    if (!title) return;
+    onAddTodo(title);
+    setNewTodoTitle("");
+    setAddingTodo(false);
+  };
+
   return (
     <div className="h-full overflow-y-auto p-5">
       {activeTab === "plan" && (
         <section>
-          <p className="text-xs font-medium text-slate-500">Agent 工作台</p>
-          <h3 className="mt-1 text-base font-semibold">执行计划</h3>
-          <div className="mt-5 space-y-1">
-            {[
-              ["明确问题与检索范围", "done"],
-              ["检索并筛选相关论文", running ? "active" : "done"],
-              ["建立证据表与方法分类", running ? "pending" : "active"],
-              ["提炼研究空白并输出方案", "pending"],
-            ].map(([label, status], index) => (
-              <div key={label} className="flex gap-3 rounded-xl px-2 py-3 transition hover:bg-white">
-                {status === "done" ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-600" />
-                ) : status === "active" ? (
-                  <LoaderCircle className="mt-0.5 h-4 w-4 animate-spin text-slate-900" />
-                ) : (
-                  <Clock3 className="mt-0.5 h-4 w-4 text-slate-400" />
-                )}
-                <div>
-                  <p className="text-sm font-medium text-slate-800">{index + 1}. {label}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {status === "done" ? "已完成" : status === "active" ? "进行中" : "等待执行"}
-                  </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-slate-500">Agent 工作台</p>
+              <h3 className="mt-1 text-base font-semibold">执行计划</h3>
+            </div>
+            {planAccepted && completedCount < todos.length && attentionCount === 0 && (
+              <button
+                type="button"
+                onClick={onToggleRunning}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-slate-300 active:scale-[0.98]"
+              >
+                {running ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                {running ? "暂停" : "继续"}
+              </button>
+            )}
+          </div>
+
+          {!planReady ? (
+            <div className="mt-6 space-y-3" aria-label="正在生成执行计划">
+              {[88, 72, 80, 64].map((width, index) => (
+                <div key={width} className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-3.5">
+                  <div className="h-4 w-4 animate-pulse rounded-full bg-slate-200" />
+                  <div className="h-3 animate-pulse rounded-full bg-slate-200" style={{ width: `${width}%`, animationDelay: `${index * 80}ms` }} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="mt-5 rounded-xl border border-slate-200 bg-white px-3.5 py-3">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-slate-700">{completedCount}/{todos.length} 已完成</span>
+                  {attentionCount > 0 ? (
+                    <span className="text-amber-700">{attentionCount} 项需要处理</span>
+                  ) : (
+                    <span className="text-slate-400">计划已同步</span>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
+
+              <div className="mt-3 space-y-1.5">
+                {todos.map((todo, index) => {
+                  const meta = statusMeta[todo.status];
+                  const StatusIcon = meta.icon;
+                  const expanded = expandedTodoId === todo.id;
+                  const menuOpen = menuTodoId === todo.id;
+                  const muted = todo.status === "done" || todo.status === "skipped";
+
+                  return (
+                    <article
+                      key={todo.id}
+                      className={`relative rounded-xl border transition ${
+                        todo.status === "active"
+                          ? "border-blue-200 bg-blue-50/75"
+                          : todo.status === "waiting" || todo.status === "blocked"
+                            ? "border-amber-200 bg-amber-50/70"
+                            : todo.status === "failed"
+                              ? "border-red-200 bg-red-50/70"
+                              : "border-transparent bg-white/60 hover:border-slate-200 hover:bg-white"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3 px-3 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedTodoId(expanded ? null : todo.id)}
+                          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                          aria-expanded={expanded}
+                        >
+                          <StatusIcon className={`mt-0.5 h-4 w-4 shrink-0 ${meta.color} ${todo.status === "active" && running ? "animate-spin" : ""}`} />
+                          <span className="min-w-0 flex-1">
+                            <span className={`block text-sm font-medium leading-5 ${muted ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                              {index + 1}. {todo.title}
+                            </span>
+                            <span className={`mt-1 block text-[11px] ${meta.color}`}>{meta.label}</span>
+                          </span>
+                          <ChevronDown className={`mt-0.5 h-4 w-4 shrink-0 text-slate-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                        </button>
+                        {todo.status !== "done" && todo.status !== "skipped" && (
+                          <button
+                            type="button"
+                            onClick={() => setMenuTodoId(menuOpen ? null : todo.id)}
+                            className="rounded-md p-1 text-slate-400 transition hover:bg-white hover:text-slate-700"
+                            aria-label={`管理 ${todo.title}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {expanded && (
+                        <div className="border-t border-slate-200/70 px-10 pb-3 pt-2.5">
+                          <p className="text-xs leading-5 text-slate-500">{todo.detail}</p>
+                          <p className="mt-2 text-[10px] text-slate-400">
+                            {todo.type === "approval" ? "需要用户确认" : todo.type === "user" ? "由你完成" : "由 Agent 执行"}
+                          </p>
+                        </div>
+                      )}
+
+                      {menuOpen && (
+                        <div className="absolute right-2 top-11 z-20 w-36 rounded-xl border border-slate-200 bg-white p-1.5 text-xs shadow-[0_18px_42px_-22px_rgba(15,23,42,0.42)]">
+                          {todo.status === "active" && (
+                            <>
+                              <button onClick={() => { onTodoStatusChange(todo.id, "done"); setMenuTodoId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-slate-50">
+                                <CheckCircle2 className="h-3.5 w-3.5" />标记完成
+                              </button>
+                              <button onClick={() => { onTodoStatusChange(todo.id, "blocked"); setMenuTodoId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-slate-50">
+                                <Ban className="h-3.5 w-3.5" />设为阻塞
+                              </button>
+                            </>
+                          )}
+                          {todo.status === "waiting" && (
+                            <button onClick={() => { onTodoStatusChange(todo.id, "done"); setMenuTodoId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-slate-50">
+                              <Check className="h-3.5 w-3.5" />确认并继续
+                            </button>
+                          )}
+                          {(todo.status === "blocked" || todo.status === "failed") && (
+                            <button onClick={() => { onTodoStatusChange(todo.id, "active"); setMenuTodoId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-slate-50">
+                              <RotateCcw className="h-3.5 w-3.5" />重试
+                            </button>
+                          )}
+                          {todo.status === "pending" && (
+                            <button onClick={() => { onTodoStatusChange(todo.id, todo.type === "approval" ? "waiting" : "active"); setMenuTodoId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-slate-50">
+                              <Play className="h-3.5 w-3.5" />设为下一项
+                            </button>
+                          )}
+                          <button onClick={() => { onTodoStatusChange(todo.id, "skipped"); setMenuTodoId(null); }} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-slate-500 hover:bg-slate-50">
+                            <SkipForward className="h-3.5 w-3.5" />跳过
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+
+              {addingTodo ? (
+                <div className="mt-3 rounded-xl border border-blue-200 bg-white p-2.5">
+                  <input
+                    autoFocus
+                    value={newTodoTitle}
+                    onChange={(event) => setNewTodoTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") submitNewTodo();
+                      if (event.key === "Escape") setAddingTodo(false);
+                    }}
+                    placeholder="输入新的执行步骤"
+                    className="w-full bg-transparent px-1 text-sm outline-none placeholder:text-slate-400"
+                  />
+                  <div className="mt-2 flex justify-end gap-1.5">
+                    <button onClick={() => setAddingTodo(false)} className="rounded-lg px-2.5 py-1.5 text-xs text-slate-500 hover:bg-slate-50">取消</button>
+                    <button onClick={submitNewTodo} disabled={!newTodoTitle.trim()} className="rounded-lg bg-slate-950 px-2.5 py-1.5 text-xs font-medium text-white disabled:bg-slate-200">添加</button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAddingTodo(true)}
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white/50 py-2.5 text-xs font-medium text-slate-500 transition hover:border-slate-400 hover:bg-white hover:text-slate-800"
+                >
+                  <Plus className="h-3.5 w-3.5" />添加步骤
+                </button>
+              )}
+
+              {!planAccepted && (
+                <div className="mt-4 rounded-2xl bg-slate-950 p-3.5 text-white">
+                  <p className="text-xs font-medium">确认后 Agent 将按此计划执行</p>
+                  <p className="mt-1 text-[11px] leading-5 text-white/55">开始前可以调整步骤，执行中仍可暂停或处理阻塞项。</p>
+                  <button
+                    type="button"
+                    onClick={onAcceptPlan}
+                    className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-blue-50 active:scale-[0.98]"
+                  >
+                    <Play className="h-4 w-4" />确认并开始
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </section>
       )}
       {activeTab === "files" && (
@@ -381,16 +631,34 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
   const [prompt, setPrompt] = useState("");
   const [started, setStarted] = useState(false);
   const [running, setRunning] = useState(false);
+  const [planReady, setPlanReady] = useState(false);
+  const [planAccepted, setPlanAccepted] = useState(false);
+  const [todos, setTodos] = useState<AgentTodo[]>(initialAgentTodos);
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("plan");
   const [panelOpen, setPanelOpen] = useState(true);
   const [taskTitle, setTaskTitle] = useState("新研究任务");
   const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<AgentTierId>("balanced");
+  const taskCompleted = planAccepted && todos.every((todo) => todo.status === "done" || todo.status === "skipped");
+  const taskNeedsAttention = planAccepted && todos.some((todo) => todo.status === "waiting" || todo.status === "blocked" || todo.status === "failed");
+
+  useEffect(() => {
+    if (!planAccepted) return;
+    const waitingForUser = todos.some((todo) => todo.status === "waiting" || todo.status === "blocked" || todo.status === "failed");
+    const hasActiveTodo = todos.some((todo) => todo.status === "active");
+    if (taskCompleted || (waitingForUser && !hasActiveTodo)) setRunning(false);
+  }, [planAccepted, taskCompleted, todos]);
 
   const submit = (text = prompt) => {
     const value = text.trim();
     if (!value || running) return;
-    if (!started) setTaskTitle(value.length > 32 ? `${value.slice(0, 32)}…` : value);
+    const startingTask = !started;
+    if (startingTask) {
+      setTaskTitle(value.length > 32 ? `${value.slice(0, 32)}…` : value);
+      setPlanReady(false);
+      setPlanAccepted(false);
+      setTodos(initialAgentTodos.map((todo) => ({ ...todo })));
+    }
     setStarted(true);
     setPrompt("");
     setRunning(true);
@@ -401,11 +669,66 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
         ...items,
         {
           role: "agent",
-          text: "任务已拆解。我会先检索高相关文献并建立证据表，再对研究空白进行交叉验证，最后输出可直接推进的研究计划。",
+          text: startingTask
+            ? "任务已拆解为 5 个步骤。你可以在右侧调整执行计划，确认后我会开始检索与分析。"
+            : "已收到补充说明。我会基于当前计划继续处理，并在需要改变执行范围时请你确认。",
         },
       ]);
-      setRunning(false);
+      if (startingTask) {
+        setPlanReady(true);
+        setRunning(false);
+      } else {
+        setRunning(false);
+      }
     }, 900);
+  };
+
+  const activateNextTodo = (items: AgentTodo[], afterId?: string) => {
+    const startIndex = afterId ? items.findIndex((todo) => todo.id === afterId) + 1 : 0;
+    const nextIndex = items.findIndex((todo, index) => index >= Math.max(startIndex, 0) && todo.status === "pending");
+    if (nextIndex < 0) return items;
+    return items.map((todo, index) =>
+      index === nextIndex
+        ? { ...todo, status: todo.type === "approval" ? "waiting" : "active" }
+        : todo,
+    );
+  };
+
+  const handleAcceptPlan = () => {
+    setPlanAccepted(true);
+    setRunning(true);
+    setTodos((items) => activateNextTodo(items));
+    setMessages((items) => [...items, { role: "agent", text: "计划已确认。我会从明确检索范围开始，并持续更新右侧 Todo List。" }]);
+  };
+
+  const handleTodoStatusChange = (id: string, status: AgentTodoStatus) => {
+    setTodos((items) => {
+      let nextItems = items.map((todo) => {
+        if (todo.id === id) return { ...todo, status };
+        if (status === "active" && todo.status === "active") return { ...todo, status: "pending" as AgentTodoStatus };
+        return todo;
+      });
+
+      if (status === "done" || status === "skipped") {
+        nextItems = activateNextTodo(nextItems, id);
+      }
+      return nextItems;
+    });
+    if (status === "blocked" || status === "failed") setRunning(false);
+    if (status === "active" || status === "done") setRunning(true);
+  };
+
+  const handleAddTodo = (title: string) => {
+    setTodos((items) => [
+      ...items,
+      {
+        id: `custom-${Date.now()}`,
+        title,
+        detail: "由用户补充的执行步骤，Agent 将在执行前检查依赖关系。",
+        type: "user",
+        status: "pending",
+      },
+    ]);
   };
 
   if (!started) {
@@ -478,8 +801,8 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
           <h1 className="min-w-0 truncate pr-6 text-[15px] font-semibold">{taskTitle}</h1>
           <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
             <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
-              <span className={`h-2 w-2 rounded-full ${running ? "bg-emerald-500" : "bg-slate-400"}`} />
-              {running ? "进行中" : "可继续"}
+              <span className={`h-2 w-2 rounded-full ${taskCompleted ? "bg-blue-500" : taskNeedsAttention ? "bg-amber-500" : running ? "bg-emerald-500" : "bg-slate-400"}`} />
+              {!planReady ? "制定计划" : !planAccepted ? "待确认" : taskCompleted ? "已完成" : taskNeedsAttention ? "等待确认" : running ? "进行中" : "已暂停"}
             </span>
             <span className="hidden items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 sm:inline-flex">
               <GraduationCap className="h-3.5 w-3.5" />
@@ -526,7 +849,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
                   )}
                 </article>
               ))}
-              {running && (
+              {running && !planReady && (
                 <div className="flex items-center gap-3 text-sm text-slate-500">
                   <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-950 text-white">
                     <Bot className="h-3.5 w-3.5" />
@@ -556,7 +879,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
       </main>
 
       {panelOpen && (
-        <aside className="hidden w-[310px] shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block">
+        <aside className="hidden w-[360px] shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block">
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
             <span className="text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}</span>
             <button
@@ -568,7 +891,17 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
             </button>
           </div>
           <div className="h-[calc(100%_-_4rem)]">
-            <WorkbenchPanel activeTab={activeTab} running={running} />
+            <WorkbenchPanel
+              activeTab={activeTab}
+              running={running}
+              planReady={planReady}
+              planAccepted={planAccepted}
+              todos={todos}
+              onAcceptPlan={handleAcceptPlan}
+              onToggleRunning={() => setRunning((value) => !value)}
+              onTodoStatusChange={handleTodoStatusChange}
+              onAddTodo={handleAddTodo}
+            />
           </div>
         </aside>
       )}
