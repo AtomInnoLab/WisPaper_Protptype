@@ -46,7 +46,8 @@ export function ToolsHub({ onOpenFigureToPPTX }: ToolsHubProps) {
                 <div>
                   <h2 className="max-w-[320px] text-[30px] font-semibold leading-[1.12] tracking-[-0.045em] text-[#22262c] sm:text-[36px]">论文插图转 PPT</h2>
                   <p className="mt-4 max-w-[320px] text-[13px] leading-6 text-[#6d7782]">框选论文插图，转换为可编辑的 PPT。</p>
-                  <span className="mt-8 inline-flex w-fit items-center gap-2 rounded-full bg-[#22262c] px-5 py-3 text-sm font-medium text-white shadow-[0_8px_20px_rgba(34,38,44,0.14)] transition duration-300 group-hover:bg-[#111418]">开始转换 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" /></span>
+                  <p className="mt-5 text-[11px] font-medium text-[#8a949e]">预计消耗：上传后计算 Credits</p>
+                  <span className="mt-6 inline-flex w-fit items-center gap-2 rounded-full bg-[#22262c] px-5 py-3 text-sm font-medium text-white shadow-[0_8px_20px_rgba(34,38,44,0.14)] transition duration-300 group-hover:bg-[#111418]">开始转换 <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" /></span>
                 </div>
               </div>
 
