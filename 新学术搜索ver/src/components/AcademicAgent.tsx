@@ -20,6 +20,7 @@ import {
   Library,
   LoaderCircle,
   MessageSquareText,
+  Minus,
   Moon,
   MoreHorizontal,
   Orbit,
@@ -43,6 +44,16 @@ type WorkbenchTab = "files" | "search" | "plan" | "gpu";
 type AgentTierId = "fast" | "balanced" | "primary" | "deep";
 type AgentTodoStatus = "pending" | "active" | "waiting" | "blocked" | "done" | "skipped" | "failed";
 type AgentTodoType = "agent" | "approval" | "user";
+
+type GpuModelId = "rtx-4090" | "rtx-5090" | "rtx-pro-6000" | "a800" | "rtx-4080";
+
+const gpuModels: Array<{ id: GpuModelId; name: string; memory: string; stock: number }> = [
+  { id: "rtx-4090", name: "RTX 4090", memory: "48 GB", stock: 7 },
+  { id: "rtx-5090", name: "RTX 5090", memory: "32 GB", stock: 4 },
+  { id: "rtx-pro-6000", name: "RTX PRO 6000", memory: "96 GB", stock: 37 },
+  { id: "a800", name: "A800 NVLink", memory: "80 GB", stock: 33 },
+  { id: "rtx-4080", name: "RTX 4080 Super", memory: "16 GB", stock: 1 },
+];
 
 interface AgentTodo {
   id: string;
@@ -348,6 +359,184 @@ function AgentComposer({
   );
 }
 
+function GpuConfigPanel() {
+  const [selectedGpu, setSelectedGpu] = useState<GpuModelId>("rtx-4090");
+  const [region, setRegion] = useState("新加坡 A");
+  const [imageVersion, setImageVersion] = useState("PyTorch 2.8 · CUDA 12.8 · Ubuntu 24.04");
+  const [quantity, setQuantity] = useState(1);
+  const [launchState, setLaunchState] = useState<"idle" | "launching" | "ready">("idle");
+
+  const selectedModel = gpuModels.find((model) => model.id === selectedGpu) ?? gpuModels[0];
+  const updateQuantity = (next: number) => setQuantity(Math.min(selectedModel.stock, Math.max(1, next)));
+
+  const launchInstance = () => {
+    if (launchState !== "idle") return;
+    setLaunchState("launching");
+    window.setTimeout(() => setLaunchState("ready"), 1200);
+  };
+
+  return (
+    <section className="flex min-h-full flex-col">
+      <div className="flex-1 px-1 pb-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium text-slate-500">Agent 工作台</p>
+            <h3 className="mt-1 text-lg font-semibold tracking-[-0.02em]">GPU 配置</h3>
+          </div>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${launchState === "ready" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
+            {launchState === "ready" ? "运行中" : "按需启动"}
+          </span>
+        </div>
+
+        {launchState === "ready" ? (
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white">
+                <Check className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">GPU 实例已启动</p>
+                <p className="mt-0.5 text-xs text-slate-500">环境已连接到当前 Agent 会话</p>
+              </div>
+            </div>
+            <dl className="mt-5 grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-xl bg-white/80 p-3">
+                <dt className="text-slate-400">GPU</dt>
+                <dd className="mt-1 font-medium text-slate-800">{quantity} × {selectedModel.name}</dd>
+              </div>
+              <div className="rounded-xl bg-white/80 p-3">
+                <dt className="text-slate-400">区域</dt>
+                <dd className="mt-1 font-medium text-slate-800">{region}</dd>
+              </div>
+            </dl>
+            <button
+              type="button"
+              onClick={() => setLaunchState("idle")}
+              className="mt-4 w-full rounded-xl border border-emerald-200 bg-white py-2.5 text-sm font-medium text-slate-700 transition hover:border-emerald-300 hover:text-slate-950"
+            >
+              重新配置
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="mt-6">
+              <div className="mb-2.5 flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-600">GPU 型号</label>
+                <span className="text-[11px] text-slate-400">选择适合任务的计算资源</span>
+              </div>
+              <div className="space-y-2">
+                {gpuModels.map((model) => {
+                  const selected = selectedGpu === model.id;
+                  return (
+                    <button
+                      key={model.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedGpu(model.id);
+                        setQuantity((value) => Math.min(value, model.stock));
+                      }}
+                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left transition active:scale-[0.995] ${
+                        selected
+                          ? "border-slate-950 bg-slate-950 text-white shadow-[0_10px_24px_-18px_rgba(15,23,42,0.8)]"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>
+                        <span className="text-sm font-semibold">{model.name}</span>
+                        <span className={`ml-2 text-xs ${selected ? "text-white/55" : "text-slate-400"}`}>{model.memory}</span>
+                      </span>
+                      <span className={`text-xs font-medium ${selected ? "text-white/65" : model.stock <= 1 ? "text-amber-600" : "text-emerald-600"}`}>
+                        库存 {model.stock}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">区域</span>
+                <select
+                  value={region}
+                  onChange={(event) => setRegion(event.target.value)}
+                  className="mt-2 h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option>新加坡 A</option>
+                  <option>中国香港 A</option>
+                  <option>美国西部 A</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-slate-600">实例数量</span>
+                <span className="mt-2 flex h-11 items-center justify-between rounded-xl border border-slate-200 bg-white px-1.5">
+                  <button
+                    type="button"
+                    onClick={() => updateQuantity(quantity - 1)}
+                    disabled={quantity <= 1}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 disabled:text-slate-200"
+                    aria-label="减少实例数量"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm font-semibold text-slate-800">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => updateQuantity(quantity + 1)}
+                    disabled={quantity >= selectedModel.stock}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 disabled:text-slate-200"
+                    aria-label="增加实例数量"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </span>
+              </label>
+            </div>
+
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold text-slate-600">镜像版本</span>
+              <select
+                value={imageVersion}
+                onChange={(event) => setImageVersion(event.target.value)}
+                className="mt-2 h-11 w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              >
+                <option>PyTorch 2.8 · CUDA 12.8 · Ubuntu 24.04</option>
+                <option>PyTorch 2.6 · CUDA 12.4 · Ubuntu 22.04</option>
+                <option>TensorFlow 2.18 · CUDA 12.5 · Ubuntu 22.04</option>
+              </select>
+            </label>
+
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-slate-400">本次配置</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">{quantity} × {selectedModel.name} · {region}</p>
+                </div>
+                <Cpu className="h-5 w-5 text-blue-600" />
+              </div>
+              <p className="mt-3 border-t border-slate-100 pt-3 text-xs leading-5 text-slate-500">确认后系统将自动开机，并把 GPU 环境连接到当前 Agent 会话。</p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {launchState !== "ready" && (
+        <div className="sticky bottom-0 border-t border-slate-200 bg-[#f7f9fc]/95 px-1 pb-1 pt-4 backdrop-blur">
+          <button
+            type="button"
+            onClick={launchInstance}
+            disabled={launchState === "launching"}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 active:scale-[0.99] disabled:bg-slate-500"
+          >
+            {launchState === "launching" ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Cpu className="h-4 w-4" />}
+            {launchState === "launching" ? "正在启动环境" : "确认并启动"}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function WorkbenchPanel({
   activeTab,
   running,
@@ -608,20 +797,7 @@ function WorkbenchPanel({
         </section>
       )}
       {activeTab === "gpu" && (
-        <section>
-          <p className="text-xs font-medium text-slate-500">Agent 工作台</p>
-          <h3 className="mt-1 text-base font-semibold">运行环境</h3>
-          <div className="mt-5 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">GPU 实例</span>
-              <span className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-500">未配置</span>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-500">需要训练或复现实验时，Agent 会请求创建运行环境。</p>
-            <button className="mt-4 w-full rounded-xl bg-slate-950 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 active:scale-[0.98]">
-              配置 GPU
-            </button>
-          </div>
-        </section>
+        <GpuConfigPanel />
       )}
     </div>
   );
@@ -879,7 +1055,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
       </main>
 
       {panelOpen && (
-        <aside className="hidden w-[360px] shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block">
+        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "gpu" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
             <span className="text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}</span>
             <button

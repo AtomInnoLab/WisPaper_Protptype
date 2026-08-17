@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal, Upload, FileText, RefreshCw } from 'lucide-react';
+import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal, Upload, FileText, RefreshCw, Presentation } from 'lucide-react';
 import { Paper } from '../types';
 import { TableOfContents } from './TableOfContents';
 import { PageThumbnails } from './PageThumbnails';
@@ -15,6 +15,7 @@ interface PaperDetailProps {
   paper: Paper | null;
   onBack: () => void;
   initialLocalFile?: File | null;
+  onOpenFigureToPPTX?: () => void;
 }
 
 type TabType = 'blog' | 'paper' | 'translation';
@@ -44,7 +45,7 @@ const defaultShareCommentsEn = [
   'Sharing a good read. Feel free to join the discussion.',
 ];
 
-export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDetailProps) {
+export function PaperDetail({ paper, onBack, initialLocalFile = null, onOpenFigureToPPTX }: PaperDetailProps) {
   const { language } = useLanguage();
   const isZh = language === 'zh';
   const [activeTab, setActiveTab] = useState<TabType>('blog');
@@ -692,6 +693,17 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null }: PaperDet
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-2.5">
           <div className="flex items-center gap-3">
+            {hasPaper && onOpenFigureToPPTX ? (
+              <button
+                type="button"
+                onClick={onOpenFigureToPPTX}
+                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-blue-700"
+                title={isZh ? '框选插图并转换为可编辑 PPTX' : 'Select a figure and convert it to editable PPTX'}
+              >
+                <Presentation className="h-3.5 w-3.5" />
+                <span>{isZh ? '论文插图转 PPT' : 'Figure to Editable PPT'}</span>
+              </button>
+            ) : null}
             {activeTab === 'blog' ? (
               <div className="relative">
                 <button

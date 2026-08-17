@@ -242,7 +242,7 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
                       <Coins className="h-3 w-3 text-slate-500" />
                       <span>{language === 'zh' ? '已领取 Voucher' : 'Claimed vouchers'}</span>
                     </div>
-                    <span className="tabular-nums text-slate-400">2 {language === 'zh' ? '笔' : 'items'} · 3,200 Credits</span>
+                    <span className="tabular-nums text-slate-400">3 {language === 'zh' ? '笔' : 'items'} · 5,400 Credits</span>
                   </div>
                 </div>
 

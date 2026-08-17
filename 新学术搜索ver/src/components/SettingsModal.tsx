@@ -40,10 +40,103 @@ const creditPackages = [
   { id: 'pack-0524', purchasedAt: '2026 年 5 月 24 日', expiresAt: '2026 年 7 月 24 日', total: 2000, used: 1200 },
 ];
 
-const voucherCredits = [
-  { id: 'voucher-agent-0625', issuedAt: '2026 年 6 月 25 日', expiresAt: '2026 年 9 月 25 日', feature: 'Agent', total: 2000, used: 600 },
-  { id: 'voucher-search-0612', issuedAt: '2026 年 6 月 12 日', expiresAt: '2026 年 9 月 12 日', feature: 'Search', total: 3000, used: 1200 },
+type VoucherFeatureId = 'deep-search' | 'scholar-qa' | 'survey' | 'feeds' | 'table-extraction' | 'blog-generation' | 'agent';
+
+type VoucherTargetKey =
+  | 'deep_search'
+  | 'scholar_qa'
+  | 'survey'
+  | 'feed_verify'
+  | 'paper_column_extractor'
+  | 'summary-v2'
+  | 'plan_generation'
+  | 'agent_token_cost'
+  | 'cpu_cost'
+  | 'gpu_cost';
+
+const voucherFeatureOrder: VoucherFeatureId[] = [
+  'deep-search',
+  'scholar-qa',
+  'survey',
+  'feeds',
+  'table-extraction',
+  'blog-generation',
+  'agent',
 ];
+
+const voucherFeatureMeta: Record<VoucherFeatureId, { label: string; className: string }> = {
+  'deep-search': { label: '深度搜索', className: 'bg-orange-100 text-orange-700' },
+  'scholar-qa': { label: '学术问答', className: 'bg-blue-100 text-blue-700' },
+  survey: { label: 'AI Survey', className: 'bg-violet-100 text-violet-700' },
+  feeds: { label: 'AI Feeds', className: 'bg-emerald-100 text-emerald-700' },
+  'table-extraction': { label: '表格抽取', className: 'bg-cyan-100 text-cyan-700' },
+  'blog-generation': { label: 'Blog 生成', className: 'bg-pink-100 text-pink-700' },
+  agent: { label: 'Agent', className: 'bg-teal-100 text-teal-700' },
+};
+
+const voucherTargetMap: Partial<Record<VoucherTargetKey, VoucherFeatureId>> = {
+  deep_search: 'deep-search',
+  scholar_qa: 'scholar-qa',
+  survey: 'survey',
+  feed_verify: 'feeds',
+  paper_column_extractor: 'table-extraction',
+  'summary-v2': 'blog-generation',
+  agent_token_cost: 'agent',
+  cpu_cost: 'agent',
+  gpu_cost: 'agent',
+};
+
+const normalizeVoucherFeatures = (targets: VoucherTargetKey[]) => {
+  const normalized = new Set<VoucherFeatureId>();
+  targets.forEach((target) => {
+    const feature = voucherTargetMap[target];
+    if (feature) normalized.add(feature);
+  });
+  return voucherFeatureOrder.filter((feature) => normalized.has(feature));
+};
+
+const voucherCredits: Array<{
+  id: string;
+  name: string;
+  issuedAt: string;
+  expiresAt: string;
+  targets: VoucherTargetKey[];
+  total: number;
+  used: number;
+}> = [
+  {
+    id: 'voucher-research-0625',
+    name: '研究执行奖励',
+    issuedAt: '2026 年 6 月 25 日',
+    expiresAt: '2026 年 9 月 25 日',
+    targets: ['deep_search', 'scholar_qa', 'agent_token_cost', 'cpu_cost', 'gpu_cost'],
+    total: 3000,
+    used: 900,
+  },
+  {
+    id: 'voucher-content-0612',
+    name: '内容处理体验券',
+    issuedAt: '2026 年 6 月 12 日',
+    expiresAt: '2026 年 9 月 12 日',
+    targets: ['survey', 'feed_verify', 'summary-v2', 'plan_generation'],
+    total: 2500,
+    used: 700,
+  },
+  {
+    id: 'voucher-data-0601',
+    name: '数据抽取补偿',
+    issuedAt: '2026 年 6 月 1 日',
+    expiresAt: '2026 年 9 月 1 日',
+    targets: ['deep_search', 'paper_column_extractor'],
+    total: 2000,
+    used: 500,
+  },
+];
+
+function VoucherFeatureTag({ feature }: { feature: VoucherFeatureId }) {
+  const meta = voucherFeatureMeta[feature];
+  return <span className={`inline-flex rounded-md px-2 py-1 text-[9px] font-semibold ${meta.className}`}>{meta.label}</span>;
+}
 
 export function SettingsModal({ isOpen, onClose, onOpenPricing }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>('membership');
@@ -300,6 +393,12 @@ function BasicInformation() {
 function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
   const [showCreditPackages, setShowCreditPackages] = useState(false);
   const [showVoucherCredits, setShowVoucherCredits] = useState(false);
+  const voucherFeatures = normalizeVoucherFeatures(voucherCredits.flatMap((voucher) => voucher.targets));
+  const voucherTotal = voucherCredits.reduce((sum, voucher) => sum + voucher.total, 0);
+  const voucherUsed = voucherCredits.reduce((sum, voucher) => sum + voucher.used, 0);
+  const voucherRemaining = voucherTotal - voucherUsed;
+  const voucherUsedPercentage = voucherTotal > 0 ? (voucherUsed / voucherTotal) * 100 : 0;
+  const coversAllFeatures = voucherFeatures.length === voucherFeatureOrder.length;
 
   return (
     <div className="p-8">
@@ -353,7 +452,7 @@ function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
             </div>
             <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-[10px] text-slate-500">
               <span>已领取 Voucher</span>
-              <span className="tabular-nums text-slate-400">2 笔 · 3,200 Credits</span>
+              <span className="tabular-nums text-slate-400">{voucherCredits.length} 笔 · {voucherRemaining.toLocaleString()} Credits</span>
             </div>
           </div>
         </section>
@@ -453,13 +552,34 @@ function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="text-xs font-semibold text-slate-900">Voucher Credits</h4>
-                  <span className="rounded-md bg-teal-100 px-2 py-1 text-[9px] font-semibold text-teal-700">Agent</span>
-                  <span className="rounded-md bg-orange-100 px-2 py-1 text-[9px] font-semibold text-orange-700">Search</span>
+                  {coversAllFeatures ? (
+                    <span className="inline-flex rounded-md bg-slate-900 px-2 py-1 text-[9px] font-semibold text-white">全功能</span>
+                  ) : (
+                    <>
+                      <span className="hidden items-center gap-1.5 sm:inline-flex">
+                        {voucherFeatures.slice(0, 2).map((feature) => <VoucherFeatureTag key={feature} feature={feature} />)}
+                        {voucherFeatures.length > 2 && (
+                          <span
+                            className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[9px] font-semibold text-slate-600"
+                            title={voucherFeatures.slice(2).map((feature) => voucherFeatureMeta[feature].label).join('、')}
+                          >
+                            +{voucherFeatures.length - 2}
+                          </span>
+                        )}
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 sm:hidden">
+                        {voucherFeatures.slice(0, 1).map((feature) => <VoucherFeatureTag key={feature} feature={feature} />)}
+                        {voucherFeatures.length > 1 && (
+                          <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[9px] font-semibold text-slate-600">+{voucherFeatures.length - 1}</span>
+                        )}
+                      </span>
+                    </>
+                  )}
                   <span className="rounded-md bg-violet-100 px-2 py-1 text-[9px] font-semibold text-violet-700">{voucherCredits.length} 笔</span>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <p className="text-sm font-semibold text-slate-950 tabular-nums">3,200</p>
+                <p className="text-sm font-semibold text-slate-950 tabular-nums">{voucherRemaining.toLocaleString()}</p>
                 <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:text-slate-700 ${showVoucherCredits ? 'rotate-180' : ''}`} />
               </div>
             </button>
@@ -470,13 +590,13 @@ function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
                 role="progressbar"
                 aria-label="Voucher Credits 池已使用额度"
                 aria-valuemin={0}
-                aria-valuemax={5000}
-                aria-valuenow={1800}
+                aria-valuemax={voucherTotal}
+                aria-valuenow={voucherUsed}
               >
-                <div className="h-full w-[36%] rounded-full bg-violet-600" />
+                <div className="h-full rounded-full bg-violet-600" style={{ width: `${voucherUsedPercentage}%` }} />
               </div>
               <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500">
-                <span className="tabular-nums">已使用 1,800 / 5,000</span>
+                <span className="tabular-nums">已使用 {voucherUsed.toLocaleString()} / {voucherTotal.toLocaleString()}</span>
                 <span>{showVoucherCredits ? '收起发放明细' : '展开查看每笔余额'}</span>
               </div>
             </div>
@@ -486,7 +606,8 @@ function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
                 {voucherCredits.map((voucher, index) => {
                   const remaining = voucher.total - voucher.used;
                   const usedPercentage = (voucher.used / voucher.total) * 100;
-                  const isAgent = voucher.feature === 'Agent';
+                  const features = normalizeVoucherFeatures(voucher.targets);
+                  const featureLabels = features.map((feature) => voucherFeatureMeta[feature].label);
 
                   return (
                     <div
@@ -494,14 +615,13 @@ function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
                       className={`px-4 py-3.5 ${index > 0 ? 'border-t border-slate-100' : ''}`}
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-[11px] font-semibold text-slate-900">发放于 {voucher.issuedAt}</p>
-                            <span className={`rounded-md px-2 py-1 text-[9px] font-semibold ${isAgent ? 'bg-teal-100 text-teal-700' : 'bg-orange-100 text-orange-700'}`}>
-                              {voucher.feature}
-                            </span>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-[11px] font-semibold text-slate-900">{voucher.name}</p>
+                            {features.map((feature) => <VoucherFeatureTag key={feature} feature={feature} />)}
                           </div>
-                          <p className="mt-1 text-[9px] text-slate-400">仅限 {voucher.feature} 使用 · 有效期至 {voucher.expiresAt}</p>
+                          <p className="mt-1 text-[9px] text-slate-400">发放于 {voucher.issuedAt} · 有效期至 {voucher.expiresAt}</p>
+                          <p className="mt-0.5 text-[9px] text-slate-400">仅限 {featureLabels.join('、')} 使用</p>
                         </div>
                         <div className="text-right">
                           <p className="text-xs font-semibold text-violet-700 tabular-nums">{remaining.toLocaleString()} 剩余</p>
@@ -511,7 +631,7 @@ function MembershipPayment({ onOpenPricing }: { onOpenPricing?: () => void }) {
                       <div
                         className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"
                         role="progressbar"
-                        aria-label={`${voucher.feature} Voucher Credits 已使用额度`}
+                        aria-label={`${featureLabels.join('、')} Voucher Credits 已使用额度`}
                         aria-valuemin={0}
                         aria-valuemax={voucher.total}
                         aria-valuenow={voucher.used}

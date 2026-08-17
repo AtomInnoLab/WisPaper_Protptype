@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { SearchBar } from "./components/SearchBar";
 import { SearchResults } from "./components/SearchResults";
 import { SearchThinkingPanel } from "./components/SearchThinkingPanel";
@@ -16,6 +16,8 @@ import { FudanCollectionResults } from "./components/FudanCollectionResults";
 import { AcademicAgent } from "./components/AcademicAgent";
 import { ResearchProjects } from "./components/ResearchProjects";
 import { ResearchCanvas } from "./components/ResearchCanvas";
+import { FigureToPPTX } from "./components/FigureToPPTX";
+import { ToolsHub } from "./components/ToolsHub";
 import { QuickPaperPage } from "./components/QuickPaperPage";
 import { FloatingTaskButton } from "./components/FloatingTaskButton";
 import { SearchMoreButton } from "./components/SearchMoreButton";
@@ -58,8 +60,8 @@ export default function App() {
   const [selectedPaper, setSelectedPaper] =
     useState<Paper | null>(null);
   const [viewMode, setViewMode] = useState<
-    "home" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas"
-  >("home");
+    "home" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas" | "tools" | "figure-to-pptx"
+  >(() => window.location.pathname === '/tools/figure-to-pptx' ? 'figure-to-pptx' : window.location.pathname === '/tools' ? 'tools' : 'home');
   const [showTasksModal, setShowTasksModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
@@ -69,7 +71,15 @@ export default function App() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
   const [readerInitialFile, setReaderInitialFile] = useState<File | null>(null);
+  const [figureToPPTXFromReader, setFigureToPPTXFromReader] = useState(false);
   const [shortcutResults, setShortcutResults] = useState<Paper[] | null>(null);
+
+  useEffect(() => {
+    const targetPath = viewMode === 'figure-to-pptx' ? '/tools/figure-to-pptx' : viewMode === 'tools' ? '/tools' : '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.replaceState({}, '', targetPath);
+    }
+  }, [viewMode]);
 
   const resolveShortcutPaper = (identifier: AcademicIdentifier): Paper => {
     const cleanValue = identifier.value.replace(/v\d+$/i, '');
@@ -257,9 +267,12 @@ export default function App() {
     <LanguageProvider>
       <div className={isReaderView ? "h-screen overflow-hidden bg-white flex" : "min-h-screen bg-white flex"}>
         {/* Left Sidebar - Only show in list view, library view, and scholar-qa view */}
-        {(viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas") && (
+        {(viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas" || viewMode === "tools" || viewMode === "figure-to-pptx") && (
           <LeftSidebar
-            onNavigate={(view) => setViewMode(view as any)}
+            onNavigate={(view) => {
+              if (view === 'figure-to-pptx' || view === 'tools') setFigureToPPTXFromReader(false);
+              setViewMode(view as any);
+            }}
             onOpenInvite={() => setShowInviteModal(true)}
             onOpenPaywall={() => setShowPaywallModal(true)}
             onOpenRecharge={() => setShowRechargeModal(true)}
@@ -348,6 +361,10 @@ export default function App() {
               paper={null}
               initialLocalFile={readerInitialFile}
               onBack={() => setViewMode("all-feeds")}
+              onOpenFigureToPPTX={() => {
+                setFigureToPPTXFromReader(true);
+                setViewMode("figure-to-pptx");
+              }}
             />
           ) : viewMode === "scholar-qa" ? (
             <ScholarQA key={scholarQAKey} papersCount={mockPapers.length} onReset={handleResetScholarQA} />
@@ -375,11 +392,34 @@ export default function App() {
             <ResearchProjects onOpenAgent={() => setViewMode("academic-agent")} />
           ) : viewMode === "research-canvas" ? (
             <ResearchCanvas onOpenAgent={() => setViewMode("academic-agent")} />
+          ) : viewMode === "tools" ? (
+            <ToolsHub
+              onOpenFigureToPPTX={() => {
+                setFigureToPPTXFromReader(false);
+                setViewMode("figure-to-pptx");
+              }}
+            />
+          ) : viewMode === "figure-to-pptx" ? (
+            <FigureToPPTX
+              fromReader={figureToPPTXFromReader}
+              onBackToTools={() => {
+                setFigureToPPTXFromReader(false);
+                setViewMode("tools");
+              }}
+              onBackToReader={() => {
+                setFigureToPPTXFromReader(false);
+                setViewMode("reader");
+              }}
+            />
           ) : (
             <PaperDetail
               paper={selectedPaper}
               initialLocalFile={null}
               onBack={handleBackToList}
+              onOpenFigureToPPTX={() => {
+                setFigureToPPTXFromReader(true);
+                setViewMode("figure-to-pptx");
+              }}
             />
           )}
         </div>
