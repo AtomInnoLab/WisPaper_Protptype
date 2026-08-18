@@ -50,6 +50,7 @@ interface HomePageProps {
   onOpenPricing?: () => void;
   onOpenRecharge?: () => void;
   onStartSearch?: (query?: string) => void;
+  onOpenFigureToPPTX?: () => void;
 }
 
 interface PageConfig {
@@ -156,7 +157,7 @@ function HomeCtaBanner({
   );
 }
 
-export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onOpenRecharge, onStartSearch }: HomePageProps) {
+export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onOpenRecharge, onStartSearch, onOpenFigureToPPTX }: HomePageProps) {
   const [activePage, setActivePage] = React.useState<MarketingPageKey>(getInitialMarketingPage);
   const [language, setLanguage] = React.useState<'zh' | 'en'>('zh');
   const isZh = language === 'zh';
@@ -181,6 +182,7 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onO
           onStartSearch={handleStartSearch}
           onContinueToSurvey={onNavigateToWorkspace}
           onNavigateToMarketingPage={setActivePage}
+          onOpenFigureToPPTX={onOpenFigureToPPTX}
         />
       );
     }
@@ -193,6 +195,7 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onO
           onStartSearch={handleStartSearch}
           onContinueToSurvey={onNavigateToWorkspace}
           onNavigateToMarketingPage={setActivePage}
+          onOpenFigureToPPTX={onOpenFigureToPPTX}
         />
       );
     }

@@ -293,6 +293,10 @@ export default function App() {
               onOpenPricing={() => setShowPaywallModal(true)}
               onOpenRecharge={() => setShowRechargeModal(true)}
               onStartSearch={handleStartSearchFromHome}
+              onOpenFigureToPPTX={() => {
+                setFigureToPPTXFromReader(false);
+                setViewMode("figure-to-pptx");
+              }}
             />
           ) : viewMode === "fudan-collection-search" ? (
             !hasSearched ? (
@@ -301,6 +305,10 @@ export default function App() {
                 onQuickOpen={handleQuickOpen}
                 showDeepSearchTooltip={showDeepSearchTooltip}
                 onTooltipDismiss={() => setShowDeepSearchTooltip(false)}
+                onOpenFigureToPPTX={() => {
+                  setFigureToPPTXFromReader(false);
+                  setViewMode("figure-to-pptx");
+                }}
               />
             ) : (
               <FudanCollectionResults
@@ -320,6 +328,10 @@ export default function App() {
                 onQuickOpen={handleQuickOpen}
                 showDeepSearchTooltip={showDeepSearchTooltip}
                 onTooltipDismiss={() => setShowDeepSearchTooltip(false)}
+                onOpenFigureToPPTX={() => {
+                  setFigureToPPTXFromReader(false);
+                  setViewMode("figure-to-pptx");
+                }}
               />
             ) : (
               // Show search results
@@ -375,6 +387,10 @@ export default function App() {
                 handleSearch(query);
               }}
               onQuickOpen={handleQuickOpen}
+              onOpenFigureToPPTX={() => {
+                setFigureToPPTXFromReader(false);
+                setViewMode("figure-to-pptx");
+              }}
             />
           ) : viewMode === "quick-paper" && selectedPaper ? (
             <QuickPaperPage
