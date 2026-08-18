@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal, Upload, FileText, RefreshCw, Presentation } from 'lucide-react';
+import { Library, Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize, Globe, ChevronDown, Bookmark, Share2, ThumbsUp, PlusCircle, History, House, MessageSquare, StickyNote, Sparkles, Info, X, SendHorizontal, Upload, FileText, RefreshCw, ScanLine } from 'lucide-react';
 import { Paper } from '../types';
 import { TableOfContents } from './TableOfContents';
 import { PageThumbnails } from './PageThumbnails';
@@ -21,7 +21,7 @@ interface PaperDetailProps {
 type TabType = 'blog' | 'paper' | 'translation';
 type SidebarTab = 'preview' | 'structure';
 type RightSidebarTab = 'home' | 'info' | 'chat' | 'history' | 'notes' | 'comments';
-type ReaderTool = 'single-page' | 'double-page' | 'flip' | 'click' | 'grab' | 'pen' | 'eraser';
+type ReaderTool = 'single-page' | 'double-page' | 'flip' | 'click' | 'grab' | 'marquee' | 'pen' | 'eraser';
 type PaperHighlightTarget = {
   citationId: string;
   elementId: string;
@@ -693,17 +693,6 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null, onOpenFigu
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-2.5">
           <div className="flex items-center gap-3">
-            {hasPaper && onOpenFigureToPPTX ? (
-              <button
-                type="button"
-                onClick={onOpenFigureToPPTX}
-                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-blue-700"
-                title={isZh ? '框选插图并转换为可编辑 PPTX' : 'Select a figure and convert it to editable PPTX'}
-              >
-                <Presentation className="h-3.5 w-3.5" />
-                <span>{isZh ? '论文插图转 PPT' : 'Figure to Editable PPT'}</span>
-              </button>
-            ) : null}
             {activeTab === 'blog' ? (
               <div className="relative">
                 <button
@@ -942,6 +931,22 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null, onOpenFigu
               <Upload className="h-3.5 w-3.5" />
               <span>{isZh ? '打开本地文件' : 'Open local file'}</span>
             </button>
+            {activeTab !== 'blog' ? (
+              <button
+                type="button"
+                onClick={() => setReaderTool(readerTool === 'marquee' ? 'click' : 'marquee')}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition ${
+                  readerTool === 'marquee'
+                    ? 'bg-blue-600 text-white shadow-sm hover:bg-blue-700'
+                    : 'border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
+                }`}
+                title={isZh ? '框选 PDF 内容' : 'Select an area in the PDF'}
+                aria-label={isZh ? '框选' : 'Select area'}
+              >
+                <ScanLine className="h-3.5 w-3.5" />
+                <span>{isZh ? '框选' : 'Select'}</span>
+              </button>
+            ) : null}
             <button className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900">
               <ThumbsUp className="h-3.5 w-3.5" />
               <span>53</span>
@@ -1015,9 +1020,11 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null, onOpenFigu
                 paper={activePaper}
                 currentPage={currentPage}
                 pdfScale={pdfScale}
+                selectionMode={readerTool === 'marquee'}
                 highlightTarget={paperHighlightTarget}
                 onClearHighlight={() => setPaperHighlightTarget(null)}
                 onTextSelect={handlePaperTextSelection}
+                onConvertSelection={() => onOpenFigureToPPTX?.()}
               />
             )}
             {activePaper && activeTab === 'translation' && (
@@ -1071,6 +1078,7 @@ export function PaperDetail({ paper, onBack, initialLocalFile = null, onOpenFigu
               selectedExcerpt={selectedExcerpt}
               onClearSelectedExcerpt={() => setSelectedExcerpt(null)}
               onChangeTab={setRightSidebarTab}
+              onOpenFigureToPPTX={onOpenFigureToPPTX}
             />
           ) : (
             <div className="flex h-full items-center justify-center px-6 text-center text-sm leading-6 text-gray-500">

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, Database, FileText, Globe2, MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Copy, FlaskConical, History, Plus } from 'lucide-react';
+import { Check, ChevronDown, Database, FileText, Globe2, MessageSquare, Search, StickyNote, X, ThumbsUp, ThumbsDown, Reply, Sparkles, SendHorizontal, Copy, FlaskConical, History, Plus, Presentation } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface SummaryCitation {
@@ -40,6 +40,7 @@ interface CommentsPanelProps {
   selectedExcerpt?: string | null;
   onClearSelectedExcerpt?: () => void;
   onChangeTab?: (tab: 'home' | 'info' | 'comments' | 'notes' | 'chat' | 'history') => void;
+  onOpenFigureToPPTX?: () => void;
 }
 
 export function CommentsPanel({
@@ -53,6 +54,7 @@ export function CommentsPanel({
   selectedExcerpt = null,
   onClearSelectedExcerpt,
   onChangeTab,
+  onOpenFigureToPPTX,
 }: CommentsPanelProps) {
   const { language } = useLanguage();
   const isZh = language === 'zh';
@@ -758,6 +760,21 @@ export function CommentsPanel({
                   </p>
                 </div>
               </button>
+
+              {onOpenFigureToPPTX ? (
+                <button
+                  type="button"
+                  onClick={onOpenFigureToPPTX}
+                  className="min-h-[66px] w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <Presentation className="h-5 w-5 shrink-0 text-slate-500" />
+                    <p className="shrink-0 text-xs font-medium text-slate-950">
+                      {isZh ? '论文插图转 PPT' : 'Figure to Editable PPT'}
+                    </p>
+                  </div>
+                </button>
+              ) : null}
 
               <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                 <div className="px-4 py-4">
