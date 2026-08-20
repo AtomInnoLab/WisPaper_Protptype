@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Search, MessageSquare, Library, Rss, Clock, Plus, ChevronDown, ArrowRight, FlaskConical, GraduationCap, Lightbulb, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Folder, Trash2, Bot, FolderKanban, Network } from 'lucide-react';
+import { Search, MessageSquare, Library, Rss, Clock, Plus, ChevronDown, ArrowRight, FlaskConical, GraduationCap, Lightbulb, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Folder, Trash2, Bot, FolderKanban, Network, Compass, Wrench } from 'lucide-react';
 import { UserPanel } from './UserPanel';
 import { useLanguage } from '../contexts/LanguageContext';
 import { SettingsModal } from './SettingsModal';
@@ -30,6 +30,31 @@ const navItemsConfig: NavItem[] = [
   { id: 'scholar-qa', icon: <MessageSquare className="w-4 h-4" />, labelKey: 'nav.scholarQA' },
   { id: 'my-library', icon: <Library className="w-4 h-4" />, labelKey: 'nav.myLibrary' },
 ];
+
+const latestWorkspaceNav = [
+  { id: 'explore', label: '首页', icon: Compass },
+  { id: 'scholar-qa', label: '问答', icon: MessageSquare },
+  { id: 'scholar-search', label: '搜索', icon: Search },
+  { id: 'academic-agent', label: 'Agent', icon: Bot },
+  { id: 'my-library', label: '知识库', icon: Library },
+  { id: 'research-projects', label: '项目', icon: FolderKanban },
+  { id: 'tools', label: '工具', icon: Wrench },
+];
+
+const historyByNav: Record<string, { title: string; items: string[] }> = {
+  'scholar-qa': {
+    title: '问答历史',
+    items: ['GRPO 与 PPO 有什么区别？', 'Muon 优化器的核心思想', '如何评估 RAG 的可信度？'],
+  },
+  'scholar-search': {
+    title: '搜索历史',
+    items: ['非线性多智能体编队控制', 'Multimodal reasoning benchmarks', 'RAG vs. fine-tuning'],
+  },
+  'academic-agent': {
+    title: 'Agent 历史',
+    items: ['多模态 Agent 长期记忆选题', 'RAG 评测文献综述', '论文主图设计与优化'],
+  },
+};
 
 interface RecentItem {
   id: string;
@@ -65,11 +90,19 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+  const [qaHistory, setQaHistory] = useState([
+    { id: 'qa-1', title: 'GRPO 与 PPO 有什么区别？', pinned: true },
+    { id: 'qa-2', title: 'Muon 优化器的核心思想', pinned: false },
+    { id: 'qa-3', title: '如何评估 RAG 的可信度？', pinned: false },
+  ]);
+  const [draggedHistoryId, setDraggedHistoryId] = useState<string | null>(null);
   const historyMenuRef = useRef<HTMLDivElement>(null);
   const { t } = useLanguage();
 
   React.useEffect(() => {
-    if (currentView === 'library') {
+    if (currentView === 'explore') {
+      setActiveNav('explore');
+    } else if (currentView === 'library') {
       setActiveNav('my-library');
     } else if (currentView === 'scholar-qa') {
       setActiveNav('scholar-qa');
@@ -90,6 +123,8 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
       setActiveNav('research-projects');
     } else if (currentView === 'research-canvas') {
       setActiveNav('research-canvas');
+    } else if (currentView === 'truecite' || currentView === 'tools') {
+      setActiveNav('tools');
     } else if (currentView === 'list') {
       setActiveNav('scholar-search');
       setShowMoreMenu(true);
@@ -125,7 +160,9 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
   const handleNavClick = (itemId: string) => {
     setActiveNav(itemId);
     if (onNavigate) {
-      if (itemId === 'my-library') {
+      if (itemId === 'explore') {
+        onNavigate('explore');
+      } else if (itemId === 'my-library') {
         onNavigate('library');
       } else if (itemId === 'scholar-search') {
         // Reset search state when clicking Scholar Search
@@ -149,6 +186,8 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
         onNavigate('research-canvas');
       } else if (itemId === 'truecite') {
         onNavigate('truecite');
+      } else if (itemId === 'tools') {
+        onNavigate('tools');
       } else if (itemId === 'fudan-collection-search') {
         if (onResetSearch) {
           onResetSearch();
@@ -175,7 +214,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
   };
 
   return (
-    <aside className={`${isCollapsed ? 'w-14' : 'w-64'} bg-white border-r border-gray-200 flex flex-col transition-all duration-200 ${isCollapsed ? 'overflow-visible' : ''}`}>
+    <aside className={`${isCollapsed ? 'w-14' : 'w-64'} h-screen sticky top-0 shrink-0 bg-white border-r border-gray-200 flex flex-col transition-all duration-200 ${isCollapsed ? 'overflow-visible' : ''}`}>
       {/* Logo */}
       <div className={`${isCollapsed ? 'px-2' : 'px-3'} py-3 border-b border-gray-100 flex items-center justify-between`}>
         <button 
@@ -209,55 +248,72 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
         </div>
       )}
 
-      {/* New Scholar QA Button - Only show when Scholar QA is active */}
-      {activeNav === 'scholar-qa' && !isCollapsed && (
-        <div className="px-3 py-3">
-          <button 
-            onClick={onNewScholarQA}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
-          >
-            <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              <span>{t('nav.newScholarQA')}</span>
-            </div>
-            <span className="text-xs">⌘K</span>
-          </button>
-        </div>
-      )}
-
-      {/* New Library Collection Button - Show when not in Scholar QA */}
-      {activeNav !== 'scholar-qa' && !isCollapsed && (
-        <div className="px-3 py-3">
-          <button 
-            onClick={handleNewScholarSearch}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-gray-100 text-gray-900 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
-          >
-            <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              <span>{t('nav.newLibraryCollection')}</span>
-            </div>
-            <span className="text-xs">⌘K</span>
-          </button>
-        </div>
-      )}
-
-      {/* Collapsed: New button as icon only */}
-      {isCollapsed && (
-        <div className="px-2 py-1">
-          <button
-            onClick={activeNav === 'scholar-qa' ? onNewScholarQA : handleNewScholarSearch}
-            className="w-10 h-8 flex items-center justify-center bg-gray-100 text-gray-900 rounded-md hover:bg-gray-200 transition-colors"
-            title={activeNav === 'scholar-qa' ? t('nav.newScholarQA') : t('nav.newLibraryCollection')}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       {/* Navigation */}
       <nav className={`flex-1 ${isCollapsed ? 'px-1' : 'px-2'} py-2 ${isCollapsed ? 'overflow-visible' : 'overflow-y-auto'}`}>
+        <div className="space-y-1" aria-label="Workspace 一级导航">
+          {latestWorkspaceNav.map(({ id, label, icon: Icon }) => (
+            <div key={id} className="relative group">
+              <button
+                type="button"
+                onClick={() => handleNavClick(id)}
+                className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5'} rounded-lg transition-colors text-sm ${
+                  activeNav === id
+                    ? 'bg-blue-50 text-blue-600 font-semibold'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {!isCollapsed && <span>{label}</span>}
+              </button>
+              {isCollapsed && (
+                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="inline-block px-2 py-1 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap shadow-lg">{label}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="my-3 border-t border-gray-100" />
+
+        {activeNav === 'scholar-qa' ? (
+          <section className={`${isCollapsed ? 'px-0' : 'px-1'} pb-3`} aria-label="问答历史">
+            {!isCollapsed ? <h2 className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">问答历史</h2> : null}
+            {!isCollapsed && qaHistory.some((item) => item.pinned) ? <div className="px-2 pb-1 text-[10px] font-medium text-gray-400">置顶</div> : null}
+            <div className="space-y-0.5">
+              {[...qaHistory].sort((a, b) => Number(b.pinned) - Number(a.pinned)).map((item) => (
+                <div key={item.id} draggable={item.pinned} onDragStart={() => setDraggedHistoryId(item.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => { if (!draggedHistoryId || draggedHistoryId === item.id) return; setQaHistory((current) => { const source = current.find((entry) => entry.id === draggedHistoryId); if (!source?.pinned || !item.pinned) return current; const next = current.filter((entry) => entry.id !== draggedHistoryId); const target = next.findIndex((entry) => entry.id === item.id); next.splice(target, 0, source); return next; }); setDraggedHistoryId(null); }} className="group flex items-center rounded-lg hover:bg-gray-50">
+                  <button type="button" title={item.title} className={`min-w-0 flex-1 py-2 text-left text-xs text-gray-500 hover:text-gray-900 ${isCollapsed ? 'flex justify-center px-0' : 'truncate px-2.5'}`}>{isCollapsed ? <Clock className="h-4 w-4" /> : item.title}</button>
+                  {!isCollapsed && <div className="flex pr-1 opacity-0 transition group-hover:opacity-100"><button title={item.pinned ? '取消置顶' : '置顶'} onClick={() => setQaHistory((current) => current.map((entry) => entry.id === item.id ? { ...entry, pinned: !entry.pinned } : entry))} className={`rounded p-1 text-[11px] ${item.pinned ? 'text-blue-500' : 'text-gray-400'}`}>●</button><button title="重命名" onClick={() => { const title = window.prompt('重命名', item.title); if (title?.trim()) setQaHistory((current) => current.map((entry) => entry.id === item.id ? { ...entry, title: title.trim() } : entry)); }} className="rounded p-1 text-[11px] text-gray-400">Edit</button><button title="删除" onClick={() => { if (window.confirm('确认删除对话？\n删除后将无法恢复。')) setQaHistory((current) => current.filter((entry) => entry.id !== item.id)); }} className="rounded p-1 text-[11px] text-gray-400">×</button></div>}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : historyByNav[activeNav] ? (
+          <section className={`${isCollapsed ? 'px-0' : 'px-1'} pb-3`} aria-label={historyByNav[activeNav].title}>
+            {!isCollapsed ? <h2 className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{historyByNav[activeNav].title}</h2> : null}
+            <div className="space-y-0.5">
+              {historyByNav[activeNav].items.map((item) => (
+                <button key={item} type="button" title={item} className={`w-full rounded-lg py-2 text-left text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-900 ${isCollapsed ? 'flex justify-center px-0' : 'truncate px-2.5'}`}>
+                  {isCollapsed ? <Clock className="h-4 w-4" /> : item}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         {/* Primary Nav Items */}
-        <div className="space-y-0.5">
+        <div className="hidden" aria-hidden="true">
+          <div className="relative group">
+            <button
+              onClick={() => handleNavClick('explore')}
+              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${activeNav === 'explore' ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              <Compass className="w-4 h-4" />
+              {!isCollapsed && <span>首页</span>}
+            </button>
+          </div>
+
           {/* New Research */}
           <div className="relative group">
             <button
@@ -594,7 +650,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
         ) : null}
 
         {/* Divider + History Section */}
-        {activeNav !== 'my-library' ? (
+        {false ? (
           <>
         <div className={`my-2 ${isCollapsed ? 'mx-1' : 'mx-1'} border-t border-gray-200`} />
         <div className="space-y-0.5">

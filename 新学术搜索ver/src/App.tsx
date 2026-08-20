@@ -7,6 +7,7 @@ import { RightPanel } from "./components/RightPanel";
 import { PaperDetail } from "./components/PaperDetail";
 import { MyLibrary } from "./components/MyLibrary";
 import { ScholarSearchHome, extractAcademicIdentifiers, type AcademicIdentifier } from "./components/ScholarSearchHome";
+import { ExplorePage } from "./components/ExplorePage";
 import { HomePage } from "./components/HomePage";
 import { ScholarQA } from "./components/ScholarQA";
 import { PaperReproduction } from "./components/PaperReproduction";
@@ -16,10 +17,10 @@ import { FudanCollectionResults } from "./components/FudanCollectionResults";
 import { AcademicAgent } from "./components/AcademicAgent";
 import { ResearchProjects } from "./components/ResearchProjects";
 import { ResearchCanvas } from "./components/ResearchCanvas";
+import { ToolsPage } from "./components/ToolsPage";
+import { MockConsole } from "./components/MockConsole";
 import { QuickPaperPage } from "./components/QuickPaperPage";
-import { FloatingTaskButton } from "./components/FloatingTaskButton";
 import { SearchMoreButton } from "./components/SearchMoreButton";
-import { NewbieTasksModal } from "./components/NewbieTasksModal";
 import { InviteModal } from "./components/InviteModal";
 import { PaywallModal } from "./components/PaywallModal";
 import { RechargeModal } from "./components/RechargeModal";
@@ -29,6 +30,35 @@ import { mockPapers } from "./data/mockPapers";
 import { mockBooks } from "./data/mockBooks";
 import { mockTheses } from "./data/mockTheses";
 import { Paper, FilterOptions } from "./types";
+
+const viewRoutes: Record<string, string> = {
+  home: '/landing',
+  explore: '/',
+  list: '/app/scholar-search',
+  'scholar-qa': '/app/ask',
+  'academic-agent': '/app/agent',
+  library: '/app/library',
+  'research-projects': '/app/projects',
+  'research-canvas': '/app/research-canvas',
+  'all-feeds': '/app/explore',
+  'paper-reproduction': '/app/paper-reproduction',
+  'idea-discovery': '/app/idea-discovery',
+  'fudan-collection-search': '/app/fudan-collection',
+  reader: '/app/reader',
+  detail: '/app/paper',
+  'quick-paper': '/app/quick-paper',
+  truecite: '/app/truecite',
+  tools: '/app/tools',
+};
+
+const getViewFromPath = (pathname: string) => {
+  if (pathname === '/') return 'explore';
+  if (pathname === '/landing') return 'home';
+  if (pathname === '/app/search' || pathname === '/app/explore' || pathname === '/app/ai-feeds') return 'explore';
+  if (pathname === '/scholar-search' || pathname === '/app/scholar-search') return 'list';
+  const match = Object.entries(viewRoutes).find(([, route]) => pathname === route || (route === '/app/paper' && pathname.startsWith('/app/paper/')));
+  return match?.[0] ?? 'home';
+};
 
 // Suppress Figma-specific prop warnings in development
 if (typeof console !== 'undefined') {
@@ -57,19 +87,50 @@ export default function App() {
   const [filters, setFilters] = useState<FilterOptions>(defaultFilters);
   const [selectedPaper, setSelectedPaper] =
     useState<Paper | null>(null);
+  const initialView = typeof window !== 'undefined' ? getViewFromPath(window.location.pathname) : 'home';
   const [viewMode, setViewMode] = useState<
-    "home" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas"
-  >("home");
-  const [showTasksModal, setShowTasksModal] = useState(false);
+    "home" | "explore" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas" | "truecite" | "tools"
+  >(initialView as any);
+  const historyNavigationRef = React.useRef(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [showRechargeModal, setShowRechargeModal] = useState(false);
   const [showDeepSearchTooltip, setShowDeepSearchTooltip] = useState(false);
   const [scholarQAKey, setScholarQAKey] = useState(0);
+  const [agentKey, setAgentKey] = useState(0);
+  const [initialAskQuestion, setInitialAskQuestion] = useState('');
+  const [initialAgentPrompt, setInitialAgentPrompt] = useState('');
+  const [mockUserCredits, setMockUserCredits] = useState(50000);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
   const [readerInitialFile, setReaderInitialFile] = useState<File | null>(null);
   const [shortcutResults, setShortcutResults] = useState<Paper[] | null>(null);
+
+  React.useEffect(() => {
+    if (window.location.pathname === '/app/search' || window.location.pathname === '/app/ai-feeds' || window.location.pathname === '/app/explore') {
+      window.history.replaceState({ view: 'explore' }, '', '/');
+    }
+
+    const handlePopState = () => {
+      historyNavigationRef.current = true;
+      setViewMode(getViewFromPath(window.location.pathname) as any);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  React.useEffect(() => {
+    if (historyNavigationRef.current) {
+      historyNavigationRef.current = false;
+      return;
+    }
+
+    const nextPath = viewRoutes[viewMode] ?? '/';
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState({ view: viewMode }, '', nextPath);
+    }
+  }, [viewMode]);
 
   const resolveShortcutPaper = (identifier: AcademicIdentifier): Paper => {
     const cleanValue = identifier.value.replace(/v\d+$/i, '');
@@ -193,6 +254,14 @@ export default function App() {
     setScholarQAKey(prev => prev + 1);
   };
 
+  const handleWorkspaceNavigate = (view: string) => {
+    if (view === 'scholar-qa') {
+      setInitialAskQuestion('');
+      setScholarQAKey((value) => value + 1);
+    }
+    setViewMode(view as any);
+  };
+
   const handleSearch = (query: string) => {
     const identifiers = extractAcademicIdentifiers(query);
     setShortcutResults(identifiers.length > 0 ? identifiers.map(resolveShortcutPaper) : null);
@@ -251,15 +320,15 @@ export default function App() {
     setHasSearched(false);
   };
 
-  const isReaderView = viewMode === "detail" || viewMode === "reader" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas";
+  const isReaderView = viewMode === "explore" || viewMode === "detail" || viewMode === "reader" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas";
 
   return (
     <LanguageProvider>
       <div className={isReaderView ? "h-screen overflow-hidden bg-white flex" : "min-h-screen bg-white flex"}>
         {/* Left Sidebar - Only show in list view, library view, and scholar-qa view */}
-        {(viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas") && (
+        {(viewMode === "explore" || viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas" || viewMode === "truecite" || viewMode === "tools") && (
           <LeftSidebar
-            onNavigate={(view) => setViewMode(view as any)}
+            onNavigate={handleWorkspaceNavigate}
             onOpenInvite={() => setShowInviteModal(true)}
             onOpenPaywall={() => setShowPaywallModal(true)}
             onOpenRecharge={() => setShowRechargeModal(true)}
@@ -273,14 +342,41 @@ export default function App() {
         {/* Main Content */}
         <div className={isReaderView ? "flex-1 flex flex-col min-w-0 overflow-hidden" : "flex-1 flex flex-col min-w-0"}>
           {viewMode === "home" ? (
-            // Show HomePage
             <HomePage
-              onNavigateToWorkspace={() => setViewMode("all-feeds")}
+              onNavigateToWorkspace={() => setViewMode("explore")}
               onNavigate={(view) => setViewMode(view as any)}
               onOpenPricing={() => setShowPaywallModal(true)}
               onOpenRecharge={() => setShowRechargeModal(true)}
               onStartSearch={handleStartSearchFromHome}
             />
+          ) : viewMode === "explore" ? (
+            <ExplorePage
+              embedded
+              onSearch={handleStartSearchFromHome}
+              onAsk={(query) => {
+                setInitialAskQuestion(query);
+                setScholarQAKey((value) => value + 1);
+                setViewMode("scholar-qa");
+              }}
+              onAgent={(query) => {
+                setInitialAgentPrompt(query);
+                setAgentKey((value) => value + 1);
+                setViewMode("academic-agent");
+              }}
+              onLibrary={() => setViewMode("library")}
+              onProjects={() => setViewMode("research-projects")}
+              userCredits={mockUserCredits}
+              onUserCreditsChange={setMockUserCredits}
+            >
+              <AllFeedsWorkspace
+                showSearchHero={false}
+                onSearch={(query) => {
+                  setViewMode("list");
+                  handleSearch(query);
+                }}
+                onQuickOpen={handleQuickOpen}
+              />
+            </ExplorePage>
           ) : viewMode === "fudan-collection-search" ? (
             !hasSearched ? (
               <ScholarSearchHome
@@ -347,10 +443,26 @@ export default function App() {
             <PaperDetail
               paper={null}
               initialLocalFile={readerInitialFile}
-              onBack={() => setViewMode("all-feeds")}
+              onBack={() => setViewMode("explore")}
             />
           ) : viewMode === "scholar-qa" ? (
-            <ScholarQA key={scholarQAKey} papersCount={mockPapers.length} onReset={handleResetScholarQA} />
+            <ScholarQA
+              key={scholarQAKey}
+              initialQuestion={initialAskQuestion}
+              papersCount={mockPapers.length}
+              onReset={handleResetScholarQA}
+              onOpenDeepSearch={(query) => {
+                setViewMode("list");
+                handleSearch(query);
+              }}
+              onStartAgent={(query) => {
+                setInitialAgentPrompt(query);
+                setAgentKey((value) => value + 1);
+                setViewMode("academic-agent");
+              }}
+              userCredits={mockUserCredits}
+              onUpgrade={() => setShowPaywallModal(true)}
+            />
           ) : viewMode === "all-feeds" ? (
             <AllFeedsWorkspace
               onSearch={(query) => {
@@ -362,7 +474,7 @@ export default function App() {
           ) : viewMode === "quick-paper" && selectedPaper ? (
             <QuickPaperPage
               paper={selectedPaper}
-              onBack={() => setViewMode("all-feeds")}
+              onBack={() => setViewMode("explore")}
               onOpenReader={() => setViewMode("detail")}
             />
           ) : viewMode === "paper-reproduction" ? (
@@ -370,11 +482,22 @@ export default function App() {
           ) : viewMode === "idea-discovery" ? (
             <IdeaDiscovery />
           ) : viewMode === "academic-agent" ? (
-            <AcademicAgent onOpenProjects={() => setViewMode("research-projects")} />
+            <AcademicAgent key={agentKey} initialPrompt={initialAgentPrompt} onOpenProjects={() => setViewMode("research-projects")} />
           ) : viewMode === "research-projects" ? (
             <ResearchProjects onOpenAgent={() => setViewMode("academic-agent")} />
           ) : viewMode === "research-canvas" ? (
             <ResearchCanvas onOpenAgent={() => setViewMode("academic-agent")} />
+          ) : viewMode === "truecite" ? (
+            <div className="flex min-h-screen flex-1 items-center justify-center bg-[#f7f9fc] p-8">
+              <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+                <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600">✓</div>
+                <h1 className="mt-5 text-2xl font-bold text-slate-950">TrueCite</h1>
+                <p className="mt-3 text-sm leading-6 text-slate-500">验证引用是否真正支持论文中的关键陈述，快速发现引用错配与证据缺口。</p>
+                <button className="mt-6 rounded-xl bg-[#1b87ff] px-5 py-2.5 text-sm font-semibold text-white">新建引用验证</button>
+              </div>
+            </div>
+          ) : viewMode === "tools" ? (
+            <ToolsPage onOpenTrueCite={() => setViewMode('truecite')} />
           ) : (
             <PaperDetail
               paper={selectedPaper}
@@ -393,27 +516,6 @@ export default function App() {
         {viewMode === "list" && hasSearched && !shortcutResults && filteredPapers.length > 0 && (
           <SearchMoreButton onSearchMore={handleSearchMore} isLoading={isLoadingMore} />
         )}
-
-        {/* Floating Task Button - Show in list, library, and scholar-qa views */}
-        {((viewMode === "list" && hasSearched) || viewMode === "library" || viewMode === "scholar-qa") && (
-          <FloatingTaskButton onClick={() => setShowTasksModal(true)} />
-        )}
-
-        {/* Newbie Tasks Modal */}
-        <NewbieTasksModal 
-          isOpen={showTasksModal}
-          onClose={() => setShowTasksModal(false)}
-          onNavigate={(view) => {
-            setViewMode(view as any);
-          }}
-          onOpenInvite={() => {
-            setShowTasksModal(false);
-            setShowInviteModal(true);
-          }}
-          onTriggerDeepSearchTooltip={() => {
-            setShowDeepSearchTooltip(true);
-          }}
-        />
 
         {/* Invite Modal */}
         <InviteModal
@@ -437,6 +539,23 @@ export default function App() {
         <NotificationDrawer
           isOpen={showNotificationDrawer}
           onClose={() => setShowNotificationDrawer(false)}
+        />
+
+        <MockConsole
+          currentView={viewMode}
+          userCredits={mockUserCredits}
+          onUserCreditsChange={setMockUserCredits}
+          onAsk={(input) => {
+            setInitialAskQuestion(input);
+            setScholarQAKey((value) => value + 1);
+            setViewMode('scholar-qa');
+          }}
+          onSearch={(input) => handleStartSearchFromHome(input)}
+          onAgent={(input) => {
+            setInitialAgentPrompt(input);
+            setAgentKey((value) => value + 1);
+            setViewMode('academic-agent');
+          }}
         />
       </div>
     </LanguageProvider>

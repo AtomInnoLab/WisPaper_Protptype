@@ -613,9 +613,11 @@ function InlineFeedActivationCard({
 export function AllFeedsWorkspace({
   onSearch,
   onQuickOpen,
+  showSearchHero = true,
 }: {
   onSearch: (query: string) => void;
   onQuickOpen: (identifier: AcademicIdentifier) => void;
+  showSearchHero?: boolean;
 }) {
   const { t } = useLanguage();
   const resolveSourceSelection = (sourceIds: string[]): FeedPreferenceState['sourceSelection'] => {
@@ -985,7 +987,7 @@ export function AllFeedsWorkspace({
     <div className="h-full overflow-y-auto bg-muted/30">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6 lg:px-8">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'trends' | 'latest' | 'for-you')} className="gap-6">
-            <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} />
+            {showSearchHero ? <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <CardNavTabs
                 items={[

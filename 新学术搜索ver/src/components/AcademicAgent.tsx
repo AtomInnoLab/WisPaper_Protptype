@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ArrowUp,
   BookOpen,
@@ -377,7 +377,7 @@ function WorkbenchPanel({ activeTab, running }: { activeTab: WorkbenchTab; runni
   );
 }
 
-export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }) {
+export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenProjects: () => void; initialPrompt?: string }) {
   const [prompt, setPrompt] = useState("");
   const [started, setStarted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -407,6 +407,10 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
       setRunning(false);
     }, 900);
   };
+
+  useEffect(() => {
+    if (initialPrompt.trim()) submit(initialPrompt);
+  }, [initialPrompt]);
 
   if (!started) {
     return (

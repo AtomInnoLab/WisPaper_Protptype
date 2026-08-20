@@ -1,17 +1,21 @@
 import React, { useRef, useState } from 'react';
 import { Send, HelpCircle, Database, Sparkles, Globe2, ChevronDown, Check, Search, Plus, X } from 'lucide-react';
 import { ScholarQAResults } from './ScholarQAResults';
-import { ResourcesPanel } from './ResourcesPanel';
 import { useLanguage } from '../contexts/LanguageContext';
 
-type KnowledgeSource = 'my-library' | 'academic-search' | 'web-search';
+type KnowledgeSource = 'current-paper' | 'my-library' | 'academic-search' | 'web-search';
 
 interface ScholarQAProps {
   papersCount?: number;
   onReset?: () => void;
+  initialQuestion?: string;
+  onOpenDeepSearch?: (query: string) => void;
+  onStartAgent?: (query: string) => void;
+  userCredits?: number;
+  onUpgrade?: () => void;
 }
 
-export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
+export function ScholarQA({ papersCount = 9, onReset, initialQuestion = '', onOpenDeepSearch, onStartAgent, userCredits = 50000, onUpgrade }: ScholarQAProps) {
   const { language } = useLanguage();
   const isZh = language === 'zh';
   const [question, setQuestion] = useState('');
@@ -22,12 +26,30 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
   const [showKnowledgeMenu, setShowKnowledgeMenu] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [effort, setEffort] = useState<'low' | 'medium' | 'high'>(() => {
+    try { return (localStorage.getItem('wispaper-qa-effort') as 'low' | 'medium' | 'high') || 'medium'; } catch { return 'medium'; }
+  });
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const knowledgeSourceOptions: Array<{ id: KnowledgeSource; label: string; icon: React.ReactNode }> = [
+    { id: 'current-paper', label: isZh ? '单篇论文' : 'Current Paper', icon: <Sparkles className="h-4 w-4 text-gray-500" /> },
     { id: 'my-library', label: isZh ? '我的知识库' : 'My Library', icon: <Database className="h-4 w-4 text-gray-500" /> },
     { id: 'academic-search', label: isZh ? '学术搜索' : 'Scholar Search', icon: <Search className="h-4 w-4 text-gray-500" /> },
     { id: 'web-search', label: isZh ? '网页检索' : 'Web Search', icon: <Globe2 className="h-4 w-4 text-gray-500" /> },
   ];
+
+  const changeEffort = (value: 'low' | 'medium' | 'high') => {
+    setEffort(value);
+    try { localStorage.setItem('wispaper-qa-effort', value); } catch {}
+  };
+
+  React.useEffect(() => {
+    const value = initialQuestion.trim();
+    if (value) {
+      setQuestion(value);
+      setSubmittedQuestion(value);
+      setHasResults(true);
+    }
+  }, [initialQuestion]);
 
   const toggleKnowledgeSource = (source: KnowledgeSource) => {
     setSelectedKnowledgeSources((prev) => {
@@ -112,8 +134,7 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
   if (hasResults) {
     return (
       <div className="flex-1 flex overflow-hidden">
-        <ScholarQAResults question={submittedQuestion} papersCount={papersCount} />
-        <ResourcesPanel />
+        <ScholarQAResults question={submittedQuestion} papersCount={papersCount} effort={effort} onEffortChange={changeEffort} selectedSources={selectedKnowledgeSources} onSourcesChange={(sources) => setSelectedKnowledgeSources(sources as KnowledgeSource[])} userCredits={userCredits} onUpgrade={onUpgrade} onOpenDeepSearch={onOpenDeepSearch} onStartAgent={onStartAgent} />
       </div>
     );
   }
@@ -272,9 +293,11 @@ export function ScholarQA({ papersCount = 9, onReset }: ScholarQAProps) {
 
       {/* Footer Status */}
       <div className="px-6 py-4 border-t border-gray-100">
-        <div className="flex items-center justify-center gap-1.5 text-sm text-gray-500">
-          <Sparkles className="w-4 h-4" />
-          <span>Unrestricted Scholar QA</span>
+        <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
+          <span className="inline-flex items-center gap-1.5"><Sparkles className="w-4 h-4" />思考强度</span>
+          <div className="flex rounded-lg bg-gray-100 p-1">
+            {(['low', 'medium', 'high'] as const).map((value) => <button key={value} onClick={() => changeEffort(value)} className={`rounded-md px-3 py-1 text-xs ${effort === value ? 'bg-white font-semibold text-blue-600 shadow-sm' : 'text-gray-500'}`}>{value === 'low' ? '低' : value === 'medium' ? '中' : '高'}</button>)}
+          </div>
         </div>
       </div>
     </div>
