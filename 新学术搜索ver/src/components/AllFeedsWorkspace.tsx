@@ -585,11 +585,13 @@ function InlineFeedActivationCard({
 export function AllFeedsWorkspace({
   onSearch,
   onQuickOpen,
-  onOpenFigureToPPTX,
+  onOpenFigureToPPTX = () => {},
+  showSearchHero = true,
 }: {
   onSearch: (query: string) => void;
   onQuickOpen: (identifier: AcademicIdentifier) => void;
-  onOpenFigureToPPTX: () => void;
+  onOpenFigureToPPTX?: () => void;
+  showSearchHero?: boolean;
 }) {
   const { t } = useLanguage();
   const resolveSourceSelection = (sourceIds: string[]): FeedPreferenceState['sourceSelection'] => {
@@ -948,7 +950,7 @@ export function AllFeedsWorkspace({
     <div className="h-full overflow-y-auto bg-muted/30">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-7 lg:px-8">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'trends' | 'latest' | 'for-you')} className="gap-6">
-            <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} onOpenFigureToPPTX={onOpenFigureToPPTX} />
+            {showSearchHero ? <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} onOpenFigureToPPTX={onOpenFigureToPPTX} /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <CardNavTabs
                 items={[

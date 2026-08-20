@@ -803,7 +803,7 @@ function WorkbenchPanel({
   );
 }
 
-export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }) {
+export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenProjects: () => void; initialPrompt?: string }) {
   const [prompt, setPrompt] = useState("");
   const [started, setStarted] = useState(false);
   const [running, setRunning] = useState(false);
@@ -858,6 +858,10 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
       }
     }, 900);
   };
+
+  useEffect(() => {
+    if (initialPrompt.trim()) submit(initialPrompt);
+  }, [initialPrompt]);
 
   const activateNextTodo = (items: AgentTodo[], afterId?: string) => {
     const startIndex = afterId ? items.findIndex((todo) => todo.id === afterId) + 1 : 0;
