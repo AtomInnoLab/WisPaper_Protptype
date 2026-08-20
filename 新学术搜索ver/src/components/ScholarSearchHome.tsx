@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, ArrowRight, ChevronRight, ChevronLeft, BookOpen, GraduationCap, Infinity, ChevronDown } from 'lucide-react';
+import { Search, ArrowRight, ChevronRight, ChevronLeft, BookOpen, GraduationCap, Infinity, ChevronDown, Bot, Lightbulb, Presentation, Bookmark, ThumbsUp, ThumbsDown, SlidersHorizontal } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ScholarSearchHomeProps {
@@ -7,6 +7,7 @@ interface ScholarSearchHomeProps {
   onQuickOpen: (identifier: AcademicIdentifier) => void;
   showDeepSearchTooltip?: boolean;
   onTooltipDismiss?: () => void;
+  onOpenFigureToPPTX?: () => void;
 }
 
 export interface AcademicIdentifier {
@@ -121,7 +122,7 @@ const getThesesCategoryExamples = (categoryKey: string): string[] => {
   return exampleMap[categoryKey] || [];
 };
 
-export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip, onTooltipDismiss }: ScholarSearchHomeProps) {
+export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip, onTooltipDismiss, onOpenFigureToPPTX }: ScholarSearchHomeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'quick' | 'deep' | 'books' | 'theses'>('deep');
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
@@ -132,6 +133,7 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
   const detectedIdentifiers = extractAcademicIdentifiers(searchQuery);
   const [verifiedIdentifiers, setVerifiedIdentifiers] = useState<AcademicIdentifier[]>([]);
   const [isVerifyingIdentifiers, setIsVerifyingIdentifiers] = useState(false);
+  const [activeFeedTab, setActiveFeedTab] = useState<'trends' | 'latest' | 'feeds'>('trends');
 
   useEffect(() => {
     setVerifiedIdentifiers([]);
@@ -194,9 +196,7 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
           --line: #e5e7eb;
           --line-blue: #e6ecf4;
           min-height: 100%;
-          background:
-            linear-gradient(180deg, rgba(243, 249, 255, 0.72) 0%, rgba(255, 255, 255, 0) 38%),
-            transparent;
+          background: linear-gradient(180deg, #f7fbff 0%, #ffffff 34%);
           color: var(--ink);
           font-family: UberMoveText, system-ui, "Helvetica Neue", Arial, sans-serif;
         }
@@ -205,7 +205,7 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
 
         .scholar-search-landing .search-page {
           width: 100%;
-          max-width: 980px;
+          max-width: 1120px;
         }
 
         .scholar-search-landing .search-hero {
@@ -231,10 +231,10 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
         .scholar-search-landing .search-title {
           max-width: 780px;
           margin: 0 auto;
-          color: var(--ink);
-          font-size: 42px;
-          line-height: 52px;
-          font-weight: 700;
+          color: var(--accent);
+          font-size: 36px;
+          line-height: 46px;
+          font-weight: 650;
           letter-spacing: 0;
         }
 
@@ -243,12 +243,12 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
         }
 
         .scholar-search-landing .search-shell {
-          margin-bottom: 32px;
-          padding: 18px;
+          margin-bottom: 26px;
+          padding: 20px;
           border: 1px solid var(--line-blue);
-          border-radius: 20px;
+          border-radius: 24px;
           background: rgba(255, 255, 255, 0.9);
-          box-shadow: rgba(35, 40, 47, 0.08) 0 18px 44px;
+          box-shadow: rgba(35, 40, 47, 0.07) 0 14px 36px;
         }
 
         .scholar-search-landing .search-input-wrap {
@@ -256,13 +256,13 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
           margin-bottom: 14px;
           padding-bottom: 12px;
           border-radius: 14px;
-          background: var(--canvas-softer);
-          border: 1px solid rgba(0, 121, 255, 0.1);
+          background: var(--canvas);
+          border: 0;
         }
 
         .scholar-search-landing .search-textarea {
           width: 100%;
-          min-height: 110px;
+          min-height: 126px;
           padding: 18px 20px;
           border: 0;
           outline: 0;
@@ -352,6 +352,184 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
           display: flex;
           align-items: center;
           gap: 12px;
+        }
+
+        .scholar-search-landing .tool-card {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 42px;
+          padding: 10px 15px;
+          border: 1px solid var(--line-blue);
+          border-radius: 999px;
+          background: var(--canvas);
+          color: var(--body);
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+          transition: border-color .16s ease, color .16s ease, transform .16s ease;
+        }
+
+        .scholar-search-landing .tool-card:hover {
+          border-color: rgba(0, 121, 255, .28);
+          color: var(--accent-deep);
+          transform: translateY(-1px);
+        }
+
+        .scholar-search-landing .feed-toolbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 20px;
+          margin-bottom: 16px;
+        }
+
+        .scholar-search-landing .feed-tabs {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px;
+          border-radius: 999px;
+          background: #f0f3f7;
+        }
+
+        .scholar-search-landing .feed-tab {
+          min-width: 84px;
+          padding: 8px 18px;
+          border-radius: 999px;
+          color: #7b8798;
+          font-size: 14px;
+          font-weight: 600;
+          transition: background .16s ease, color .16s ease;
+        }
+
+        .scholar-search-landing .feed-tab.active {
+          background: #ffffff;
+          color: var(--accent);
+          box-shadow: 0 6px 18px rgba(35, 40, 47, .06);
+        }
+
+        .scholar-search-landing .personalize-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 14px;
+          border: 1px solid rgba(0, 121, 255, .18);
+          border-radius: 999px;
+          background: rgba(0, 121, 255, .08);
+          color: var(--accent);
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .scholar-search-landing .paper-feed {
+          display: grid;
+          gap: 14px;
+        }
+
+        .scholar-search-landing .paper-feed-card {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 144px;
+          gap: 22px;
+          min-height: 194px;
+          padding: 22px;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          background: #ffffff;
+          box-shadow: 0 10px 28px rgba(35, 40, 47, .04);
+          transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+        }
+
+        .scholar-search-landing .paper-feed-card:hover {
+          border-color: rgba(0, 121, 255, .22);
+          transform: translateY(-1px);
+          box-shadow: 0 16px 36px rgba(35, 40, 47, .07);
+        }
+
+        .scholar-search-landing .paper-feed-title {
+          margin: 0;
+          color: #202731;
+          font-size: 19px;
+          line-height: 26px;
+          font-weight: 700;
+        }
+
+        .scholar-search-landing .paper-meta {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 14px;
+          margin-top: 11px;
+          color: #7b8798;
+          font-size: 12px;
+        }
+
+        .scholar-search-landing .paper-rank {
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: rgba(0, 121, 255, .08);
+          color: var(--accent);
+        }
+
+        .scholar-search-landing .paper-abstract {
+          margin: 14px 0 0;
+          color: #687689;
+          font-size: 13px;
+          line-height: 22px;
+        }
+
+        .scholar-search-landing .paper-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 16px;
+        }
+
+        .scholar-search-landing .paper-action {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          min-height: 34px;
+          padding: 7px 11px;
+          border: 1px solid #e2e8f0;
+          border-radius: 999px;
+          color: #687689;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .scholar-search-landing .paper-preview {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          overflow: hidden;
+          border: 1px solid #e4e9ef;
+          border-radius: 12px;
+          background: linear-gradient(150deg, #fbfdff, #edf4fb);
+          padding: 14px;
+        }
+
+        .scholar-search-landing .paper-preview-kicker {
+          color: #8793a4;
+          font-size: 9px;
+          font-weight: 700;
+          letter-spacing: .16em;
+          text-transform: uppercase;
+        }
+
+        .scholar-search-landing .paper-preview-title {
+          margin-top: 9px;
+          color: #2a313b;
+          font-size: 11px;
+          line-height: 15px;
+          font-weight: 700;
+        }
+
+        .scholar-search-landing .paper-preview-line {
+          height: 5px;
+          margin-top: 8px;
+          border-radius: 999px;
+          background: #dfe5ec;
         }
 
         .scholar-search-landing .mode-toggle {
@@ -633,14 +811,21 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
             flex: 1;
             justify-content: center;
           }
+
+          .scholar-search-landing .paper-feed-card {
+            grid-template-columns: 1fr;
+          }
+
+          .scholar-search-landing .paper-preview {
+            min-height: 130px;
+          }
         }
       `}</style>
       <div className="search-page">
         {/* Header */}
         <div className="search-hero">
-          <span className="search-kicker">Scholar Search</span>
           <h1 className="search-title">
-            Hi. Which paper do you want to <span className="accent">read today?</span>
+            你好，今天想读哪篇论文？
           </h1>
         </div>
 
@@ -652,7 +837,7 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSearch())}
-              placeholder="e.g., Find me papers that study AI4Science in recent 3 years..."
+              placeholder="例如：帮我找一下关于非线性多智能体系统最优编队控制的论文"
               rows={3}
               className="search-textarea"
             />
@@ -701,7 +886,7 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
                     <circle cx="12" cy="12" r="10" />
                     <path d="M12 6v6l4 2" strokeLinecap="round" />
                   </svg>
-                  <span>Quick Mode</span>
+                  <span>快速搜索</span>
                 </button>
 
                 {/* Deep Mode */}
@@ -712,9 +897,13 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18M3 12h18M3 18h18" strokeLinecap="round" />
                   </svg>
-                  <span>Deep Mode</span>
+                  <span>深度搜索</span>
                 </button>
               </div>
+
+              <button type="button" className="tool-card"><Bot className="h-4 w-4" />Agent</button>
+              <button type="button" className="tool-card"><Lightbulb className="h-4 w-4" />{t('nav.ideaDiscovery') || '灵感发现'}</button>
+              <button type="button" onClick={onOpenFigureToPPTX} className="tool-card"><Presentation className="h-4 w-4" />PDF 转 PPT</button>
 
               {/* Database Selector */}
               <div className="relative">
@@ -725,11 +914,6 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
 
             <div className="control-right">
               {/* Unmetered */}
-              <button className="unmetered-button">
-                <Infinity className="w-4 h-4" />
-                <span>Unmetered</span>
-              </button>
-
               {/* Search Button */}
               <button
                 onClick={handleSearch}
@@ -746,114 +930,66 @@ export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip
           )}
         </div>
 
-        {/* Try Our Examples Section */}
-        <div>
-          <h2 className="examples-title">{t('search.examples')}</h2>
-          
-          {/* Category Tabs - show different categories based on mode */}
-          {searchMode === 'books' ? (
-            <div className="category-row">
-              <div className="category-list center">
-                {bookCategoryKeys.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedBookCategory(category)}
-                    className={`category-pill ${selectedBookCategory === category ? 'active' : ''}`}
-                  >
-                    {t(`category.${category}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : searchMode === 'theses' ? (
-            <div className="category-row">
-              <div className="category-list center">
-                {thesesCategoryKeys.map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedThesesCategory(category)}
-                    className={`category-pill ${selectedThesesCategory === category ? 'active' : ''}`}
-                  >
-                    {t(`category.${category}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="category-row">
-              <div className="category-inner">
-                {canScrollLeft && (
-                  <button
-                    onClick={() => scrollCategories('left')}
-                    className="category-arrow"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                )}
-                
-                <div className="category-scroll">
-                  <div className="category-list">
-                    {categoryKeys.slice(currentCategoryIndex, currentCategoryIndex + visibleCategories).map((category) => (
-                      <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className={`category-pill ${selectedCategory === category ? 'active' : ''}`}
-                      >
-                        {t(`category.${category}`)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {canScrollRight && (
-                  <button
-                    onClick={() => scrollCategories('right')}
-                    className="category-arrow"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Example Queries - show different queries based on mode */}
-          <div className="example-list">
-            {searchMode === 'books' ? (
-              getBookCategoryExamples(selectedBookCategory).map((queryKey, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleExampleClick(t(queryKey))}
-                  className="example-row"
-                >
-                  <span className="example-text">{t(queryKey)}</span>
-                  <ArrowRight className="example-icon w-4 h-4" />
-                </button>
-              ))
-            ) : searchMode === 'theses' ? (
-              getThesesCategoryExamples(selectedThesesCategory).map((queryKey, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleExampleClick(t(queryKey))}
-                  className="example-row"
-                >
-                  <span className="example-text">{t(queryKey)}</span>
-                  <ArrowRight className="example-icon w-4 h-4" />
-                </button>
-              ))
-            ) : (
-              getCategoryExamples(selectedCategory).map((queryKey, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleExampleClick(t(queryKey))}
-                  className="example-row"
-                >
-                  <span className="example-text">{t(queryKey)}</span>
-                  <ArrowRight className="example-icon w-4 h-4" />
-                </button>
-              ))
-            )}
+        <div className="feed-toolbar">
+          <div className="feed-tabs" aria-label="论文推荐分类">
+            {[
+              ['trends', '趋势'],
+              ['latest', '最新'],
+              ['feeds', 'AI 订阅'],
+            ].map(([value, label]) => (
+              <button key={value} type="button" onClick={() => setActiveFeedTab(value as typeof activeFeedTab)} className={`feed-tab ${activeFeedTab === value ? 'active' : ''}`}>{label}</button>
+            ))}
           </div>
+          <button type="button" className="personalize-button"><SlidersHorizontal className="h-3.5 w-3.5" />个性化设置</button>
+        </div>
+
+        <div className="paper-feed">
+          {[
+            {
+              title: 'Natural-Language Agent Harnesses',
+              date: '2025-11J',
+              author: 'Lin et al',
+              venue: 'NeurIPS 2025',
+              rank: 'JCR Q1',
+              preview: 'NeurIPS 2025',
+            },
+            {
+              title: 'OmniVoice: Towards Omnilingual Zero-Shot Text-to-Speech with Diffusion Language Models',
+              date: '2025-11J',
+              author: 'Lin et al',
+              venue: 'NeurIPS 2025',
+              rank: 'JCR Q1',
+              preview: 'Agent Systems',
+            },
+            {
+              title: 'Evaluating Traceable Reasoning in Research QA Systems',
+              date: '2026-03',
+              author: 'K. Zhou et al.',
+              venue: 'ICLR 2026 Workshop',
+              rank: 'JCR Q1',
+              preview: 'ICLR 2026',
+            },
+          ].map((paper) => (
+            <article key={paper.title} className="paper-feed-card">
+              <div>
+                <h2 className="paper-feed-title">{paper.title}</h2>
+                <div className="paper-meta"><span>{paper.date}</span><span>{paper.author}</span><span>{paper.venue}</span><span className="paper-rank">{paper.rank}</span></div>
+                <p className="paper-abstract">本文提出了一种面向复杂研究任务的模型框架，通过理解上下文与对象关系提升推理效率，并在多组实验中验证其有效性与可扩展性。</p>
+                <div className="paper-actions">
+                  <button type="button" className="paper-action"><Bookmark className="h-3.5 w-3.5" />加入图书馆</button>
+                  <button type="button" className="paper-action"><ThumbsUp className="h-3.5 w-3.5" />161</button>
+                  <button type="button" className="paper-action" aria-label="不感兴趣"><ThumbsDown className="h-3.5 w-3.5" /></button>
+                </div>
+              </div>
+              <div className="paper-preview">
+                <span className="paper-preview-kicker">{paper.preview}</span>
+                <span className="paper-preview-title">{paper.title}</span>
+                <span className="paper-preview-line" />
+                <span className="paper-preview-line" style={{ width: '86%' }} />
+                <span className="paper-preview-line" style={{ width: '68%' }} />
+              </div>
+            </article>
+          ))}
         </div>
       </div>
     </div>

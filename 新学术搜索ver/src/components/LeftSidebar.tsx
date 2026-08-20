@@ -123,7 +123,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
       setActiveNav('research-projects');
     } else if (currentView === 'research-canvas') {
       setActiveNav('research-canvas');
-    } else if (currentView === 'truecite' || currentView === 'tools') {
+    } else if (currentView === 'truecite' || currentView === 'tools' || currentView === 'figure-to-pptx') {
       setActiveNav('tools');
     } else if (currentView === 'list') {
       setActiveNav('scholar-search');

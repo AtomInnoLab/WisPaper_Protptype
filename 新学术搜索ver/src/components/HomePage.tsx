@@ -11,6 +11,7 @@ import { HomeSearchLanding } from './HomeSearchLanding';
 import { LogoLoop } from './LogoLoop';
 import { MarketingSeoPage } from './MarketingSeoPage';
 import { PricingPage } from './PricingPage';
+import { ResearchLanding } from './ResearchLanding';
 import { TranslationLandingPage } from './TranslationLandingPage';
 import { cn } from './ui/utils';
 
@@ -49,6 +50,7 @@ interface HomePageProps {
   onOpenPricing?: () => void;
   onOpenRecharge?: () => void;
   onStartSearch?: (query?: string) => void;
+  onOpenFigureToPPTX?: () => void;
 }
 
 interface PageConfig {
@@ -155,7 +157,7 @@ function HomeCtaBanner({
   );
 }
 
-export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onOpenRecharge, onStartSearch }: HomePageProps) {
+export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onOpenRecharge, onStartSearch, onOpenFigureToPPTX }: HomePageProps) {
   const [activePage, setActivePage] = React.useState<MarketingPageKey>(getInitialMarketingPage);
   const [language, setLanguage] = React.useState<'zh' | 'en'>('zh');
   const isZh = language === 'zh';
@@ -180,6 +182,7 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onO
           onStartSearch={handleStartSearch}
           onContinueToSurvey={onNavigateToWorkspace}
           onNavigateToMarketingPage={setActivePage}
+          onOpenFigureToPPTX={onOpenFigureToPPTX}
         />
       );
     }
@@ -192,6 +195,7 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onO
           onStartSearch={handleStartSearch}
           onContinueToSurvey={onNavigateToWorkspace}
           onNavigateToMarketingPage={setActivePage}
+          onOpenFigureToPPTX={onOpenFigureToPPTX}
         />
       );
     }
@@ -898,6 +902,20 @@ export function HomePage({ onNavigateToWorkspace, onNavigate, onOpenPricing, onO
 
   const isFeaturePage = featureMenuItems.some((item) => item.key === activePage);
   const isResourcePage = resourceMenuItems.some((item) => item.key === activePage);
+
+  if (isHomePage) {
+    return (
+      <ResearchLanding
+        language={language}
+        onLanguageChange={setLanguage}
+        onSearch={() => setActivePage('search')}
+        onOpenWorkspace={onNavigateToWorkspace}
+        onOpenLibrary={() => onNavigate?.('library')}
+        onOpenAgent={() => onNavigate?.('idea-discovery')}
+        onOpenPricing={() => setActivePage('pricing')}
+      />
+    );
+  }
 
   return (
     <div

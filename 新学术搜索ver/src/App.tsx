@@ -17,6 +17,7 @@ import { FudanCollectionResults } from "./components/FudanCollectionResults";
 import { AcademicAgent } from "./components/AcademicAgent";
 import { ResearchProjects } from "./components/ResearchProjects";
 import { ResearchCanvas } from "./components/ResearchCanvas";
+import { FigureToPPTX } from "./components/FigureToPPTX";
 import { ToolsPage } from "./components/ToolsPage";
 import { MockConsole } from "./components/MockConsole";
 import { QuickPaperPage } from "./components/QuickPaperPage";
@@ -49,6 +50,7 @@ const viewRoutes: Record<string, string> = {
   'quick-paper': '/app/quick-paper',
   truecite: '/app/truecite',
   tools: '/app/tools',
+  'figure-to-pptx': '/app/tools/figure-to-pptx',
 };
 
 const getViewFromPath = (pathname: string) => {
@@ -89,7 +91,7 @@ export default function App() {
     useState<Paper | null>(null);
   const initialView = typeof window !== 'undefined' ? getViewFromPath(window.location.pathname) : 'home';
   const [viewMode, setViewMode] = useState<
-    "home" | "explore" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas" | "truecite" | "tools"
+    "home" | "explore" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas" | "truecite" | "tools" | "figure-to-pptx"
   >(initialView as any);
   const historyNavigationRef = React.useRef(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -104,6 +106,7 @@ export default function App() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showNotificationDrawer, setShowNotificationDrawer] = useState(false);
   const [readerInitialFile, setReaderInitialFile] = useState<File | null>(null);
+  const [figureToPPTXFromReader, setFigureToPPTXFromReader] = useState(false);
   const [shortcutResults, setShortcutResults] = useState<Paper[] | null>(null);
 
   React.useEffect(() => {
@@ -326,7 +329,7 @@ export default function App() {
     <LanguageProvider>
       <div className={isReaderView ? "h-screen overflow-hidden bg-white flex" : "min-h-screen bg-white flex"}>
         {/* Left Sidebar - Only show in list view, library view, and scholar-qa view */}
-        {(viewMode === "explore" || viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas" || viewMode === "truecite" || viewMode === "tools") && (
+        {(viewMode === "explore" || viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas" || viewMode === "truecite" || viewMode === "tools" || viewMode === "figure-to-pptx") && (
           <LeftSidebar
             onNavigate={handleWorkspaceNavigate}
             onOpenInvite={() => setShowInviteModal(true)}
@@ -444,6 +447,10 @@ export default function App() {
               paper={null}
               initialLocalFile={readerInitialFile}
               onBack={() => setViewMode("explore")}
+              onOpenFigureToPPTX={() => {
+                setFigureToPPTXFromReader(true);
+                setViewMode('figure-to-pptx');
+              }}
             />
           ) : viewMode === "scholar-qa" ? (
             <ScholarQA
@@ -497,12 +504,19 @@ export default function App() {
               </div>
             </div>
           ) : viewMode === "tools" ? (
-            <ToolsPage onOpenTrueCite={() => setViewMode('truecite')} />
+            <ToolsPage onOpenTrueCite={() => setViewMode('truecite')} onOpenFigureToPPTX={() => { setFigureToPPTXFromReader(false); setViewMode('figure-to-pptx'); }} />
+          ) : viewMode === "figure-to-pptx" ? (
+            <FigureToPPTX
+              fromReader={figureToPPTXFromReader}
+              onBackToTools={() => { setFigureToPPTXFromReader(false); setViewMode('tools'); }}
+              onBackToReader={() => { setFigureToPPTXFromReader(false); setViewMode('reader'); }}
+            />
           ) : (
             <PaperDetail
               paper={selectedPaper}
               initialLocalFile={null}
               onBack={handleBackToList}
+              onOpenFigureToPPTX={() => { setFigureToPPTXFromReader(true); setViewMode('figure-to-pptx'); }}
             />
           )}
         </div>

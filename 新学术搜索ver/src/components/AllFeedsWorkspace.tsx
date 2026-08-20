@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowUp, Globe, RotateCcw, Search, Settings2 } from 'lucide-react';
+import { ArrowUp, Bot, Globe, Lightbulb, Presentation, RotateCcw, Search, Settings2, Sparkles } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
@@ -79,25 +79,20 @@ function PreferenceNotice({ message }: { message: string }) {
 function AIFeedsSearchHero({
   onSearch,
   onQuickOpen,
+  onOpenFigureToPPTX,
 }: {
   onSearch: (query: string) => void;
   onQuickOpen: (identifier: AcademicIdentifier) => void;
+  onOpenFigureToPPTX: () => void;
 }) {
   const { t } = useLanguage();
   const [query, setQuery] = useState('');
-  const [selectedSkill, setSelectedSkill] = useState<'search' | 'scholar-qa' | 'socratic' | 'paperclaw'>('search');
+  const [selectedSkill, setSelectedSkill] = useState<'search' | 'scholar-qa' | 'socratic'>('search');
   const [searchMode, setSearchMode] = useState<'deep' | 'quick'>('deep');
   const detectedIdentifiers = extractAcademicIdentifiers(query);
   const [verifiedIdentifiers, setVerifiedIdentifiers] = useState<AcademicIdentifier[]>([]);
   const [isVerifyingIdentifiers, setIsVerifyingIdentifiers] = useState(false);
-  const heroTitle =
-    selectedSkill === 'scholar-qa'
-      ? t('aiFeeds.searchHero.scholarQaTitle')
-      : selectedSkill === 'socratic'
-        ? 'Generate feasible research ideas based on anything you got...'
-        : selectedSkill === 'paperclaw'
-          ? 'Turn papers into actionable reproduction workflows...'
-      : t('aiFeeds.searchHero.title');
+  const heroTitle = '你好，今天想读哪篇论文？';
 
   const submitSearch = () => {
     const normalizedQuery = query.trim();
@@ -122,15 +117,15 @@ function AIFeedsSearchHero({
   }, [query]);
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-5">
       <div className="text-center">
-        <h1 className="text-[22px] font-semibold tracking-tight text-foreground sm:text-[30px]">
+        <h1 className="text-[24px] font-semibold tracking-tight text-[#2d8cff] sm:text-[34px]">
           {heroTitle}
         </h1>
       </div>
-      <Card className="w-full rounded-[26px] border-border/70 bg-background shadow-sm">
-        <CardContent className="space-y-5 p-4 sm:p-5">
-          <div className="rounded-[20px] border border-border/60 bg-white transition-colors focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-100">
+      <Card className="w-full rounded-[22px] border-[#e4eaf1] bg-white shadow-[0_16px_44px_-28px_rgba(35,40,47,0.38)]">
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="rounded-[16px] border-0 bg-white transition-colors focus-within:ring-0">
             <textarea
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -140,10 +135,10 @@ function AIFeedsSearchHero({
                   submitSearch();
                 }
               }}
-              rows={3}
+              rows={4}
               aria-label="Search papers, DOI, or arXiv ID"
-              placeholder="Find papers that introduce new RL algorithms for LLM post-training."
-              className="min-h-[78px] w-full resize-none rounded-[20px] bg-transparent px-4 py-3 text-left text-[15px] text-foreground outline-none placeholder:text-muted-foreground/90"
+              placeholder="例如：帮我找一下关于非线性多智能体系统最优编队控制的论文"
+              className="min-h-[126px] w-full resize-none rounded-[16px] bg-transparent px-1 py-1 text-left text-[15px] text-foreground outline-none placeholder:text-[#98a3b2] sm:px-2"
             />
             {(isVerifyingIdentifiers || verifiedIdentifiers.length > 0) ? (
               <div className="flex gap-2 overflow-x-auto px-4 pb-3" aria-label="已识别论文标识符">
@@ -171,33 +166,15 @@ function AIFeedsSearchHero({
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1 rounded-full border border-border/70 bg-white p-1">
+              <div className="flex items-center rounded-full bg-[#f1f4f8] p-1">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    'h-9 rounded-full px-3 transition-all',
-                    selectedSkill === 'search' && searchMode === 'quick'
-                      ? 'bg-muted/70 text-foreground shadow-sm'
-                      : 'px-2.5 text-muted-foreground hover:bg-muted/40',
-                  )}
-                  onClick={() => {
-                    setSelectedSkill('search');
-                    setSearchMode('quick');
-                  }}
-                >
-                  <Search className="h-4 w-4" />
-                  {selectedSkill === 'search' && searchMode === 'quick' ? <span>{t('search.quickMode')}</span> : null}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    'h-9 rounded-full px-3 transition-all',
+                    'h-9 rounded-full px-3.5 transition-all',
                     selectedSkill === 'search' && searchMode === 'deep'
-                      ? 'bg-muted/70 text-foreground shadow-sm'
+                      ? 'bg-white text-[#202731] shadow-sm'
                       : 'px-2.5 text-muted-foreground hover:bg-muted/40',
                   )}
                   onClick={() => {
@@ -205,8 +182,8 @@ function AIFeedsSearchHero({
                     setSearchMode('deep');
                   }}
                 >
-                  <Globe className="h-4 w-4" />
-                  {selectedSkill === 'search' && searchMode === 'deep' ? <span>{t('search.deepMode')}</span> : null}
+                  <Sparkles className="h-4 w-4 text-[#1687ff]" />
+                  <span>深度搜索</span>
                 </Button>
               </div>
               <Button
@@ -221,10 +198,9 @@ function AIFeedsSearchHero({
                 )}
                 onClick={() => setSelectedSkill('scholar-qa')}
               >
-                <Search className="h-4 w-4" />
-                Scholar QA
+                <Bot className="h-4 w-4" />
+                Agent
               </Button>
-              <div className="mx-1 hidden h-6 w-px bg-border/70 sm:block" />
               <Button
                 type="button"
                 variant="outline"
@@ -237,31 +213,27 @@ function AIFeedsSearchHero({
                 )}
                 onClick={() => setSelectedSkill('socratic')}
               >
-                {t('nav.ideaDiscovery')}
+                <Lightbulb className="h-4 w-4" />
+                灵感发现
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className={cn(
-                  'h-9 rounded-full px-3.5',
-                  selectedSkill === 'paperclaw'
-                    ? 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
-                    : 'border-border/70 bg-white text-muted-foreground',
-                )}
-                onClick={() => setSelectedSkill('paperclaw')}
+                className="h-9 rounded-full border-border/70 bg-white px-3.5 text-muted-foreground"
+                onClick={onOpenFigureToPPTX}
               >
-                PaperClaw
+                <Presentation className="h-4 w-4" />
+                PDF 转 PPT
               </Button>
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="hidden sm:inline">⌘K {t('search')}</span>
               <Button
                 type="button"
                 size="icon"
                 disabled={!query.trim()}
                 aria-label={t('search')}
-                className="h-9 w-9 rounded-full bg-sky-500 text-white hover:bg-sky-600 disabled:bg-slate-200 disabled:text-slate-400"
+                className="h-11 w-11 rounded-full bg-[#202731] text-white hover:bg-[#111820] disabled:bg-[#202731] disabled:text-white"
                 onClick={submitSearch}
               >
                 <ArrowUp className="h-4 w-4" />
@@ -613,10 +585,12 @@ function InlineFeedActivationCard({
 export function AllFeedsWorkspace({
   onSearch,
   onQuickOpen,
+  onOpenFigureToPPTX = () => {},
   showSearchHero = true,
 }: {
   onSearch: (query: string) => void;
   onQuickOpen: (identifier: AcademicIdentifier) => void;
+  onOpenFigureToPPTX?: () => void;
   showSearchHero?: boolean;
 }) {
   const { t } = useLanguage();
@@ -756,34 +730,23 @@ export function AllFeedsWorkspace({
     [recommendedPapers],
   );
   const latestPaperCards = useMemo(() => aiFeedsLatestPapers.slice(0, 5), []);
-  const trendPaperCards = useMemo<FeedPaperItem[]>(
-    () =>
-      visibleTrends
-        .flatMap((trend) => {
-          const detail = getAITrendDetail(trend.id);
-          if (!detail) {
-            return [];
-          }
-
-          return detail.papers.map((paper) => ({
-            id: `${trend.id}-${paper.id}`,
-            previewId: paper.id,
-            title: paper.title,
-            summary: detail.explanation[0] ?? trend.summary,
-            source: paper.venue,
-            venue: paper.venue,
-            date: paper.date,
-            authors: paper.authors,
-            roleLabel: paper.roleLabel,
-            badges: trend.keywords.slice(0, 2),
-            relevanceReason: trend.relevanceReason,
-            saved: false,
-            likeCount: trend.paperCount,
-          }));
-        })
-        .slice(0, 5),
-    [visibleTrends],
-  );
+  const trendPaperCards = useMemo<FeedPaperItem[]>(() => [
+    {
+      id: 'trend-natural-language-agent', previewId: 't1-p1', title: 'Natural-Language Agent Harnesses',
+      summary: '本文提出一种面向复杂研究任务的智能体框架，通过理解上下文与对象关系提升推理效率，并验证其有效性与可扩展性。',
+      source: 'NeurIPS 2025', venue: 'NeurIPS 2025', date: '2025-11J', authors: 'Lin et al', roleLabel: 'JCR Q1', badges: ['Agent', 'Reasoning'], relevanceReason: '', saved: false, likeCount: 161,
+    },
+    {
+      id: 'trend-omnivoice', previewId: 't1-p2', title: 'OmniVoice: Towards Omnilingual Zero-Shot Text-to-Speech with Diffusion Language Models',
+      summary: '本文提出一种面向多语言零样本语音合成的扩散语言模型，并通过多组实验验证其性能与泛化能力。',
+      source: 'NeurIPS 2025', venue: 'NeurIPS 2025', date: '2025-11J', authors: 'Lin et al', roleLabel: 'JCR Q1', badges: ['Speech', 'Diffusion'], relevanceReason: '', saved: false, likeCount: 161,
+    },
+    {
+      id: 'trend-traceable-qa', previewId: 't3-p1', title: 'Evaluating Traceable Reasoning in Research QA Systems',
+      summary: '本文研究学术问答系统中的可追溯推理，以真实文献证据提升答案的可靠性与可验证性。',
+      source: 'ICLR 2026 Workshop', venue: 'ICLR 2026 Workshop', date: '2026-03', authors: 'K. Zhou et al.', roleLabel: 'JCR Q1', badges: ['QA', 'Evidence'], relevanceReason: '', saved: false, likeCount: 96,
+    },
+  ], []);
   const selectedTrend = useMemo(
     () => visibleTrends.find((trend) => trend.id === selectedTrendId) ?? null,
     [selectedTrendId, visibleTrends],
@@ -985,9 +948,9 @@ export function AllFeedsWorkspace({
 
   return (
     <div className="h-full overflow-y-auto bg-muted/30">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-7 lg:px-8">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'trends' | 'latest' | 'for-you')} className="gap-6">
-            {showSearchHero ? <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} /> : null}
+            {showSearchHero ? <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} onOpenFigureToPPTX={onOpenFigureToPPTX} /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <CardNavTabs
                 items={[
@@ -1006,7 +969,7 @@ export function AllFeedsWorkspace({
                 onClick={() => handleOpenManageSetup()}
               >
                 <Settings2 className="h-4 w-4" />
-                Personalize
+                个性化设置
               </Button>
             </div>
 

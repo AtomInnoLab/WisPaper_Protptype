@@ -12,6 +12,26 @@
   }
 }
 
+@keyframes research-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.research-marquee-track {
+  animation: research-marquee 24s linear infinite;
+  will-change: transform;
+}
+
 .research-agent-running {
   animation: research-agent-glow 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-marquee-track {
+    animation: none;
+  }
 }

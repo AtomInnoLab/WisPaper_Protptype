@@ -6,6 +6,7 @@ import {
   ArrowUp,
   ArrowRight,
   BookOpen,
+  Bot,
   Check,
   ChevronDown,
   Compass,
@@ -16,6 +17,7 @@ import {
   Layers3,
   ListFilter,
   MessageSquareText,
+  Presentation,
   Search,
   ShieldCheck,
   Sparkles,
@@ -39,6 +41,7 @@ interface HomeSearchLandingProps {
   onStartSearch: (query?: string) => void;
   onContinueToSurvey: () => void;
   onNavigateToMarketingPage: (page: MarketingFeaturePage) => void;
+  onOpenFigureToPPTX?: () => void;
 }
 
 const exampleQueries = [
@@ -363,6 +366,7 @@ export function HomeSearchLanding({
   onStartSearch,
   onContinueToSurvey,
   onNavigateToMarketingPage,
+  onOpenFigureToPPTX,
 }: HomeSearchLandingProps) {
   const [landingSearchQuery, setLandingSearchQuery] = React.useState('');
   const [expandedSearchFaqIndexes, setExpandedSearchFaqIndexes] = React.useState<number[]>([0]);
@@ -628,21 +632,20 @@ export function HomeSearchLanding({
           position: relative;
           overflow: hidden;
           margin: 48px auto 0;
-          max-width: 1040px;
+          max-width: 1180px;
           border: 1px solid rgba(0, 121, 255, 0.16);
-          border-radius: 20px;
-          background:
-            linear-gradient(180deg, rgba(243, 249, 255, 0.88), rgba(255, 255, 255, 0.96) 76%);
-          padding: 18px;
-          box-shadow: rgba(35, 40, 47, 0.08) 0 20px 60px;
+          border-radius: 24px;
+          background: rgba(255, 255, 255, 0.96);
+          padding: 20px 22px 18px;
+          box-shadow: rgba(35, 40, 47, 0.07) 0 22px 60px;
         }
 
         .search-marketing-page .hero-search-card {
           position: relative;
-          border: 1px solid var(--line-blue);
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.94);
-          padding: 18px 20px;
+          border: 0;
+          border-radius: 0;
+          background: transparent;
+          padding: 2px 4px;
         }
 
         .search-marketing-page .hero-search-label {
@@ -663,7 +666,8 @@ export function HomeSearchLanding({
           outline: 0;
           background: transparent;
           color: var(--ink);
-          font-size: 16px;
+          min-height: 118px;
+          font-size: 17px;
           line-height: 28px;
         }
 
@@ -679,7 +683,7 @@ export function HomeSearchLanding({
 
         .search-marketing-page .hero-search-controls {
           position: relative;
-          margin-top: 16px;
+          margin-top: 8px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -689,25 +693,25 @@ export function HomeSearchLanding({
         .search-marketing-page .mode-shell {
           display: inline-flex;
           align-items: center;
-          gap: 10px;
-          min-height: 48px;
-          border: 1px solid var(--line-blue);
+          gap: 8px;
+          min-height: 42px;
+          border: 1px solid #e4eaf1;
           border-radius: 999px;
           background: rgba(255, 255, 255, 0.9);
-          padding: 6px 8px 6px 14px;
-          box-shadow: rgba(35, 40, 47, 0.06) 0 10px 26px;
+          padding: 8px 15px;
+          box-shadow: none;
         }
 
         .search-marketing-page .mode-chip {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          min-height: 36px;
+          min-height: 0;
           border-radius: 999px;
-          border: 1px solid rgba(0, 121, 255, 0.14);
-          background: var(--accent-soft-strong);
-          padding: 8px 14px;
-          color: var(--accent-deep);
+          border: 0;
+          background: transparent;
+          padding: 0;
+          color: var(--ink);
           font-size: 14px;
           line-height: 16px;
           font-weight: 600;
@@ -721,14 +725,14 @@ export function HomeSearchLanding({
           height: 52px;
           border: 0;
           border-radius: 999px;
-          background: var(--accent);
+          background: var(--primary);
           color: var(--on-primary);
           box-shadow: rgba(0, 121, 255, 0.24) 0 14px 30px;
           transition: background 0.16s ease, transform 0.16s ease;
         }
 
         .search-marketing-page .hero-submit:hover {
-          background: var(--accent-hover);
+          background: #111820;
           transform: translateY(-1px);
         }
 
@@ -1401,27 +1405,14 @@ export function HomeSearchLanding({
       {isSearchMode ? (
       <section className="search-mode-hero px-6 py-10 md:px-10 md:py-14">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-10 text-center">
-            <div className="landing-eyebrow">
-              <Sparkles className="h-4 w-4" />
-              <span>Scholar Search</span>
-            </div>
+          <div className="mb-9 text-center">
             <h1 className="landing-title">
-              {isZh ? 'WisPaper: 用更聪明的方式开始学术搜索' : 'WisPaper: Start yoursearch more intelligently'}
+              {isZh ? '你好，今天想读哪篇论文？' : 'Hi · Which paper do you want to read today?'}
             </h1>
-            <p className="landing-subtitle">
-              {isZh
-                ? '支持自然语言提问的智能搜索引擎，全文检索精准锁定匹配论文。'
-                : 'An intelligent academic search engine that supports natural-language queries and uses full-text retrieval to pinpoint relevant papers.'}
-            </p>
           </div>
 
           <div className="hero-search-shell">
             <div className="hero-search-card">
-              <div className="hero-search-label">
-                <Search className="h-4 w-4" />
-                <span>{isZh ? '描述你的研究问题' : 'Describe your research question'}</span>
-              </div>
               <textarea
                 value={landingSearchQuery}
                 onChange={(e) => setLandingSearchQuery(e.target.value)}
@@ -1432,29 +1423,33 @@ export function HomeSearchLanding({
                   }
                 }}
                 placeholder=""
-                rows={1}
+                rows={4}
                 className="hero-search-input"
               />
               {!landingSearchQuery ? (
                 <div className="hero-search-placeholder">
-                  {isZh
-                    ? '例如：搜索 2022 年后使用 GNN 做 molecular property prediction、排除 QM9、强调 realistic constraints 的论文'
-                    : 'e.g. Find post-2022 papers on molecular property prediction using GNNs, excluding QM9 and emphasizing realistic constraints'}
+                  {isZh ? '例如：帮我找一下关于非线性多智能体系统最优编队控制的论文' : 'Find papers that introduce new RL algorithms for LLM post-training.'}
                 </div>
               ) : null}
             </div>
 
             <div className="hero-search-controls">
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="mode-shell"
-                >
-                  <Search className="h-5 w-5 text-slate-500" />
-                  <span className="mode-chip">
-                    <Globe className="h-4 w-4" />
-                    <span>{isZh ? '深度模式' : 'Deep Mode'}</span>
-                  </span>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button type="button" className="mode-shell bg-[#f5f7fa]">
+                  <Sparkles className="h-4 w-4 text-[#1687ff]" />
+                  <span className="mode-chip">{isZh ? '深度搜索' : 'Deep Search'}</span>
+                </button>
+                <button type="button" onClick={() => onNavigateToMarketingPage('scholar-qa')} className="mode-shell">
+                  <Bot className="h-4 w-4 text-slate-500" />
+                  <span className="mode-chip">Agent</span>
+                </button>
+                <button type="button" onClick={() => onNavigateToMarketingPage('idea-discovery')} className="mode-shell">
+                  <Sparkles className="h-4 w-4 text-slate-500" />
+                  <span className="mode-chip">{isZh ? '灵感发现' : 'Idea Discovery'}</span>
+                </button>
+                <button type="button" onClick={onOpenFigureToPPTX} className="mode-shell">
+                  <Presentation className="h-4 w-4 text-slate-500" />
+                  <span className="mode-chip">PDF {isZh ? '转' : 'to'} PPT</span>
                 </button>
               </div>
 
@@ -1468,6 +1463,33 @@ export function HomeSearchLanding({
               </div>
             </div>
 
+          </div>
+        </div>
+      </section>
+      ) : null}
+
+      {isSearchMode ? (
+      <section className="px-6 pb-10 md:px-10">
+        <div className="mx-auto max-w-[1180px]">
+          <div className="mb-5 flex items-center justify-between">
+            <div className="inline-flex rounded-full bg-[#edf1f6] p-1 text-sm text-slate-500">
+              <span className="rounded-full bg-white px-5 py-2 font-semibold text-[#1687ff]">{isZh ? '趋势' : 'Trends'}</span>
+              <span className="px-5 py-2">{isZh ? '最新' : 'Latest'}</span>
+              <span className="px-5 py-2">AI Feeds</span>
+            </div>
+          </div>
+          <div className="space-y-4">
+            {resultRows.slice(0, 2).map((row, index) => (
+              <article key={row.title} className="grid gap-5 rounded-[18px] border border-[#dfe6ee] bg-white p-6 shadow-[0_12px_36px_-32px_rgba(35,40,47,0.35)] md:grid-cols-[1fr_140px]">
+                <div>
+                  <h2 className="text-xl font-semibold text-[#252c35]">{row.title}</h2>
+                  <div className="mt-4 flex flex-wrap gap-5 text-sm text-[#7b8797]"><span>2025-11J</span><span>Lin et al</span><span>NeurIPS 2025</span><span className="rounded-full bg-blue-50 px-2 text-[#1687ff]">JCR Q1</span></div>
+                  <p className="mt-4 line-clamp-2 text-sm leading-7 text-[#667386]">{isZh ? '本文提出一种面向复杂研究任务的模型框架，并通过多组实验验证其效率与可扩展性。' : 'The paper introduces a research framework and demonstrates its efficiency and scalability across multiple experimental settings.'}</p>
+                  <button type="button" className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#dfe6ee] px-4 py-2 text-sm text-[#667386]"><BookOpen className="h-4 w-4" />{isZh ? '加入图书馆' : 'Add to library'}</button>
+                </div>
+                <div className="flex min-h-[150px] items-center justify-center rounded-[12px] border border-[#e4e9ef] bg-[linear-gradient(135deg,#f8fafc,#eaf2f9)] text-center text-xs text-[#8793a2]">Paper<br />{String(index + 1).padStart(2, '0')}</div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
