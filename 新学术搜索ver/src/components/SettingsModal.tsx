@@ -168,7 +168,7 @@ export function SettingsModal({ isOpen, onClose, onOpenPricing }: SettingsModalP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-[11000] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-[2px]" onClick={onClose}>
       <div
         className="grid h-[min(88vh,860px)] w-full max-w-5xl grid-cols-[15.5rem_minmax(0,1fr)] overflow-hidden rounded-2xl bg-white shadow-[0_28px_90px_-32px_rgba(15,23,42,0.48)]"
         onClick={(e) => e.stopPropagation()}

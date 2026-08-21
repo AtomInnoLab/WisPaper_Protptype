@@ -166,7 +166,7 @@ export function UserPanel({ onOpenInvite, onOpenPaywall, onOpenNotifications, on
         
         {/* User Menu Dropdown */}
         {showUserMenu && (
-          <div className={`absolute bottom-full ${isCollapsed ? 'left-0 right-auto w-56' : 'left-3 right-3'} mb-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50`}>
+          <div className={`absolute bottom-full ${isCollapsed ? 'left-0 right-auto w-56' : 'left-3 right-3'} z-[10010] mb-2 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl`}>
             {/* User Info Header */}
             <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
               <div className="flex items-center gap-3">

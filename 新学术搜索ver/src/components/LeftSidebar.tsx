@@ -214,7 +214,7 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
   };
 
   return (
-    <aside className={`${isCollapsed ? 'w-14' : 'w-64'} h-screen sticky top-0 shrink-0 bg-white border-r border-gray-200 flex flex-col transition-all duration-200 ${isCollapsed ? 'overflow-visible' : ''}`}>
+    <aside className={`${isCollapsed ? 'w-14' : 'w-64'} sticky top-0 z-[1000] isolate h-screen shrink-0 bg-white border-r border-gray-200 flex flex-col transition-all duration-200 ${isCollapsed ? 'overflow-visible' : ''}`}>
       {/* Logo */}
       <div className={`${isCollapsed ? 'px-2' : 'px-3'} py-3 border-b border-gray-100 flex items-center justify-between`}>
         <button 
