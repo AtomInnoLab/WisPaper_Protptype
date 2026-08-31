@@ -1,9 +1,27 @@
 import React, { useRef, useState } from 'react';
-import { Send, HelpCircle, Database, Sparkles, Globe2, ChevronDown, Check, Search, Plus, X } from 'lucide-react';
+import { Send, HelpCircle, Database, Sparkles, Globe2, ChevronDown, Check, Search, Plus, X, RotateCw, CornerUpLeft } from 'lucide-react';
 import { ScholarQAResults } from './ScholarQAResults';
 import { useLanguage } from '../contexts/LanguageContext';
 
 type KnowledgeSource = 'current-paper' | 'my-library' | 'academic-search' | 'web-search';
+
+const qaSampleQuestionSets = [
+  [
+    { label: { zh: '查概念', en: 'Concept' }, question: { zh: 'Paleodictyon 遗迹化石的形态特征是什么？', en: 'What are the morphological characteristics of Paleodictyon trace fossils?' } },
+    { label: { zh: '看趋势', en: 'Trends' }, question: { zh: '大型语言模型幻觉问题未来可能通过哪些方法解决？', en: 'Which approaches could reduce hallucinations in large language models?' } },
+    { label: { zh: '找文献', en: 'Papers' }, question: { zh: '推荐循环经济领域近五年被高引用的经典实证研究。', en: 'Recommend highly cited empirical studies on the circular economy from the past five years.' } },
+  ],
+  [
+    { label: { zh: '查概念', en: 'Concept' }, question: { zh: '因果推断中的可识别性是什么意思？', en: 'What does identifiability mean in causal inference?' } },
+    { label: { zh: '看趋势', en: 'Trends' }, question: { zh: '生成式 AI 正在如何改变科学发现的研究流程？', en: 'How is generative AI changing scientific discovery workflows?' } },
+    { label: { zh: '找文献', en: 'Papers' }, question: { zh: '寻找近五年关于开放科学实践效果的系统综述。', en: 'Find recent systematic reviews on the effects of open science practices.' } },
+  ],
+  [
+    { label: { zh: '查概念', en: 'Concept' }, question: { zh: '图神经网络中的过平滑现象是如何产生的？', en: 'How does over-smoothing arise in graph neural networks?' } },
+    { label: { zh: '看趋势', en: 'Trends' }, question: { zh: '自动化实验室未来最值得关注的技术方向有哪些？', en: 'Which technical directions are most promising for autonomous laboratories?' } },
+    { label: { zh: '找文献', en: 'Papers' }, question: { zh: '推荐研究科研可重复性危机的代表性论文和综述。', en: 'Recommend representative papers and reviews on the reproducibility crisis.' } },
+  ],
+];
 
 interface ScholarQAProps {
   papersCount?: number;
@@ -26,10 +44,12 @@ export function ScholarQA({ papersCount = 9, onReset, initialQuestion = '', onOp
   const [showKnowledgeMenu, setShowKnowledgeMenu] = useState(false);
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [sampleSetIndex, setSampleSetIndex] = useState(0);
   const [effort, setEffort] = useState<'low' | 'medium' | 'high'>(() => {
     try { return (localStorage.getItem('wispaper-qa-effort') as 'low' | 'medium' | 'high') || 'medium'; } catch { return 'medium'; }
   });
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const sampleQuestions = qaSampleQuestionSets[sampleSetIndex];
   const knowledgeSourceOptions: Array<{ id: KnowledgeSource; label: string; icon: React.ReactNode }> = [
     { id: 'current-paper', label: isZh ? '单篇论文' : 'Current Paper', icon: <Sparkles className="h-4 w-4 text-gray-500" /> },
     { id: 'my-library', label: isZh ? '我的知识库' : 'My Library', icon: <Database className="h-4 w-4 text-gray-500" /> },
@@ -276,6 +296,7 @@ export function ScholarQA({ papersCount = 9, onReset, initialQuestion = '', onOp
                 onClick={handleSubmit}
                 disabled={!question.trim()}
                 className="absolute right-4 bottom-4 p-2.5 bg-gray-400 hover:bg-gray-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-full transition-colors"
+                aria-label={isZh ? '发送问题' : 'Send question'}
               >
                 <Send className="w-4 h-4" />
               </button>
@@ -287,6 +308,44 @@ export function ScholarQA({ papersCount = 9, onReset, initialQuestion = '', onOp
               className="hidden"
               onChange={handleLocalAttachmentChange}
             />
+
+            <section className="mt-8" aria-labelledby="qa-sample-questions-title">
+              <div className="flex items-center justify-between border-b border-gray-200 px-1 pb-4">
+                <h2 id="qa-sample-questions-title" className="text-[15px] font-semibold text-slate-600">
+                  {isZh ? '试试这些科研问题' : 'Try these research questions'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setSampleSetIndex((index) => (index + 1) % qaSampleQuestionSets.length)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 active:rotate-180"
+                  aria-label={isZh ? '换一组问题' : 'Show another set of questions'}
+                  title={isZh ? '换一组' : 'Refresh'}
+                >
+                  <RotateCw className="h-[18px] w-[18px]" />
+                </button>
+              </div>
+              <div>
+                {sampleQuestions.map((item) => (
+                  <button
+                    key={item.question.zh}
+                    type="button"
+                    onClick={() => {
+                      setQuestion(isZh ? item.question.zh : item.question.en);
+                      setIsTyping(true);
+                    }}
+                    className="group flex w-full items-center gap-4 border-b border-gray-200 px-2 py-4 text-left transition hover:bg-slate-50/80"
+                  >
+                    <span className="shrink-0 rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-medium text-slate-600">
+                      {isZh ? item.label.zh : item.label.en}
+                    </span>
+                    <span className="min-w-0 flex-1 text-[15px] leading-6 text-slate-600 transition group-hover:text-slate-950">
+                      {isZh ? item.question.zh : item.question.en}
+                    </span>
+                    <CornerUpLeft className="h-4 w-4 shrink-0 text-slate-400 transition group-hover:-translate-x-0.5 group-hover:text-slate-700" />
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
       </div>
