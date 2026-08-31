@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import inspirationDiscoveryImage from "../assets/agent-cases/inspiration-discovery.jpg";
 import literatureReviewImage from "../assets/agent-cases/literature-review.jpg";
-import paperAnalysisImage from "../assets/agent-cases/paper-analysis.jpg";
 import paperReproductionImage from "../assets/agent-cases/paper-reproduction.jpg";
 import {
   ArrowUp,
@@ -118,11 +117,6 @@ const quickTasks: QuickTask[] = [
     prompt: "围绕我关心的研究方向，系统检索并整理相关文献，归纳主要观点、方法、证据与研究空白。",
     icon: BookOpen,
   },
-  {
-    title: "论文解析",
-    prompt: "解析我提供的论文或研究材料，提炼研究问题、方法、关键证据、结论与可延伸方向。",
-    icon: FileText,
-  },
 ];
 
 const quickTaskSamplePrompts: Record<string, AgentSamplePrompt[]> = {
@@ -184,26 +178,6 @@ const quickTaskSamplePrompts: Record<string, AgentSamplePrompt[]> = {
       summary: "把研究目标转成可执行的检索式、筛选条件和质量评估框架，降低遗漏与偏差。",
       prompt: "根据我的综述目标，设计检索策略、文献纳入排除标准和质量评估框架。",
       credits: "9K",
-    },
-  ],
-  论文解析: [
-    {
-      title: "快速读懂一篇复杂论文",
-      summary: "提炼研究问题、核心假设、方法流程、关键证据和结论，降低首次阅读成本。",
-      prompt: "解析我提供的论文，用清晰的结构说明研究问题、方法、关键证据、结论与局限。",
-      credits: "6K",
-    },
-    {
-      title: "多篇论文对照解析",
-      summary: "统一比较研究目标、方法设计、证据质量与结论差异，快速建立整体认识。",
-      prompt: "对照解析我提供的多篇论文，比较它们的问题、方法、证据、结论和适用边界。",
-      credits: "12K",
-    },
-    {
-      title: "提取值得复用的方法细节",
-      summary: "定位影响结果的实现选择、参数、数据处理和评估约束，形成可复用的方法笔记。",
-      prompt: "解析我提供的论文，重点提取可复用的方法细节、实现约束和容易忽略的关键设置。",
-      credits: "7K",
     },
   ],
 };
@@ -287,39 +261,12 @@ const quickTaskCaseStudies: Record<string, AgentCaseStudy[]> = {
       credits: "20K",
     },
   ],
-  论文解析: [
-    {
-      title: "拆解复杂论文的方法与证据链",
-      field: "深度阅读",
-      summary: "Agent 将研究问题、关键假设、方法模块、实验和结论串成一条可检查的推理链。",
-      outcome: "获得结构化解析与关键证据定位",
-      prompt: "参考这个案例，解析我提供的论文，并把问题、假设、方法、实验和结论整理成证据链。",
-      credits: "8K",
-    },
-    {
-      title: "对照多篇论文的核心贡献",
-      field: "对照解析",
-      summary: "Agent 使用统一维度比较多篇论文，区分真正的方法创新、实验增量和适用范围变化。",
-      outcome: "形成贡献对照表与阅读结论",
-      prompt: "参考这个案例，用统一框架对照解析我提供的多篇论文，比较核心贡献、证据和适用边界。",
-      credits: "12K",
-    },
-    {
-      title: "识别论文结论的证据边界",
-      field: "证据核查",
-      summary: "Agent 逐项检查主张与实验支持关系，区分直接证据、间接推断和仍需验证的部分。",
-      outcome: "得到主张—证据矩阵与风险提示",
-      prompt: "参考这个案例，检查论文主要结论的证据边界，并标出支持充分、推断过度和待验证之处。",
-      credits: "10K",
-    },
-  ],
 };
 
 const quickTaskCaseImages: Record<string, string> = {
   灵感发现: inspirationDiscoveryImage,
   论文复现: paperReproductionImage,
   文献综述: literatureReviewImage,
-  论文解析: paperAnalysisImage,
 };
 
 const moreTools = [
@@ -1235,7 +1182,6 @@ export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenPr
                 <h2 className="text-sm font-semibold text-slate-900">Sample Prompts</h2>
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
                   {activeSamplePrompts.map((item) => {
-                    const PromptIcon = activeCaseTask.icon;
                     return (
                       <button
                         key={item.title}
@@ -1246,16 +1192,7 @@ export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenPr
                         }}
                         className="group rounded-2xl border border-slate-200 bg-white/75 p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_18px_45px_-28px_rgba(15,23,42,0.35)] active:translate-y-0"
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-white">
-                            <PromptIcon className="h-4 w-4" />
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-xs tabular-nums text-slate-400">
-                            <GraduationCap className="h-3.5 w-3.5" />
-                            {item.credits}
-                          </span>
-                        </div>
-                        <h3 className="mt-4 text-[15px] font-semibold leading-6 text-slate-900">{item.title}</h3>
+                        <h3 className="text-[15px] font-semibold leading-6 text-slate-900">{item.title}</h3>
                         <p className="mt-1.5 text-xs leading-5 text-slate-500">{item.summary}</p>
                       </button>
                     );
