@@ -38,6 +38,7 @@ const latestWorkspaceNav = [
   { id: 'academic-agent', label: 'Agent', icon: Bot },
   { id: 'my-library', label: '知识库', icon: Library },
   { id: 'research-projects', label: '项目', icon: FolderKanban },
+  { id: 'research-canvas', label: '科研画布', icon: Network },
   { id: 'tools', label: '工具', icon: Wrench },
 ];
 
