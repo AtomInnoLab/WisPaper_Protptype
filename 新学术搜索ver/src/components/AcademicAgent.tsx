@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import inspirationDiscoveryImage from "../assets/agent-cases/inspiration-discovery.jpg";
 import literatureReviewImage from "../assets/agent-cases/literature-review.jpg";
 import paperReproductionImage from "../assets/agent-cases/paper-reproduction.jpg";
@@ -17,6 +17,7 @@ import {
   Code2,
   Cpu,
   Dna,
+  ExternalLink,
   FileText,
   FlaskConical,
   FolderKanban,
@@ -28,6 +29,7 @@ import {
   Minus,
   Moon,
   MoreHorizontal,
+  Network,
   Orbit,
   Paperclip,
   PanelRight,
@@ -44,8 +46,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { ResearchTree } from "./ResearchTree";
 
-type WorkbenchTab = "files" | "search" | "plan" | "gpu" | "bio";
+type WorkbenchTab = "files" | "search" | "plan" | "gpu" | "bio" | "note";
 type AgentTierId = "fast" | "balanced" | "primary" | "deep";
 type AgentTodoStatus = "pending" | "active" | "waiting" | "blocked" | "done" | "skipped" | "failed";
 type AgentTodoType = "agent" | "approval" | "user";
@@ -282,6 +285,7 @@ const moreTools = [
 ];
 
 const tabs: { id: WorkbenchTab; label: string; icon: React.ElementType }[] = [
+  { id: "note", label: "科研笔记", icon: FileText },
   { id: "plan", label: "执行计划", icon: Sparkles },
   { id: "files", label: "任务文件", icon: FolderKanban },
   { id: "search", label: "检索结果", icon: Search },
@@ -737,6 +741,8 @@ function WorkbenchPanel({
   onTodoStatusChange,
   onAddTodo,
   onStartBioSkill,
+  canvasFocusNodeId,
+  canvasFocusRequest,
 }: {
   activeTab: WorkbenchTab;
   running: boolean;
@@ -748,6 +754,8 @@ function WorkbenchPanel({
   onTodoStatusChange: (id: string, status: AgentTodoStatus) => void;
   onAddTodo: (title: string) => void;
   onStartBioSkill: (prompt: string) => void;
+  canvasFocusNodeId: string | null;
+  canvasFocusRequest: number;
 }) {
   const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
   const [menuTodoId, setMenuTodoId] = useState<string | null>(null);
@@ -822,7 +830,12 @@ function WorkbenchPanel({
   };
 
   return (
-    <div className="h-full overflow-y-auto p-5">
+    <div className={`relative h-full ${activeTab === "note" ? "overflow-hidden p-3" : "overflow-y-auto p-5"}`}>
+      {activeTab === "note" && (
+        <section className="h-full min-h-0">
+          <ResearchTree key={activeTab} projectId={1} projectTitle="LLM 长期记忆研究" initialTemplate="demo" focusNodeId={canvasFocusNodeId ?? "n2"} focusRequest={canvasFocusRequest} noteOnly />
+        </section>
+      )}
       {activeTab === "plan" && (
         <section>
           <div className="flex items-start justify-between gap-3">
@@ -1132,20 +1145,32 @@ function WorkbenchPanel({
 }
 
 export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenProjects: () => void; initialPrompt?: string }) {
+  const linkedConversation = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("source") !== "research-note" || !params.get("agentName")) return null;
+    return { agentName: params.get("agentName")!, message: params.get("message")?.trim() || "" };
+  }, []);
   const [prompt, setPrompt] = useState("");
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(Boolean(linkedConversation));
   const [running, setRunning] = useState(false);
-  const [planReady, setPlanReady] = useState(false);
+  const [planReady, setPlanReady] = useState(Boolean(linkedConversation));
   const [planAccepted, setPlanAccepted] = useState(false);
   const [todos, setTodos] = useState<AgentTodo[]>(initialAgentTodos);
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("plan");
   const [panelOpen, setPanelOpen] = useState(true);
-  const [taskTitle, setTaskTitle] = useState("新研究任务");
-  const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
+  const [taskTitle, setTaskTitle] = useState(linkedConversation?.agentName || "新研究任务");
+  const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>(() => linkedConversation
+    ? linkedConversation.message
+      ? [{ role: "user", text: linkedConversation.message }, { role: "agent", text: `${linkedConversation.agentName} 已收到消息，正在结合当前科研项目与笔记内容继续处理。` }]
+      : [{ role: "agent", text: `已进入 ${linkedConversation.agentName} 对话。你可以继续发送问题或补充科研笔记中的上下文。` }]
+    : []);
   const [selectedAgent, setSelectedAgent] = useState<AgentTierId>("balanced");
   const [activeCaseTab, setActiveCaseTab] = useState(quickTasks[0].title);
   const [canvasContextCount, setCanvasContextCount] = useState(0);
+  const [canvasFocusNodeId, setCanvasFocusNodeId] = useState<string | null>(null);
+  const [canvasFocusRequest, setCanvasFocusRequest] = useState(0);
   const taskCompleted = planAccepted && todos.every((todo) => todo.status === "done" || todo.status === "skipped");
   const taskNeedsAttention = planAccepted && todos.some((todo) => todo.status === "waiting" || todo.status === "blocked" || todo.status === "failed");
   const activeSamplePrompts = quickTaskSamplePrompts[activeCaseTab] ?? [];
@@ -1498,6 +1523,24 @@ export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenPr
                       <div className="rounded-[18px] rounded-tl-md bg-slate-50 px-5 py-4 text-[15px] leading-7 text-slate-700">
                         {message.text}
                       </div>
+                      {messages.slice(0, index + 1).filter((item) => item.role === "agent").length === 1 && <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={onOpenProjects}
+                          className="group w-full rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/70 p-4 text-left transition hover:border-violet-300 hover:shadow-md"
+                        >
+                          <span className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white"><Network className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-3"><strong className="text-sm font-semibold text-slate-900">研究范围已同步到科研画布</strong><ExternalLink className="h-4 w-4 text-violet-400 transition group-hover:translate-x-0.5" /></span><span className="mt-1 block text-xs leading-5 text-slate-500">已补充“证据筛选与评测”分支，并关联向量检索基线。</span></span></span>
+                        </button>
+                      </div>}
+                      {messages.slice(0, index + 1).filter((item) => item.role === "agent").length === 2 && <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => { setActiveTab("note"); setPanelOpen(true); setCanvasFocusNodeId("n2"); setCanvasFocusRequest((value) => value + 1); }}
+                          className="group w-full rounded-2xl border border-blue-200 bg-gradient-to-br from-white to-blue-50/70 p-4 text-left transition hover:border-blue-300 hover:shadow-md"
+                        >
+                          <span className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white"><FileText className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-3"><strong className="text-sm font-semibold text-slate-900">实验范围笔记已写入</strong><ExternalLink className="h-4 w-4 text-blue-400 transition group-hover:translate-x-0.5" /></span><span className="mt-1 block text-xs leading-5 text-slate-500">记录 LoCoMo 数据集、BGE-M3、Top K=8 与 BM25 对照条件，待补充时间特征重排。</span></span></span>
+                        </button>
+                      </div>}
                     </div>
                   )}
                 </article>
@@ -1535,7 +1578,7 @@ export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenPr
       </main>
 
       {panelOpen && (
-        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
+        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "note" ? "w-[min(38vw,590px)]" : activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
             <span className="text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}</span>
             <button
@@ -1558,6 +1601,8 @@ export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenPr
               onTodoStatusChange={handleTodoStatusChange}
               onAddTodo={handleAddTodo}
               onStartBioSkill={handleStartBioSkill}
+              canvasFocusNodeId={canvasFocusNodeId}
+              canvasFocusRequest={canvasFocusRequest}
             />
           </div>
         </aside>

@@ -90,6 +90,7 @@ export default function App() {
   const [selectedPaper, setSelectedPaper] =
     useState<Paper | null>(null);
   const initialView = typeof window !== 'undefined' ? getViewFromPath(window.location.pathname) : 'home';
+  const embeddedAgent = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embedded') === '1';
   const [viewMode, setViewMode] = useState<
     "home" | "explore" | "list" | "quick-paper" | "detail" | "reader" | "library" | "scholar-qa" | "all-feeds" | "paper-reproduction" | "idea-discovery" | "fudan-collection-search" | "academic-agent" | "research-projects" | "research-canvas" | "truecite" | "tools" | "figure-to-pptx"
   >(initialView as any);
@@ -329,7 +330,7 @@ export default function App() {
     <LanguageProvider>
       <div className={isReaderView ? "h-screen overflow-hidden bg-white flex" : "min-h-screen bg-white flex"}>
         {/* Left Sidebar - Only show in list view, library view, and scholar-qa view */}
-        {(viewMode === "explore" || viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas" || viewMode === "truecite" || viewMode === "tools" || viewMode === "figure-to-pptx") && (
+        {!embeddedAgent && (viewMode === "explore" || viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas" || viewMode === "truecite" || viewMode === "tools" || viewMode === "figure-to-pptx") && (
           <LeftSidebar
             onNavigate={handleWorkspaceNavigate}
             onOpenInvite={() => setShowInviteModal(true)}
@@ -489,7 +490,13 @@ export default function App() {
           ) : viewMode === "idea-discovery" ? (
             <IdeaDiscovery />
           ) : viewMode === "academic-agent" ? (
-            <AcademicAgent key={agentKey} initialPrompt={initialAgentPrompt} onOpenProjects={() => setViewMode("research-projects")} />
+            <AcademicAgent key={agentKey} initialPrompt={initialAgentPrompt} onOpenProjects={() => {
+              if (embeddedAgent && window.parent !== window) {
+                window.parent.postMessage({ type: 'wispaper:close-agent-dialog', destination: 'research-canvas' }, window.location.origin);
+                return;
+              }
+              setViewMode("research-projects");
+            }} />
           ) : viewMode === "research-projects" ? (
             <ResearchProjects onOpenAgent={() => setViewMode("academic-agent")} />
           ) : viewMode === "research-canvas" ? (
@@ -555,7 +562,7 @@ export default function App() {
           onClose={() => setShowNotificationDrawer(false)}
         />
 
-        <MockConsole
+        {!embeddedAgent && <MockConsole
           currentView={viewMode}
           userCredits={mockUserCredits}
           onUserCreditsChange={setMockUserCredits}
@@ -570,7 +577,7 @@ export default function App() {
             setAgentKey((value) => value + 1);
             setViewMode('academic-agent');
           }}
-        />
+        />}
       </div>
     </LanguageProvider>
   );

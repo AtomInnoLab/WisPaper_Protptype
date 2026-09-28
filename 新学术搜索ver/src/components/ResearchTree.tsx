@@ -1,22 +1,25 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BlockNoteView } from "@blocknote/mantine";
-import { SuggestionMenuController, useCreateBlockNote } from "@blocknote/react";
+import { useCreateBlockNote } from "@blocknote/react";
 import type { PartialBlock } from "@blocknote/core";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/mantine/style.css";
 import {
-  AtSign, BookOpen, Bot, Check, ChevronDown, ChevronRight, Clock3, Edit3,
+  ArrowLeft, AtSign, BookOpen, Bot, Check, ChevronDown, ChevronRight, Clock3, Edit3,
   ExternalLink, File, FileText, FlaskConical, FolderTree, GripVertical, Lightbulb, LoaderCircle, Maximize2, MoreHorizontal,
-  Plus, Redo2, Save, Search, Table2, Trash2, Undo2, X, ZoomIn, ZoomOut,
+  MessageSquare, PanelRightClose, PanelRightOpen, Plus, Redo2, Save, Search, Send, Sparkles, Table2, Trash2, Undo2, Users, X, ZoomIn, ZoomOut,
 } from "lucide-react";
 
 type ResourceKind = "论文" | "Survey" | "Agent 对话" | "文件";
 type Resource = { id: string; kind: ResourceKind; title: string };
+type ProjectAgentStatus = "在线" | "运行中" | "等待中" | "已完成";
+type ProjectAgent = { id: string; name: string; description: string; status: ProjectAgentStatus; lastUsedAt: number };
 type CategoryColor = "violet" | "indigo" | "blue" | "cyan" | "teal" | "emerald" | "amber" | "orange" | "rose" | "fuchsia";
 type TreeNode = { id: string; title: string; category?: string; categoryColor?: CategoryColor; tags?: string[]; updatedAt?: number; parentId: string | null; note: string; resources: Resource[]; root?: boolean };
 type TreeSnapshot = { nodes: TreeNode[]; expanded: string[]; selectedId: string | null };
 type AgentActivity = { agentName: string; action: "访问中" | "修改中"; updatedAt: number };
 type NodePosition = { x: number; y: number };
+type CanvasSidebarTab = { id: string; type: "note" | "agent"; nodeId: string; title: string };
 
 const defaultNodeCategories: Record<string, string> = {
   root: "研究问题", n1: "方法", n2: "实验", n3: "方法", n4: "假设", n5: "实验",
@@ -26,21 +29,35 @@ const defaultNodeTags: Record<string, string[]> = {
 };
 
 const resources: Resource[] = [
-  { id: "paper-1", kind: "论文", title: "MemGPT: Towards LLMs as Operating Systems" },
-  { id: "paper-2", kind: "论文", title: "MemoryBank: Enhancing LLMs with Long-Term Memory" },
-  { id: "survey-1", kind: "Survey", title: "长期记忆机制研究综述" },
-  { id: "agent-1", kind: "Agent 对话", title: "分层记忆架构可行性分析" },
-  { id: "file-1", kind: "文件", title: "memory-evaluation-results.csv" },
-  { id: "file-2", kind: "文件", title: "experiment-notes-v3.md" },
+  { id: "paper-lost", kind: "论文", title: "Lost in the Middle: How Language Models Use Long Contexts" },
+  { id: "paper-ruler", kind: "论文", title: "RULER: What’s the Real Context Length of LLMs?" },
+  { id: "paper-needle", kind: "论文", title: "NeedleBench: Can LLMs Do Retrieval and Reasoning in 1M Context Window?" },
+  { id: "survey-position", kind: "Survey", title: "长上下文位置偏差相关工作综述" },
+  { id: "file-results", kind: "文件", title: "position-bias-results.xlsx" },
+  { id: "file-config", kind: "文件", title: "experiment-config.yaml" },
+  { id: "file-report", kind: "文件", title: "long-context-review.docx" },
+  { id: "file-slides", kind: "文件", title: "position-bias-slides.pptx" },
+  { id: "file-archive", kind: "文件", title: "experiment-artifacts.zip" },
+  { id: "file-python", kind: "文件", title: "analyze_position_bias.py" },
+  { id: "file-rust", kind: "文件", title: "dataset_loader.rs" },
+  { id: "file-typescript", kind: "文件", title: "chart-options.ts" },
+];
+
+const projectAgents: ProjectAgent[] = [
+  { id: "project-assistant", name: "项目助手", description: "统筹研究计划、画布节点与项目协作", status: "在线", lastUsedAt: 4 },
+  { id: "dataset-research", name: "数据集调研 Agent", description: "核对数据许可、评测脚本与指标定义", status: "运行中", lastUsedAt: 3 },
+  { id: "experiment-repro", name: "实验复现 Agent", description: "运行位置偏差对照实验并记录结果", status: "等待中", lastUsedAt: 2 },
+  { id: "paper-analysis", name: "论文解析 Agent", description: "整理长上下文评测方法与关键结论", status: "已完成", lastUsedAt: 1 },
 ];
 
 const initialNodes: TreeNode[] = [
-  { id: "root", title: "LLM 长期记忆研究", parentId: null, root: true, note: "# LLM 长期记忆研究\n\n研究问题：在 50 轮以上的持续对话中，如何兼顾事实召回率、时序一致性与存储成本？\n\n## 本周进展\n\n已完成向量检索与图记忆两条基线，下一步验证分层记忆在跨会话任务上的稳定性。", resources: [] },
-  { id: "n1", title: "分层记忆架构", parentId: "root", note: "# 分层记忆架构\n\n研究目标是在不显著增加首 Token 延迟的前提下，让 Agent 在长周期任务中稳定记住用户偏好、历史决策与尚未完成的约束。当前方案将记忆划分为工作记忆、情景记忆和语义记忆三层，并要求每条进入长期层的事实都保留来源、时间与置信度。\n\n## 架构假设\n\n工作记忆保留最近 8 轮原始对话和当前任务状态，容量目标控制在 6K Token 内。情景记忆按会话与任务阶段切片，保存摘要、关键动作和结果。语义记忆只保存经过归一化与冲突消解的长期事实，例如稳定偏好、人物关系和项目约束。\n\n参考 [论文 · MemGPT: Towards LLMs as Operating Systems](#resource-paper-1) 的分层调度思路，但不直接采用基于上下文溢出的被动换页，而是由检索器根据当前任务意图、事实重要性和最近访问时间主动选择需要进入上下文的记忆。\n\n## 写入流程\n\n每轮对话结束后，Extractor 先抽取候选事实，并为其标注 subject、predicate、object、valid_time 与 confidence。候选事实与现有语义记忆进行相似度匹配；相似度高于 0.86 时进入更新流程，低于阈值时作为新事实写入。存在属性冲突时，不直接覆盖旧值，而是保留版本链并标记生效时间。\n\n对动作与实验过程类内容，不拆成孤立事实，而是保存在情景记忆中。只有当同类情景至少出现两次，或用户明确确认其长期有效时，才将归纳结果提升到语义记忆层。这样可以降低单次偶然行为被误判为稳定偏好的概率。\n\n## 检索与编排\n\n检索阶段先对当前问题进行意图分类，再并行查询三层记忆。工作记忆直接按时间顺序进入上下文；情景记忆按向量相关性与时间邻近度加权；语义记忆采用向量召回加属性过滤，并对存在冲突的事实优先返回最新有效版本。\n\n第一版综合评分为 0.55 × relevance + 0.20 × recency + 0.15 × importance + 0.10 × access_frequency。为了避免高频但无关的事实长期占据前列，每条记忆连续三次被召回但未被模型引用后，访问频率权重会暂时衰减。\n\n## 小规模验证\n\n在 120 段人工构造的跨会话对话上进行预实验。相较于仅使用最近窗口，分层方案的事实问答准确率从 62.5% 提升到 81.7%，约束遵循率从 70.8% 提升到 88.3%。平均输入 Token 增加 14.6%，P95 首 Token 延迟增加 183 ms，仍在当前 250 ms 的预算内。\n\n错误主要集中在两类：一是同一人物在不同项目中的角色被错误合并；二是用户用隐含表达修改偏好时，旧事实没有及时失效。前者需要引入项目命名空间，后者需要增加对否定、转折和时间范围表达的专项识别。\n\n## 风险记录\n\n分层架构会增加可观测性成本。如果无法解释一条事实为何被写入、为何被召回，线上错误将很难定位。因此每次检索都需要记录候选集合、最终得分、过滤原因和进入 Prompt 的文本片段，但调试日志不得包含用户无权查看的原始内容。\n\n另一个风险是摘要递归导致信息漂移。情景记忆不能反复基于旧摘要生成新摘要，压缩时必须回看原始事件或保留可追溯引用。对于数值、日期和实体名称，摘要器应优先复制原值并进行格式校验。\n\n## 阶段结论\n\n当前结果支持继续推进分层方案，但尚不能证明三层结构优于更简单的双层结构。下一轮会移除情景层做消融实验，并比较召回准确率、上下文长度和延迟变化。\n\n## 下一步\n\n本周完成项目命名空间和冲突版本链；下周在 LoCoMo 全量样本上运行三次不同随机种子的评测。若 P95 延迟超过 250 ms，将优先减少情景召回数量，而不是降低语义事实的覆盖率。", resources: [resources[0]] },
-  { id: "n2", title: "向量检索基线", parentId: "n1", note: "## 实验设置\n\n- 数据集：LoCoMo，1,540 个跨会话问答样本\n- Embedding：BGE-M3\n- Top K：8\n- 对照组：BM25 与全量上下文\n\n三次运行的平均 Recall@8 为 71.4%，较 BM25 提升 12.8 个百分点；但时间型问题准确率仅为 58.2%。原始结果见 [文件 · memory-evaluation-results.csv](#resource-file-1)。\n\n下一步加入时间特征重排，并单独分析人物属性发生变化的样本。", resources: [resources[4]] },
-  { id: "n3", title: "图记忆方案", parentId: "root", note: "# 图记忆方案\n\n本分支评估结构化图记忆是否能改善跨会话多跳推理。图中的核心实体包括人物、组织、项目、事件、地点和结论；边同时保存关系类型、发生时间、来源消息和置信度，支持回答‘某项决定为什么改变’以及‘某个约束在哪次会议中提出’等问题。\n\n## 文献与讨论\n\n现有方法的分类与评测指标参考 [Survey · 长期记忆机制研究综述](#resource-survey-1)。在 [Agent 对话 · 分层记忆架构可行性分析](#resource-agent-1) 中，Agent 建议优先验证冲突事实覆盖、时间范围查询和跨项目实体隔离，这三类能力也是纯向量检索最容易出现稳定错误的场景。\n\n## 数据建模\n\n事件节点保存 start_time、end_time、participants 和 outcome；事实边保存 valid_from 与 valid_to。对于‘小林从算法组转到平台组’这类变化，不删除旧关系，而是结束旧边的有效区间并创建新边。查询当前状态时只返回当前有效边，查询历史原因时则沿时间链回溯。\n\n实体消歧采用名称、所属项目、共现实体和文本表示联合评分。初步阈值设置为 0.82，高于阈值自动合并，0.65–0.82 进入候选队列，低于 0.65 新建实体。为了避免错误合并扩散，自动合并后的节点在 24 小时内保留可逆映射。\n\n## 预实验结果\n\n从内部测试集抽取 300 个跨会话问题，其中单跳事实 120 个、时间推理 90 个、因果链 60 个、冲突事实 30 个。图记忆总体准确率为 78.0%，向量基线为 72.3%。在因果链问题上提升最明显，从 55.0% 提升到 73.3%；单跳事实仅提升 1.7 个百分点。\n\n图查询平均耗时 96 ms，实体链接与图构建平均每轮增加 41 ms。离线构建成本可接受，但在线实体消歧在长消息中出现明显抖动，P95 达到 164 ms。若与向量检索串行执行，总延迟会超过预算，因此下一版改为并行召回后统一重排。\n\n## 典型错误\n\n错误一：同名人物被合并。在两个不同项目中都出现‘王晨’，系统依据名称和相近的职位描述误判为同一人，导致项目 A 的会议结论进入项目 B。加入项目命名空间后，该类错误由 11 条下降到 2 条。\n\n错误二：隐式时间表达解析失败。‘下个季度再评估’需要结合消息时间推导绝对日期；当前解析器只保存原文，查询具体月份时无法命中。计划在写入阶段同时保存原始表达和解析后的时间范围，并记录解析所使用的时区。\n\n错误三：否定关系丢失。句子‘并不是因为成本，而是数据授权没有通过’被抽取成‘成本导致延期’。需要将否定范围作为边属性，并在抽取评测中单独增加转折和排除关系样本。\n\n## 消融观察\n\n移除时间属性后，总体准确率下降 4.8 个百分点，说明图结构本身不足以处理状态变化。移除来源引用后离线指标不变，但人工审核定位错误的平均时间从 2.4 分钟增加到 7.1 分钟，因此来源引用属于必须保留的工程能力。\n\n只使用图检索会漏掉描述性较强、尚未形成稳定实体关系的内容。当前更合理的方向是图与向量混合：图负责精确关系和时间约束，向量库负责语义近似与长文本证据，最终由同一重排器结合问题类型选择证据。\n\n## 阶段结论\n\n图记忆对多跳和时间问题有明确收益，但构建复杂度高于预期，不适合作为所有记忆的唯一存储。下一阶段保留最小关系集合，仅对人物关系、项目决策和状态变化建图，其余内容继续进入情景记忆与向量索引。\n\n## 下一轮计划\n\n完成 500 条实体消歧标注集；增加否定关系与隐式时间的专项测试；将图检索和向量检索改为并行；在相同 Token 预算下对比混合方案、纯图方案和分层向量方案。", resources: [resources[2], resources[3]] },
-  { id: "n4", title: "时间衰减策略", parentId: "n3", note: "## 核心假设\n\n引入时间衰减可以降低陈旧信息对当前任务的干扰，但衰减速度应同时受事实重要性和最近访问频率控制。\n\n## 实验计划\n\n对比固定指数衰减、分段衰减和重要性自适应衰减。主要指标为时间型问答准确率、过期事实误召回率与平均检索延迟。", resources: [] },
-  { id: "n5", title: "失败：固定衰减率", parentId: "n4", note: "## 失败记录\n\n固定衰减率 λ=0.08 时，过期事实误召回率下降 9.6%，但低频关键事实的 Recall@8 同时下降 14.1%。\n\n## 原因分析\n\n时间新鲜度不能代表任务重要性。生日、长期偏好等事实访问频率低，却需要长期保留。\n\n## 后续调整\n\n改为 importance × recency × access frequency 的组合评分，并为用户明确确认的事实设置最低保留权重。", resources: [] },
+  { id: "root", title: "长上下文模型位置偏差研究", category: "研究问题", tags: ["长上下文", "位置偏差"], updatedAt: Date.now(), parentId: null, root: true, note: "# 长上下文模型位置偏差研究\n\n研究问题：关键证据位于多文档上下文的不同位置时，模型回答准确率是否出现系统性下降？\n\n## 研究计划\n\n比较 32K、64K、128K 上下文，以及证据位于开头、中间、结尾的对照组。", resources: [] },
+  { id: "n1", title: "Lost in the Middle 文献复现", category: "论文", tags: ["关键论文", "已精读"], updatedAt: Date.now()-300000, parentId: "root", note: "# Lost in the Middle 文献复现\n\n博一新生林沐整理了论文中的位置偏差现象与复现条件。\n\n## 待确认\n\n不同模型与上下文长度下的性能曲线是否一致？", resources: [resources[0]] },
+  { id: "n2", title: "RULER 与 NeedleBench 评测", category: "数据集", tags: ["许可核对", "Agent调研"], updatedAt: Date.now()-220000, parentId: "root", note: "# RULER 与 NeedleBench 评测\n\n数据集调研 Agent 正在核对数据许可、指标定义和评测脚本。", resources: [resources[1], resources[2]] },
+  { id: "n3", title: "32K / 64K / 128K 对照实验", category: "实验设计", tags: ["博三学长复核", "待运行"], updatedAt: Date.now()-150000, parentId: "root", note: "# 对照实验\n\n博三学长周启补充控制变量：上下文长度、干扰文档数量、证据位置和随机种子。", resources: [resources[5]] },
+  { id: "n4", title: "失败：内部数据许可受限", category: "失败记录", tags: ["许可风险"], updatedAt: Date.now()-90000, parentId: "n2", note: "# 数据许可失败\n\n内部长文档问答数据无法用于本轮复现。保留失败原因，改用公开评测集。", resources: [] },
+  { id: "n5", title: "公开替代数据集", category: "数据集", tags: ["替代方案"], updatedAt: Date.now()-50000, parentId: "n2", note: "# 公开替代数据集\n\n使用 RULER 与 NeedleBench 构建可复现的位置偏差评测。", resources: [resources[1], resources[2]] },
+  { id: "n6", title: "位置偏差实验结果", category: "结果分析", tags: ["Excel结果", "导师审阅"], updatedAt: Date.now(), parentId: "n3", note: "# 实验结果\n\n中部证据条件下准确率低于首尾位置；128K 设置下降幅度更明显。\n\n原始结果见 [文件 · position-bias-results.xlsx](#resource-file-results)。", resources: [resources[4]] },
 ];
 
 function calculateTreeLayout(nodes: TreeNode[], expandedIds: Set<string>): Record<string, NodePosition> {
@@ -114,13 +131,23 @@ function markdownToBlocks(markdown: string): PartialBlock[] {
   });
 }
 
-function BlockNoteEditor({ initialMarkdown, availableResources, onChange, onAttach }: {
+function BlockNoteEditor({ initialMarkdown, availableResources, onChange, onAttach, remoteEditor = null, compact = false }: {
   initialMarkdown: string;
   availableResources: Resource[];
   onChange: (markdown: string) => void;
   onAttach: (resource: Resource) => void;
+  remoteEditor?: { type: "agent" | "collaborator"; name: string } | null;
+  compact?: boolean;
 }) {
   const editor = useCreateBlockNote({ initialContent: markdownToBlocks(initialMarkdown) });
+  const [attachedAgentIds, setAttachedAgentIds] = useState<string[]>(() => projectAgents
+    .filter((agent) => initialMarkdown.includes(`#agent-${agent.id}`))
+    .map((agent) => agent.id));
+  const [agentMessages, setAgentMessages] = useState<Record<string, string>>({});
+  const [fileDragActive, setFileDragActive] = useState(false);
+  const [mentionMenu, setMentionMenu] = useState<{ left: number; top: number } | null>(null);
+  const [editingOutline, setEditingOutline] = useState<{ top: number; left: number; width: number; height: number; editor: "agent" | "collaborator"; name: string } | null>(null);
+  const editorRootRef = useRef<HTMLDivElement>(null);
   const attachResource = (resource: Resource) => {
     editor.insertInlineContent([
       { type: "link", href: `#resource-${resource.id}`, content: [{ type: "text", text: `${resource.kind} · ${resource.title}`, styles: {} }] },
@@ -129,29 +156,95 @@ function BlockNoteEditor({ initialMarkdown, availableResources, onChange, onAtta
     onAttach(resource);
   };
 
-  const getMentionItems = async (query: string) => availableResources
-    .filter((resource) => `${resource.title} ${resource.kind}`.toLowerCase().includes(query.toLowerCase()))
-    .map((resource) => {
-      const Icon = kindIcon[resource.kind];
-      return {
-        title: resource.title,
-        subtext: resource.kind,
-        aliases: [resource.kind, resource.title],
-        group: "工作空间资源",
-        icon: <Icon className="h-4 w-4" />,
-        onItemClick: () => attachResource(resource),
-      };
-    });
+  const attachAgent = (agent: ProjectAgent) => {
+    editor.insertInlineContent([
+      { type: "link", href: `#agent-${agent.id}`, content: [{ type: "text", text: `Agent · ${agent.name}`, styles: {} }] },
+      { type: "text", text: " ", styles: {} },
+    ], { updateSelection: true });
+    setAttachedAgentIds((ids) => ids.includes(agent.id) ? ids : [...ids, agent.id]);
+  };
 
-  return <div className="blocknote-research-editor relative pb-6">
+  const openAgent = (agent: ProjectAgent, message = "") => {
+    const params = new URLSearchParams({ agentId: agent.id, agentName: agent.name, source: "research-note" });
+    if (message.trim()) params.set("message", message.trim());
+    window.open(`/app/agent?${params.toString()}`, "_blank", "noopener,noreferrer");
+  };
+
+  const sendToAgent = (agent: ProjectAgent) => {
+    const message = agentMessages[agent.id]?.trim();
+    if (!message) return;
+    setAgentMessages((messages) => ({ ...messages, [agent.id]: "" }));
+    openAgent(agent, message);
+  };
+
+  const insertDroppedFile = async (file: globalThis.File) => {
+    const resource: Resource = { id: `file-${Date.now()}`, kind: "文件", title: file.name };
+    const lastBlock = editor.document[editor.document.length - 1];
+    editor.insertBlocks([{ type: "paragraph", content: [{ type: "link", href: `#resource-${resource.id}`, content: [{ type: "text", text: `文件 · ${file.name}`, styles: {} }] }] }], lastBlock, "after");
+    onAttach(resource);
+    onChange(await editor.blocksToMarkdownLossy(editor.document));
+  };
+
+  const openMentionMenu = () => {
+    const selection = window.getSelection();
+    const caretRect = selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null;
+    const editorRect = document.querySelector(".blocknote-research-editor")?.getBoundingClientRect();
+    const left = Math.min(window.innerWidth - 340, Math.max(12, caretRect?.left || editorRect?.left || 12));
+    const top = Math.min(window.innerHeight - 420, Math.max(12, (caretRect?.bottom || editorRect?.top || 12) + 8));
+    setMentionMenu({ left, top });
+  };
+
+  useEffect(() => {
+    const handleEditorKey = (event: KeyboardEvent) => {
+      if (!editorRootRef.current?.contains(event.target as Node)) return;
+      if (event.key === "@") window.setTimeout(openMentionMenu, 0);
+      if (event.key === "Escape") setMentionMenu(null);
+    };
+    const handleEditorInput = (event: Event) => {
+      if (!editorRootRef.current?.contains(event.target as Node)) return;
+      if ((event as InputEvent).data === "@") window.setTimeout(openMentionMenu, 0);
+    };
+    document.addEventListener("keydown", handleEditorKey, true);
+    document.addEventListener("input", handleEditorInput, true);
+    return () => {
+      document.removeEventListener("keydown", handleEditorKey, true);
+      document.removeEventListener("input", handleEditorInput, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    const root = editorRootRef.current;
+    if (!root) return;
+    if (!remoteEditor) { setEditingOutline(null); return; }
+    const updateAgentOutline = () => {
+      const agentBlock = root.querySelector<HTMLElement>(".bn-block");
+      if (!agentBlock) return;
+      const rootRect = root.getBoundingClientRect();
+      const blockRect = agentBlock.getBoundingClientRect();
+      setEditingOutline({ top: blockRect.top - rootRect.top, left: blockRect.left - rootRect.left, width: blockRect.width, height: blockRect.height, editor: remoteEditor.type, name: remoteEditor.name });
+    };
+    updateAgentOutline();
+  }, [remoteEditor?.type, remoteEditor?.name]);
+
+  const chooseMention = (insert: () => void) => {
+    document.execCommand("delete", false);
+    insert();
+    setMentionMenu(null);
+  };
+
+  return <div ref={editorRootRef} onDragEnter={(event) => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); setFileDragActive(true); } }} onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; setFileDragActive(true); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setFileDragActive(false); }} onDrop={(event) => { const files = Array.from(event.dataTransfer.files); if (!files.length) return; event.preventDefault(); event.stopPropagation(); setFileDragActive(false); files.forEach((file) => void insertDroppedFile(file)); }} className={`blocknote-research-editor relative pb-6 ${compact ? "blocknote-research-editor--compact" : ""}`}>
+    {fileDragActive && <div className="pointer-events-none absolute inset-0 z-[10020] grid place-items-center rounded-2xl border-2 border-dashed border-emerald-500 bg-emerald-50/95"><div className="text-center"><File className="mx-auto h-7 w-7 text-emerald-600" /><p className="mt-2 text-sm font-semibold text-emerald-800">松开以插入文件</p><p className="mt-1 text-xs text-emerald-600">文件将关联到当前笔记并自动保存</p></div></div>}
     <BlockNoteView
       editor={editor}
       theme="light"
       onChange={async () => onChange(await editor.blocksToMarkdownLossy(editor.document))}
-    >
-      <SuggestionMenuController triggerCharacter="@" getItems={getMentionItems} />
-    </BlockNoteView>
-    <p className="pointer-events-none absolute bottom-0 left-2 text-[10px] font-normal tracking-wide text-slate-300/70">输入 “/” 插入 Block，输入 “@” 提及工作空间资源</p>
+    />
+    {mentionMenu && <div className="fixed z-[10050] max-h-[min(420px,70vh)] w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl" style={mentionMenu} onMouseDown={(event) => event.preventDefault()}>
+      <div className="flex items-center justify-between px-2 py-1.5"><span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">论文与项目资源</span><button type="button" onClick={() => setMentionMenu(null)} className="rounded p-1 text-slate-400 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button></div>
+      <p className="mt-1 border-t border-slate-100 px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">工作空间资源</p>
+      {availableResources.map((resource) => { const Icon = kindIcon[resource.kind]; return <button key={resource.id} type="button" onClick={() => chooseMention(() => attachResource(resource))} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-blue-50"><Icon className="h-4 w-4 shrink-0 text-blue-600" /><span className="min-w-0 flex-1 truncate text-sm text-slate-700">{resource.title}</span><span className="text-[10px] text-slate-400">{resource.kind}</span></button>; })}
+    </div>}
+    <p className="pointer-events-none absolute bottom-0 left-2 text-[10px] font-normal tracking-wide text-slate-300/70">输入 “/” 插入 Block，输入 “@” 提及论文或项目资源</p>
   </div>;
 }
 
@@ -184,7 +277,45 @@ function HashTagEditor({ nodeId, tags, onCommit }: { nodeId: string; tags: strin
   />;
 }
 
-export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo" }: { projectId: number; projectTitle: string; initialTemplate?: string }) {
+function ProjectAttachmentPreview({ resource }: { resource: Resource }) {
+  const extension = resource.title.split(".").pop()?.toLowerCase() ?? "";
+  const codeSamples: Record<string, string> = {
+    yaml: "model: qwen2.5-32b\ncontext_lengths: [32768, 65536, 131072]\nevidence_positions:\n  - start\n  - middle\n  - end\nseeds: [11, 23, 47]",
+    yml: "model: qwen2.5-32b\ncontext_lengths: [32768, 65536, 131072]\nevidence_positions: [start, middle, end]",
+    py: "from pathlib import Path\nimport pandas as pd\n\nresults = pd.read_excel(Path(\"position-bias-results.xlsx\"))\nsummary = results.groupby([\"context\", \"position\"]).accuracy.mean()\nprint(summary.sort_values())",
+    rs: "pub fn load_dataset(path: &Path) -> Result<Vec<Sample>> {\n    let input = std::fs::read_to_string(path)?;\n    input.lines().map(parse_sample).collect()\n}",
+    ts: "export const chartOptions = {\n  xAxis: { data: ['Start', 'Middle', 'End'] },\n  series: [{ name: 'Accuracy', data: [0.84, 0.61, 0.82] }],\n};",
+  };
+
+  if (extension === "xlsx" || extension === "xls") return <div className="overflow-hidden rounded-xl border border-emerald-200 bg-white"><div className="flex items-center justify-between bg-emerald-600 px-3 py-2 text-[10px] font-medium text-white"><span>Sheet1 · position_bias</span><span>A1:D4</span></div><div className="overflow-x-auto"><table className="w-full min-w-[330px] border-collapse text-[10px]"><thead><tr className="bg-emerald-50 text-emerald-900"><th className="border border-emerald-100 px-2 py-2 text-left">Context</th><th className="border border-emerald-100 px-2 py-2 text-left">Position</th><th className="border border-emerald-100 px-2 py-2 text-right">Accuracy</th><th className="border border-emerald-100 px-2 py-2 text-right">Samples</th></tr></thead><tbody>{[["32K", "Start", "84%", "240"], ["32K", "Middle", "67%", "240"], ["128K", "Middle", "53%", "240"]].map((row) => <tr key={row.join("-")}>{row.map((cell, index) => <td key={cell} className={`border border-slate-100 px-2 py-2 ${index > 1 ? "text-right tabular-nums" : ""}`}>{cell}</td>)}</tr>)}</tbody></table></div></div>;
+
+  if (extension === "docx" || extension === "doc") return <article className="rounded-xl border border-blue-100 bg-white px-6 py-7 shadow-sm"><p className="text-center text-[9px] uppercase tracking-[0.18em] text-slate-400">Research memo</p><h3 className="mt-3 text-center font-serif text-lg font-semibold text-slate-900">长上下文位置偏差实验综述</h3><p className="mt-5 text-[11px] leading-6 text-slate-600">本报告汇总了 Lost in the Middle、RULER 与 NeedleBench 的复现实验。结果显示，关键证据位于上下文中部时准确率持续下降，且该趋势随上下文长度增加而加剧。</p><h4 className="mt-5 text-xs font-semibold text-slate-800">1. 核心结论</h4><p className="mt-2 text-[11px] leading-6 text-slate-600">128K 条件下，中部证据组相较首部证据组下降 31 个百分点。实验日志、配置和随机种子均已归档。</p></article>;
+
+  if (extension === "pptx" || extension === "ppt") return <div className="grid grid-cols-[58px_minmax(0,1fr)] gap-2"><div className="space-y-2">{[1, 2, 3].map((slide) => <div key={slide} className={`aspect-video rounded border p-1 text-[7px] ${slide === 1 ? "border-orange-400 bg-orange-50" : "border-slate-200 bg-white"}`}>{slide}<div className="mt-1 h-1 rounded bg-slate-200" /></div>)}</div><div className="aspect-video rounded-xl border border-orange-100 bg-gradient-to-br from-white to-orange-50 p-5 shadow-sm"><p className="text-[9px] font-medium uppercase tracking-widest text-orange-500">Position bias study</p><h3 className="mt-3 text-lg font-semibold leading-tight text-slate-900">Evidence in the middle is harder to retrieve</h3><div className="mt-5 flex h-16 items-end gap-3">{[["Start", 82], ["Middle", 51], ["End", 78]].map(([label, height]) => <div key={label} className="flex flex-1 flex-col items-center gap-1"><div className="w-full rounded-t bg-orange-400" style={{ height: `${height}%` }} /><span className="text-[7px] text-slate-400">{label}</span></div>)}</div></div></div>;
+
+  if (extension === "zip") return <div className="rounded-xl border border-amber-200 bg-white p-4"><div className="flex items-center gap-2 border-b border-amber-100 pb-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-amber-100 text-amber-700"><FolderTree className="h-4 w-4" /></span><div><p className="text-xs font-semibold">压缩包内容</p><p className="text-[9px] text-slate-400">8 files · 12.4 MB</p></div></div><div className="mt-3 space-y-2 font-mono text-[10px] text-slate-600"><p>▾ experiment-artifacts/</p><p className="pl-4">├─ configs/experiment-config.yaml</p><p className="pl-4">├─ results/position-bias-results.xlsx</p><p className="pl-4">├─ logs/run-128k.log</p><p className="pl-4">└─ figures/accuracy-by-position.png</p></div></div>;
+
+  const code = codeSamples[extension] ?? `// ${resource.title}\n// 代码预览已启用\nexport default function run() {\n  return true;\n}`;
+  return <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950"><div className="flex items-center justify-between border-b border-slate-800 px-3 py-2 text-[9px] text-slate-400"><span>{resource.title}</span><span>{extension.toUpperCase()}</span></div><pre className="overflow-auto p-4 text-[10px] leading-5 text-slate-300"><code>{code}</code></pre></div>;
+}
+
+export function ResearchTree({
+  projectId,
+  projectTitle,
+  initialTemplate = "demo",
+  focusNodeId = null,
+  focusRequest = 0,
+  noteOnly = false,
+  overlayNote = false,
+}: {
+  projectId: number;
+  projectTitle: string;
+  initialTemplate?: string;
+  focusNodeId?: string | null;
+  focusRequest?: number;
+  noteOnly?: boolean;
+  overlayNote?: boolean;
+}) {
   const [nodes, setNodes] = useState<TreeNode[]>(() => {
     try {
       const projectKey = `wispaper-research-canvas-nodes-${projectId}`;
@@ -208,12 +339,44 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
   const redoStack = useRef<TreeSnapshot[]>([]);
   const [, setHistoryVersion] = useState(0);
   const [fullScreen, setFullScreen] = useState(false);
+  const [mockAgentEditing, setMockAgentEditing] = useState(false);
+  const [mockCollaboratorEditing, setMockCollaboratorEditing] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarTabs, setSidebarTabs] = useState<CanvasSidebarTab[]>([]);
+  const [activeSidebarTab, setActiveSidebarTab] = useState("message-board");
+  const [canvasAgentInput, setCanvasAgentInput] = useState("");
+  const [canvasAgentMessages, setCanvasAgentMessages] = useState([
+    { role: "agent", text: "我会从研究问题出发，创建候选研究方向，并为每个方向启动独立 Agent 调研。" },
+    { role: "agent", text: "调研完成后，我会提炼值得研究的 Idea，继续寻找数据集、设计实验并记录结果。" },
+  ]);
+  const workflowTimers = useRef<number[]>([]);
   const [editing, setEditing] = useState(false);
   const [editingNodeMeta, setEditingNodeMeta] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [draft, setDraft] = useState("");
   const [saveState, setSaveState] = useState<"saved" | "saving">("saved");
   const [toast, setToast] = useState("");
+  const [messageBoardCollapsed, setMessageBoardCollapsed] = useState(false);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [boardMentionOpen, setBoardMentionOpen] = useState(false);
+  const [agentLaunchDecision, setAgentLaunchDecision] = useState<"pending" | "running" | "cancelled">("pending");
+  const [agentDialog, setAgentDialog] = useState<{ name: string; nodeTitle: string } | null>(null);
+  const [fullScreenAttachment, setFullScreenAttachment] = useState<Resource | null>(null);
+  const [boardMessages, setBoardMessages] = useState([
+    { author: "博一新生林沐", role: "user", text: "我已整理 Lost in the Middle、RULER 和 NeedleBench，下一步想先确认数据许可。" },
+    { author: "博三学长周启", role: "user", text: "建议先启动数据集调研 Agent，并把上下文长度和证据位置设为控制变量。" },
+    { author: "项目助手", role: "agent", text: "我已生成数据集调研任务方案。是否现在启动数据集调研 Agent？" },
+    { author: "导师陈教授", role: "user", text: "重点记录许可、评测指标和算力预算，结论需要保留失败分支。" },
+  ]);
+
+  useEffect(() => {
+    const handleEmbeddedAgentNavigation = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.data?.type !== "wispaper:close-agent-dialog") return;
+      setAgentDialog(null);
+    };
+    window.addEventListener("message", handleEmbeddedAgentNavigation);
+    return () => window.removeEventListener("message", handleEmbeddedAgentNavigation);
+  }, []);
   const [mapScale, setMapScale] = useState(0.9);
   const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
@@ -227,12 +390,210 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
   const suppressNodeClick = useRef<string | null>(null);
   const snapTargetRef = useRef<string | null>(null);
   const saveTimer = useRef<number>();
+  const previousNodeCount = useRef(nodes.length);
   const selected = nodes.find((node) => node.id === selectedId) ?? null;
   const [agentActivities, setAgentActivities] = useState<Record<string, AgentActivity>>(() => {
     try { return JSON.parse(window.localStorage.getItem("wispaper-canvas-agent-activity") || "{}"); } catch { return {}; }
   });
 
+  useEffect(() => {
+    if (previousNodeCount.current === nodes.length) return;
+    previousNodeCount.current = nodes.length;
+    if (!nodes.length) return;
+    const layout = calculateTreeLayout(nodes, expanded);
+    const root = nodes.find((node) => node.root);
+    if (root && nodePositions[root.id]) layout[root.id] = nodePositions[root.id];
+    setNodePositions(layout);
+  }, [nodes.length]);
+
+  const openNodeNoteTab = (node: TreeNode) => {
+    const tab: CanvasSidebarTab = { id: `note-${node.id}`, type: "note", nodeId: node.id, title: node.title };
+    setSidebarTabs((tabs) => [...tabs.filter((item) => item.type !== "note"), tab]);
+    setSelectedIds(new Set([node.id]));
+    setSelectedId(node.id);
+    setActiveSidebarTab(tab.id);
+    setMessageBoardCollapsed(false);
+  };
+
+  const openNodeAgentTab = (node: TreeNode, agentName = "实验复现 Agent") => {
+    setAgentDialog({ name: agentName, nodeTitle: node.title });
+  };
+
+  const openAttachmentPreview = (resource: Resource) => {
+    setFullScreenAttachment(resource);
+  };
+
+  const closeSidebarTab = (tabId: string) => {
+    setSidebarTabs((tabs) => tabs.filter((tab) => tab.id !== tabId));
+    if (activeSidebarTab === tabId) setActiveSidebarTab("canvas-agent");
+  };
+
+  const runCanvasAgent = () => {
+    const prompt = canvasAgentInput.trim();
+    if (!prompt) return;
+    setCanvasAgentMessages((messages) => [...messages, { role: "user", text: prompt }, { role: "agent", text: "已更新画布结构，并将本次调整同步到相关节点。" }]);
+    setCanvasAgentInput("");
+    setNodes((items) => items.map((node) => node.root ? { ...node, updatedAt: Date.now() } : node));
+    showToast("项目助手 已更新科研画布");
+  };
+
+  const runCanvasWorkflowDemo = (delayMs = 1200) => {
+    workflowTimers.current.forEach((timer) => window.clearTimeout(timer));
+    workflowTimers.current = [];
+    const rootId = nodes.find((node) => node.root)?.id ?? "root";
+    const additions: TreeNode[] = [
+      { id: "direction-vector", title: "方向一：自适应向量记忆检索", category: "研究方向", tags: ["Agent调研"], updatedAt: Date.now(), parentId: rootId, note: "# 自适应向量记忆检索\n\n由方向调研 Agent 汇总相关工作与研究空白。", resources: [] },
+      { id: "direction-graph", title: "方向二：时序知识图谱记忆", category: "研究方向", tags: ["Agent调研"], updatedAt: Date.now(), parentId: rootId, note: "# 时序知识图谱记忆\n\n由方向调研 Agent 分析时间推理与冲突消解。", resources: [] },
+      { id: "direction-summary", title: "方向三：可追溯层级摘要", category: "研究方向", tags: ["Agent调研"], updatedAt: Date.now(), parentId: rootId, note: "# 可追溯层级摘要\n\n由方向调研 Agent 验证摘要漂移问题。", resources: [] },
+      { id: "workflow-idea", title: "Idea：基于访问反馈的动态记忆路由", category: "Idea", tags: ["值得研究"], updatedAt: Date.now(), parentId: "direction-vector", note: "# 动态记忆路由\n\n根据历史访问反馈动态选择记忆层与检索策略。", resources: [] },
+      { id: "workflow-dataset", title: "数据集：LoCoMo + LongMemEval", category: "数据集", tags: ["已确认"], updatedAt: Date.now(), parentId: "workflow-idea", note: "# 数据集\n\n使用 LoCoMo 与 LongMemEval 验证跨会话记忆能力。", resources: [] },
+      { id: "workflow-experiment", title: "实验：动态路由与固定检索对照", category: "实验", tags: ["结果已记录"], updatedAt: Date.now(), parentId: "workflow-dataset", note: "# 实验记录\n\n动态路由方案在记忆问答与约束遵循上优于固定检索基线。", resources: [] },
+    ];
+    const positions: Record<string, NodePosition> = {
+      "direction-vector": { x: 430, y: 40 }, "direction-graph": { x: 430, y: 220 }, "direction-summary": { x: 430, y: 400 },
+      "workflow-idea": { x: 760, y: 40 }, "workflow-dataset": { x: 1090, y: 40 }, "workflow-experiment": { x: 1420, y: 40 },
+    };
+    const stages = [additions.slice(0, 3), additions.slice(3, 4), additions.slice(4, 5), additions.slice(5, 6)];
+    const stageMessages = [
+      "已创建 3 个候选研究方向，并分别启动方向调研 Agent。",
+      "方向调研完成，已提炼出值得研究的动态记忆路由 Idea。",
+      "已为该 Idea 匹配 LoCoMo 与 LongMemEval 数据集。",
+      "已完成对照实验设计，并将实验结果写入画布。",
+    ];
+    setCanvasAgentMessages((messages) => [...messages, { role: "user", text: "从这个研究问题开始，完成研究方向探索到实验记录的全过程。" }]);
+    setActiveSidebarTab("canvas-agent");
+    setSidebarCollapsed(false);
+    showToast(`画布演示已开始，每步间隔 ${delayMs / 1000} 秒`);
+    stages.forEach((stage, index) => {
+      const timer = window.setTimeout(() => {
+        setNodes((items) => [...items, ...stage.filter((addition) => !items.some((item) => item.id === addition.id))]);
+        setExpanded((items) => new Set([...items, rootId, ...stage.map((node) => node.id)]));
+        setNodePositions((current) => ({ ...current, ...Object.fromEntries(stage.map((node) => [node.id, positions[node.id]])) }));
+        setCanvasAgentMessages((messages) => [...messages, { role: "agent", text: stageMessages[index] }]);
+        if (index === stages.length - 1) showToast("项目助手 已完成完整研究流程");
+      }, delayMs * (index + 1));
+      workflowTimers.current.push(timer);
+    });
+  };
+
+  const runFullResearchUsecase = (delayMs = 1200) => {
+    workflowTimers.current.forEach((timer) => window.clearTimeout(timer));
+    workflowTimers.current = [];
+    const now = Date.now();
+    const stages: TreeNode[][] = [
+      [{ id: "usecase-question", title: "研究问题：如何提升长周期 Agent 的记忆可靠性？", category: "研究问题", tags: ["起点"], updatedAt: now, parentId: null, root: true, note: "# 研究问题\n\n如何提升长周期 Agent 的记忆可靠性？", resources: [] }],
+      [{ id: "usecase-literature", title: "文献调研：长期记忆方法与评测", category: "文献调研", tags: ["Agent运行中"], updatedAt: now, parentId: "usecase-question", note: "# 文献调研\n\nAgent 正在检索长期记忆架构、评测基准与典型失败模式。", resources: [] }],
+      [
+        { id: "usecase-point-1", title: "推荐点一：动态记忆路由", category: "研究方向", tags: ["独立Agent"], updatedAt: now, parentId: "usecase-literature", note: "# 动态记忆路由\n\n根据任务和访问反馈动态选择记忆层。", resources: [] },
+        { id: "usecase-point-2", title: "推荐点二：冲突事实版本链", category: "研究方向", tags: ["独立Agent"], updatedAt: now, parentId: "usecase-literature", note: "# 冲突事实版本链\n\n显式管理事实的有效时间与版本。", resources: [] },
+        { id: "usecase-point-3", title: "推荐点三：可追溯层级摘要", category: "研究方向", tags: ["独立Agent"], updatedAt: now, parentId: "usecase-literature", note: "# 可追溯层级摘要\n\n降低递归摘要的信息漂移。", resources: [] },
+      ],
+      [1, 2, 3].map((index) => ({ id: `usecase-design-${index}`, title: `实验设计 ${index}：基线、变量与指标`, category: "实验设计", tags: ["Agent完成"], updatedAt: now, parentId: `usecase-point-${index}`, note: "# 实验设计\n\n定义对照基线、自变量、评价指标与消融实验。", resources: [] })),
+      [
+        { id: "usecase-dataset-1", title: "数据集 1：LoCoMo / LongMemEval", category: "数据集", tags: ["已匹配"], updatedAt: now, parentId: "usecase-design-1", note: "# 数据集\n\nAgent 已完成数据集查找与适用性检查。", resources: [] },
+        { id: "usecase-dataset-2", title: "数据集 2：内部会话集（授权失败）", category: "失败记录", tags: ["访问被拒"], updatedAt: now, parentId: "usecase-design-2", note: "# 数据集授权失败\n\n内部会话数据未获得隐私审批，不能用于本轮实验。", resources: [] },
+        { id: "usecase-dataset-2-alt", title: "替代数据集：MSC + PERSONA-CHAT", category: "数据集", tags: ["替代方案"], updatedAt: now, parentId: "usecase-design-2", note: "# 替代数据集\n\n改用公开数据集继续验证冲突事实版本链。", resources: [] },
+        { id: "usecase-dataset-3", title: "数据集 3：QMSum 长对话子集", category: "数据集", tags: ["已匹配"], updatedAt: now, parentId: "usecase-design-3", note: "# 数据集\n\n用于测试层级摘要的可追溯性和信息漂移。", resources: [] },
+      ],
+      [
+        { id: "usecase-experiment-1", title: "运行实验 1：训练、评测与消融", category: "实验", tags: ["运行完成"], updatedAt: now, parentId: "usecase-dataset-1", note: "# 实验运行\n\n已完成基线、主实验与关键消融。", resources: [] },
+        { id: "usecase-experiment-2-failed", title: "实验 2A：全量图构建（显存溢出）", category: "失败记录", tags: ["OOM"], updatedAt: now, parentId: "usecase-dataset-2-alt", note: "# 实验失败\n\n全量图构建出现显存溢出，保留日志并调整方案。", resources: [] },
+        { id: "usecase-experiment-2", title: "实验 2B：分批构图降采样重试", category: "实验", tags: ["重试完成"], updatedAt: now, parentId: "usecase-dataset-2-alt", note: "# 重试实验\n\n采用分批构图与邻居降采样后完成实验。", resources: [] },
+        { id: "usecase-experiment-3", title: "运行实验 3：层级摘要对照", category: "实验", tags: ["无显著提升"], updatedAt: now, parentId: "usecase-dataset-3", note: "# 实验运行\n\n主要指标未达到预设提升阈值。", resources: [] },
+      ],
+      [
+        { id: "usecase-result-1", title: "结果分析 1：动态路由显著提升", category: "结果分析", tags: ["正向结果"], updatedAt: now, parentId: "usecase-experiment-1", note: "# 结果分析\n\n动态路由在记忆问答和约束遵循上取得显著提升。\n\n完整指标、各随机种子结果与消融明细见 [文件 · experiment-results.xlsx](#resource-experiment-results-xlsx)。", resources: [{ id: "experiment-results-xlsx", kind: "文件", title: "experiment-results.xlsx" }] },
+        { id: "usecase-result-2-failure", title: "失败分析：全量图方案资源不可行", category: "失败记录", tags: ["保留结论"], updatedAt: now, parentId: "usecase-experiment-2-failed", note: "# 失败分析\n\n全量图方案资源开销不可接受，转向稀疏构图。", resources: [] },
+        { id: "usecase-result-2", title: "结果分析 2：稀疏构图可行但收益有限", category: "结果分析", tags: ["继续观察"], updatedAt: now, parentId: "usecase-experiment-2", note: "# 结果分析\n\n重试成功，但收益不足以覆盖额外复杂度。", resources: [] },
+        { id: "usecase-result-3", title: "失败 Case：层级摘要未优于平面摘要", category: "失败记录", tags: ["假设未成立"], updatedAt: now, parentId: "usecase-experiment-3", note: "# 失败 Case\n\n层级摘要没有显著优于平面摘要，记录反例并停止扩展。", resources: [] },
+      ],
+    ];
+    const positions: Record<string, NodePosition> = { "usecase-question": { x: 40, y: 250 }, "usecase-literature": { x: 340, y: 250 } };
+    [1, 2, 3].forEach((index) => {
+      const y = [40, 250, 560][index - 1];
+      positions[`usecase-point-${index}`] = { x: 640, y };
+      positions[`usecase-design-${index}`] = { x: 940, y };
+      positions[`usecase-dataset-${index}`] = { x: 1240, y };
+      positions[`usecase-experiment-${index}`] = { x: 1540, y };
+      positions[`usecase-result-${index}`] = { x: 1840, y };
+    });
+    positions["usecase-dataset-2-alt"] = { x: 1240, y: 390 };
+    positions["usecase-experiment-2-failed"] = { x: 1540, y: 250 };
+    positions["usecase-experiment-2"] = { x: 1540, y: 390 };
+    positions["usecase-result-2-failure"] = { x: 1840, y: 250 };
+    positions["usecase-result-2"] = { x: 1840, y: 390 };
+    const messages = [
+      "已创建空白项目，并写入核心研究问题。",
+      "已启动文献调研 Agent，开始检索相关方法、数据集与研究空白。",
+      "文献调研完成，推荐 3 个研究点，并为每个研究点启动独立 Agent。",
+      "3 个方向 Agent 已分别完成实验设计。",
+      "数据集查找出现授权失败，已保留失败节点并切换到公开替代数据集。",
+      "实验过程中出现显存溢出；失败日志已记录，降采样重试完成。",
+      "结果分析完成：一条方向获得正向结果，两条方向收益有限或假设未成立；Excel 实验结果已插入结果笔记。",
+    ];
+    const focusNodes = stages.map((stage) => stage[0]);
+    const agentNames = ["项目助手", "文献调研 Agent", "方向研究 Agent", "实验设计 Agent", "数据集查找 Agent", "实验运行 Agent", "结果分析 Agent"];
+    const stageInterval = delayMs * 2.5;
+    setNodes([]);
+    setExpanded(new Set());
+    setNodePositions({});
+    setCanvasAgentMessages([{ role: "agent", text: "完整研究用例已启动。我会按阶段更新画布。" }]);
+    setActiveSidebarTab("canvas-agent");
+    setSidebarCollapsed(false);
+    showToast(`完整研究用例已启动，每步间隔 ${delayMs / 1000} 秒`);
+    stages.forEach((stage, index) => {
+      const stageTimer = window.setTimeout(() => {
+        setNodes((items) => [...items, ...stage]);
+        setExpanded((items) => new Set([...items, ...stage.map((node) => node.id)]));
+        setNodePositions((current) => ({ ...current, ...Object.fromEntries(stage.map((node) => [node.id, positions[node.id]])) }));
+        setCanvasAgentMessages((items) => [...items, { role: "agent", text: messages[index] }]);
+      }, delayMs + stageInterval * index);
+      const noteTimer = window.setTimeout(() => openNodeNoteTab(focusNodes[index]), delayMs * 1.4 + stageInterval * index);
+      const agentTimer = window.setTimeout(() => {
+        if (index === 0) { setActiveSidebarTab("canvas-agent"); setSidebarCollapsed(false); }
+        else openNodeAgentTab(focusNodes[index], agentNames[index]);
+        if (index === stages.length - 1) showToast("多 Agent 完整研究用例已完成");
+      }, delayMs * 2.1 + stageInterval * index);
+      workflowTimers.current.push(stageTimer, noteTimer, agentTimer);
+    });
+  };
+
+  useEffect(() => {
+    const handleCanvasWorkflowDemo = (event: Event) => runCanvasWorkflowDemo((event as CustomEvent<{ delayMs?: number }>).detail?.delayMs ?? 1200);
+    const handleFullResearchUsecase = (event: Event) => runFullResearchUsecase((event as CustomEvent<{ delayMs?: number }>).detail?.delayMs ?? 1200);
+    window.addEventListener("wispaper:mock-canvas-workflow-demo", handleCanvasWorkflowDemo);
+    window.addEventListener("wispaper:mock-run-full-research-usecase", handleFullResearchUsecase);
+    return () => {
+      window.removeEventListener("wispaper:mock-canvas-workflow-demo", handleCanvasWorkflowDemo);
+      window.removeEventListener("wispaper:mock-run-full-research-usecase", handleFullResearchUsecase);
+    };
+  }, [nodes]);
+  useEffect(() => () => workflowTimers.current.forEach((timer) => window.clearTimeout(timer)), []);
+
   useEffect(() => setEditingNodeMeta(false), [selectedId]);
+  useEffect(() => {
+    const handleMockAgentEditing = (event: Event) => {
+      const detail = (event as CustomEvent<{ active?: boolean }>).detail;
+      setMockAgentEditing(detail?.active === true);
+      if (detail?.active === true) setMockCollaboratorEditing(false);
+    };
+    const handleMockCollaboratorEditing = (event: Event) => {
+      const detail = (event as CustomEvent<{ active?: boolean }>).detail;
+      setMockCollaboratorEditing(detail?.active === true);
+      if (detail?.active === true) setMockAgentEditing(false);
+    };
+    window.addEventListener("wispaper:mock-agent-block-editing", handleMockAgentEditing);
+    window.addEventListener("wispaper:mock-collaborator-block-editing", handleMockCollaboratorEditing);
+    return () => {
+      window.removeEventListener("wispaper:mock-agent-block-editing", handleMockAgentEditing);
+      window.removeEventListener("wispaper:mock-collaborator-block-editing", handleMockCollaboratorEditing);
+    };
+  }, []);
+  useEffect(() => {
+    if (!focusNodeId || !nodes.some((node) => node.id === focusNodeId)) return;
+    setSelectedIds(new Set([focusNodeId]));
+    setSelectedId(focusNodeId);
+  }, [focusNodeId, focusRequest, nodes]);
   useEffect(() => {
     const syncAgentActivities = () => {
       try { setAgentActivities(JSON.parse(window.localStorage.getItem("wispaper-canvas-agent-activity") || "{}")); } catch { setAgentActivities({}); }
@@ -272,6 +633,7 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
   const showToast = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2200); };
   const nodeCategory = (node: TreeNode) => node.category || defaultNodeCategories[node.id] || "探索";
   const demoAgentNodeId = visibleNodes.find((node) => nodeCategory(node).includes("实验"))?.id;
+  const workflowAgentNodeIds = new Set([demoAgentNodeId, "direction-vector", "direction-graph", "direction-summary", "usecase-literature", "usecase-point-1", "usecase-point-2", "usecase-point-3"]);
   const nodeTags = (node: TreeNode) => node.tags || defaultNodeTags[node.id] || [];
   const categoryIcon = (category: string): React.ElementType => category.includes("实验") ? FlaskConical : category.includes("假设") ? Lightbulb : category.includes("研究") || category.includes("问题") ? Search : category.includes("失败") ? X : FolderTree;
   const categoryColorOptions: Array<{ id: CategoryColor; label: string; dot: string }> = [
@@ -507,8 +869,7 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
           return;
         }
         if (node.root) {
-          setSelectedIds(new Set([node.id]));
-          setSelectedId(node.id);
+          openNodeNoteTab(node);
           return;
         }
         const position = nodePositions[node.id]; if (!position) return;
@@ -548,8 +909,7 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
           window.setTimeout(() => { if (suppressNodeClick.current === node.id) suppressNodeClick.current = null; }, 0);
           if (snapTargetRef.current) reparentNode(node.id, snapTargetRef.current);
         } else {
-          setSelectedIds(new Set([node.id]));
-          setSelectedId(node.id);
+          openNodeNoteTab(node);
         }
         nodeDrag.current = null; snapTargetRef.current = null; setDraggedNodeId(null); setSnapTargetId(null);
         try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* already released */ }
@@ -562,13 +922,12 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
       <div onClick={(event) => {
         if (suppressNodeClick.current === node.id) { suppressNodeClick.current = null; return; }
         if (event.metaKey) return;
-        setSelectedIds(new Set([node.id]));
-        setSelectedId(node.id);
+        openNodeNoteTab(node);
       }} className="flex min-w-0 flex-1 cursor-pointer flex-col">
         <span className={`inline-flex w-fit max-w-full items-center gap-1.5 truncate rounded-full px-2 py-1 text-[10px] font-semibold ${categoryClass(nodeCategory(node), node.categoryColor)}`}><CategoryIcon className="h-3 w-3 shrink-0" />{nodeCategory(node)}</span>
         <span className="mt-2 line-clamp-2 text-[15px] font-semibold leading-5">{node.title}</span>
         <span className="mt-2 flex min-w-0 gap-1">{nodeTags(node).slice(0, 2).map((tag) => <span key={tag} className="max-w-24 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">#{tag}</span>)}</span>
-        <span className="mt-auto flex items-center justify-between gap-2 border-t border-current/10 pt-2 text-[9px] opacity-70"><span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{updatedLabel(node)}</span>{node.id === demoAgentNodeId && <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-medium text-blue-700"><LoaderCircle className="h-3 w-3 animate-spin" /><span>GPU实验</span></span>}</span>
+        <span className="mt-auto flex items-center justify-between gap-2 border-t border-current/10 pt-2 text-[9px] opacity-70"><span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{updatedLabel(node)}</span>{workflowAgentNodeIds.has(node.id) && <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); openNodeAgentTab(node, node.id === demoAgentNodeId ? "实验复现 Agent" : "方向调研 Agent"); }} className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-medium text-blue-700 hover:bg-blue-100" aria-label={`打开 ${node.id === demoAgentNodeId ? "GPU 实验" : "方向调研"} Agent 对话`}><LoaderCircle className="h-3 w-3 animate-spin" /><span>{node.id === demoAgentNodeId ? "实验复现" : "调研中"}</span></button>}</span>
       </div>
       <button onPointerDown={(event) => event.stopPropagation()} onClick={() => addNode(node, false)} className="absolute -right-4 top-1/2 z-20 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-blue-600 text-white opacity-0 shadow-lg transition-opacity hover:bg-blue-700 group-hover:opacity-100" title="添加子节点"><Plus className="h-4 w-4" /></button>
       {nodeChildren.length > 0 && <button onPointerDown={(event) => event.stopPropagation()} onClick={() => setExpanded((items) => { const next = new Set(items); next.has(node.id) ? next.delete(node.id) : next.add(node.id); return next; })} className="absolute -left-3 top-1/2 z-10 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 opacity-0 shadow-sm group-hover:opacity-100" title={isOpen ? "折叠分支" : "展开分支"}>{isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}</button>}
@@ -619,9 +978,10 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
   </div>;
   };
 
-  const NoteWorkspaceContent = () => <>
+  const NoteWorkspaceContent = (showAgentLock = false) => <>
     <FullScreenMetadataEditor />
-    <BlockNoteEditor key={selected?.id} initialMarkdown={selected?.note ?? draft} availableResources={resources} onChange={updateDraft} onAttach={attachResource} />
+    <BlockNoteEditor key={selected?.id} initialMarkdown={selected?.note ?? draft} availableResources={resources} onChange={updateDraft} onAttach={attachResource} compact={!showAgentLock} remoteEditor={showAgentLock ? (mockAgentEditing ? { type: "agent", name: "数据集调研 Agent" } : mockCollaboratorEditing ? { type: "collaborator", name: "林知夏" } : null) : null} />
+    {!!selected?.resources.filter((resource) => resource.kind === "文件").length && <div className="mt-5 space-y-3"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">笔记附件</p>{selected.resources.filter((resource) => resource.kind === "文件").map((resource) => <button key={resource.id} type="button" onClick={() => openAttachmentPreview(resource)} className="group block w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm transition hover:border-emerald-300 hover:shadow-md"><span className="flex items-center gap-3 border-b border-slate-100 px-4 py-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white"><File className="h-4 w-4" /></span><span className="min-w-0 flex-1"><strong className="block truncate text-xs font-semibold text-slate-800">{resource.title}</strong><span className="mt-0.5 block text-[10px] text-slate-400">附件卡片 · 点击全屏查看</span></span><Maximize2 className="h-4 w-4 text-slate-400 transition group-hover:text-emerald-600" /></span><span className="pointer-events-none block max-h-56 overflow-hidden bg-slate-50/70 p-3"><ProjectAttachmentPreview resource={resource} /></span></button>)}</div>}
     <div className="mt-6 flex items-center justify-end gap-2 text-xs text-slate-400">{saveState === "saving" ? <><Clock3 className="h-3.5 w-3.5" />自动保存中…</> : <><Check className="h-3.5 w-3.5 text-emerald-500" />已自动保存</>}</div>
   </>;
 
@@ -649,6 +1009,17 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
       <div className="flex items-start justify-between"><div><h3 className="text-xl font-semibold">选择科研画布模板</h3><p className="mt-1 text-sm text-slate-500">模板会生成可编辑、可拖拽的初始节点。</p></div><button onClick={() => setShowTemplatePicker(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
       <div className="mt-6 grid grid-cols-2 gap-4">{canvasTemplateBlueprints.map((template, index) => <button key={template.id} onClick={() => applyCanvasTemplate(template.id)} className="group rounded-2xl border border-slate-200 p-5 text-left hover:border-blue-400 hover:shadow-md"><span className={`grid h-10 w-10 place-items-center rounded-xl ${index === 0 ? "bg-violet-100 text-violet-700" : index === 1 ? "bg-rose-100 text-rose-700" : index === 2 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"}`}><FlaskConical className="h-5 w-5" /></span><h4 className="mt-5 font-semibold group-hover:text-blue-700">{template.title}</h4><p className="mt-2 text-sm leading-6 text-slate-500">{template.description}</p><p className="mt-4 text-xs text-slate-400">{template.nodes.length} 个初始节点</p></button>)}</div>
     </div></div>}
+  </div>;
+
+  if (noteOnly || (overlayNote && selected)) return <div className="flex h-full min-h-0 w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex items-center justify-end gap-2 border-b border-slate-200 bg-white px-5 py-3">{overlayNote && <button type="button" onClick={() => { setSelectedId(null); setSelectedIds(new Set()); }} className="mr-1 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100" aria-label="返回科研画布"><ArrowLeft className="h-3.5 w-3.5" />返回科研画布</button>}<span className="mr-auto text-[11px] text-slate-400">可直接编辑 · 自动保存</span><button onClick={() => setFullScreen(true)} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50" title="全屏查看" aria-label="全屏查看"><Maximize2 className="h-4 w-4" /></button></div>
+    <div className="min-h-0 flex-1 overflow-auto bg-[#fafbfc] p-4">
+      {selected ? <article className="min-h-full w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">{NoteWorkspaceContent(!fullScreen)}</article> : <div className="grid h-full place-items-center text-sm text-slate-400">请选择科研笔记</div>}
+    </div>
+    {fullScreen && selected && <div className="fixed inset-0 z-[1150] flex flex-col bg-white">
+      <header className="flex h-16 items-center justify-between border-b border-slate-200 px-6"><div className="flex min-w-0 items-center gap-3"><button onClick={() => setFullScreen(false)} className="rounded-lg p-2 hover:bg-slate-100" aria-label="退出全屏"><X className="h-5 w-5" /></button><div><p className="text-xs text-slate-400">{projectTitle} / 科研笔记</p><h2 className="font-semibold">{selected.title}</h2></div></div><div className="flex items-center gap-3"><span className="flex items-center gap-1.5 text-xs text-slate-500">{saveState === "saving" ? <><Clock3 className="h-4 w-4" />自动保存中…</> : <><Check className="h-4 w-4 text-emerald-500" />已自动保存</>}</span></div></header>
+      <main className="flex-1 overflow-auto bg-[#f8fafc] p-8"><article className="relative mx-auto min-h-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">{NoteWorkspaceContent(true)}</article></main>
+    </div>}
   </div>;
 
   return <div className="flex h-full min-h-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -770,18 +1141,64 @@ export function ResearchTree({ projectId, projectTitle, initialTemplate = "demo"
         <div className="pointer-events-none absolute bottom-3 left-4 text-[11px] font-normal tracking-wide text-slate-300/80">拖动空白区域平移 · 滚轮缩放 · ⌘ 点击/拖动框选 · 多选后拖动同步移动</div>
       </div>
     </section>
-    {selected && <section className="flex min-w-[390px] flex-1 flex-col bg-[#fafbfc]">
-      <>
-        <div className="flex items-center justify-end gap-2 border-b border-slate-200 bg-white px-5 py-3"><span className="mr-auto text-[11px] text-slate-400">可直接编辑 · 自动保存</span><button onClick={() => setFullScreen(true)} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50" title="全屏查看" aria-label="全屏查看"><Maximize2 className="h-4 w-4" /></button></div>
-        <div className="flex-1 overflow-auto p-5">
-          <article className="mx-auto min-h-[440px] max-w-3xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"><NoteWorkspaceContent /></article>
-        </div>
-      </>
-    </section>}
+    <aside className={`flex shrink-0 border-l border-slate-200 bg-white transition-[width] duration-300 ${messageBoardCollapsed ? "w-[64px]" : "w-[456px]"}`} aria-label="科研画布右侧栏">
+      {!messageBoardCollapsed && <div className="flex min-w-0 flex-1 flex-col">
+        {activeSidebarTab.startsWith("note-") && selected ? <>
+          <header className="flex items-center gap-3 border-b border-slate-200 px-4 py-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-white"><FileText className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="text-[10px] font-medium text-blue-600">节点笔记</p><h2 className="truncate text-sm font-semibold">{selected.title}</h2></div><button onClick={() => setFullScreen(true)} className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50" aria-label="全屏查看笔记" title="全屏查看"><Maximize2 className="h-4 w-4" /></button></header>
+          <div className="min-h-0 flex-1 overflow-auto bg-[#fafbfc] p-3"><article className="min-h-full rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">{NoteWorkspaceContent(false)}</article></div>
+        </> : activeSidebarTab === "all-agents" ? <>
+          <header className="flex items-center gap-3 border-b border-slate-200 px-4 py-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-600 text-white"><Users className="h-4 w-4" /></span>
+            <div className="min-w-0 flex-1"><h2 className="text-sm font-semibold">全部 Agents</h2><p className="truncate text-[10px] text-slate-400">当前项目共 {projectAgents.length} 个 Agent</p></div>
+
+          </header>
+          <div className="min-h-0 flex-1 overflow-auto bg-slate-50/70 p-3">
+            <div className="space-y-2">
+              {[...projectAgents].sort((a, b) => b.lastUsedAt - a.lastUsedAt).map((agent) => (
+                <button key={agent.id} type="button" onClick={() => setAgentDialog({ name: agent.name, nodeTitle: projectTitle })} className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left transition hover:border-violet-200 hover:bg-violet-50/40 hover:shadow-sm">
+                  <span className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-100 text-violet-700"><Bot className="h-5 w-5" /><span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${agent.status === "在线" || agent.status === "运行中" ? "bg-emerald-500" : agent.status === "等待中" ? "bg-amber-400" : "bg-slate-300"}`} /></span>
+                  <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><strong className="truncate text-xs font-semibold text-slate-800">{agent.name}</strong><span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-medium ${agent.status === "在线" || agent.status === "运行中" ? "bg-emerald-50 text-emerald-700" : agent.status === "等待中" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500"}`}>{agent.status}</span></span><span className="mt-1 block truncate text-[10px] text-slate-400">{agent.description}</span></span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-violet-500" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </> : <>
+          <header className="flex items-center gap-3 border-b border-slate-200 px-4 py-3"><span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-white"><MessageSquare className="h-4 w-4" /></span><div className="min-w-0 flex-1"><h2 className="text-sm font-semibold">项目留言板</h2><p className="truncate text-[10px] text-slate-400">成员与 Agent 共享</p></div></header>
+          <div className="min-h-0 flex-1 space-y-3 overflow-auto bg-slate-50/70 p-3">{boardMessages.map((message, index) => <article key={index} className="rounded-xl border border-slate-200 bg-white p-3"><div className="flex items-center gap-2"><span className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-semibold text-white ${message.role === "agent" ? "bg-violet-600" : "bg-slate-700"}`}>{message.role === "agent" ? <Bot className="h-3.5 w-3.5" /> : message.author.slice(-1)}</span><strong className="min-w-0 flex-1 truncate text-xs">{message.author}</strong><span className="text-[9px] text-slate-400">刚刚</span></div><p className="mt-2 text-[11px] leading-5 text-slate-600">{message.text}</p>{message.role === "agent" && index === 2 && agentLaunchDecision === "pending" && <div className="mt-3 grid grid-cols-2 gap-2"><button onClick={() => { setAgentLaunchDecision("running"); setBoardMessages((items) => [...items, { author: "数据集调研 Agent", role: "agent", text: "任务已启动，正在检查 RULER 与 NeedleBench 的数据许可和评测脚本。" }]); }} className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-700">启动</button><button onClick={() => setAgentLaunchDecision("cancelled")} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">取消</button></div>}{message.role === "agent" && index === 2 && agentLaunchDecision === "running" && <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-medium text-emerald-700"><LoaderCircle className="h-3 w-3 animate-spin" />Agent 运行中</span>}{message.role === "agent" && index === 2 && agentLaunchDecision === "cancelled" && <span className="mt-2 inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium text-slate-500">已取消启动</span>}</article>)}</div>
+          <footer className="relative border-t border-slate-200 p-3">{boardMentionOpen && <div className="absolute bottom-[62px] left-3 right-3 z-20 rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl"><p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Mention 项目成员或 Agent</p>{[
+            { name: "博一新生林沐", type: "项目成员" }, { name: "博三学长周启", type: "项目成员" }, { name: "导师陈教授", type: "项目成员" }, { name: "项目助手", type: "Agent" }, { name: "数据集调研 Agent", type: "Agent" }, { name: "实验复现 Agent", type: "Agent" },
+          ].map((person) => <button key={person.name} onClick={() => { setMessageDraft((value) => `${value.replace(/@[^@]*$/, "")}@${person.name} `); setBoardMentionOpen(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-violet-50"><span className={`grid h-7 w-7 place-items-center rounded-full text-[10px] font-semibold text-white ${person.type === "Agent" ? "bg-violet-600" : "bg-slate-700"}`}>{person.type === "Agent" ? <Bot className="h-3.5 w-3.5" /> : person.name.slice(-1)}</span><span className="min-w-0 flex-1 truncate text-xs font-medium">{person.name}</span><span className="text-[10px] text-slate-400">{person.type}</span></button>)}</div>}<div className="flex gap-2"><input value={messageDraft} onChange={(event) => { const value = event.target.value; setMessageDraft(value); setBoardMentionOpen(value.endsWith("@")); }} onKeyDown={(event) => { if (event.key === "Escape") setBoardMentionOpen(false); if (event.key === "Enter" && messageDraft.trim()) { setBoardMessages((items) => [...items, { author: "博一新生林沐", role: "user", text: messageDraft.trim() }]); setMessageDraft(""); setBoardMentionOpen(false); } }} placeholder="给成员和 Agent 留言，输入 @ Mention" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-violet-400" /><button onClick={() => { if (!messageDraft.trim()) return; setBoardMessages((items) => [...items, { author: "博一新生林沐", role: "user", text: messageDraft.trim() }]); setMessageDraft(""); }} className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-white"><Send className="h-4 w-4" /></button></div></footer>
+        </>}
+      </div>}
+      <nav className="flex w-[64px] shrink-0 flex-col items-center gap-2 border-l border-slate-200 bg-white py-3" aria-label="科研画布右侧 Tab">
+        <button onClick={() => setMessageBoardCollapsed((value) => !value)} className={`rounded-xl p-3 transition ${messageBoardCollapsed ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-slate-100"}`} aria-label={messageBoardCollapsed ? "展开右侧栏" : "收起右侧栏"} title={messageBoardCollapsed ? "展开右侧栏" : "收起右侧栏"}>{messageBoardCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}</button>
+        <span className="mb-1 h-px w-7 bg-slate-200" />
+        <button onClick={() => setAgentDialog({ name: "项目助手", nodeTitle: projectTitle })} className="group relative mb-1 grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg" aria-label="打开项目助手" title="项目助手"><Bot className="h-5 w-5" /><span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-500" /><span className="pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-[10px] text-white opacity-0 transition group-hover:opacity-100">项目助手</span></button>
+        <span className="mb-1 h-px w-7 bg-slate-200" />
+        <button onClick={() => { setActiveSidebarTab("message-board"); setMessageBoardCollapsed(false); }} className={`relative rounded-xl p-3 ${!messageBoardCollapsed && activeSidebarTab === "message-board" ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-slate-100"}`} aria-label="项目留言板"><MessageSquare className="h-4 w-4" /><span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] text-white">2</span></button>
+        <button onClick={() => { setActiveSidebarTab("all-agents"); setMessageBoardCollapsed(false); }} className={`group relative rounded-xl p-3 ${!messageBoardCollapsed && activeSidebarTab === "all-agents" ? "bg-violet-600 text-white" : "text-slate-500 hover:bg-slate-100"}`} aria-label="全部 Agents" title="全部 Agents"><Users className="h-4 w-4" /><span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-violet-600 px-1 text-[9px] text-white">{projectAgents.length}</span><span className="pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2 py-1 text-[10px] text-white opacity-0 transition group-hover:opacity-100">全部 Agents</span></button>
+        {sidebarTabs.filter((tab) => tab.type === "note").map((tab) => <button key={tab.id} onClick={() => { setSelectedId(tab.nodeId); setSelectedIds(new Set([tab.nodeId])); setActiveSidebarTab(tab.id); setMessageBoardCollapsed(false); }} className={`rounded-xl p-3 ${!messageBoardCollapsed && activeSidebarTab === tab.id ? "bg-blue-600 text-white" : "text-slate-500 hover:bg-slate-100"}`} aria-label={`节点笔记：${tab.title}`} title={tab.title}><FileText className="h-4 w-4" /></button>)}
+      </nav>
+    </aside>
 
     {fullScreen && selected && <div className="fixed inset-0 z-[1150] flex flex-col bg-white">
-      <header className="flex h-16 items-center justify-between border-b border-slate-200 px-6"><div className="flex min-w-0 items-center gap-3"><button onClick={() => setFullScreen(false)} className="rounded-lg p-2 hover:bg-slate-100"><X className="h-5 w-5" /></button><div><p className="text-xs text-slate-400">{projectTitle} / 科研画布</p><h2 className="font-semibold">{selected.title}</h2></div></div><span className="flex items-center gap-1.5 text-xs text-slate-500">{saveState === "saving" ? <><Clock3 className="h-4 w-4" />自动保存中…</> : <><Check className="h-4 w-4 text-emerald-500" />已自动保存</>}</span></header>
-      <main className="flex-1 overflow-auto bg-[#f8fafc] p-8"><article className="relative mx-auto min-h-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-10 shadow-sm"><NoteWorkspaceContent /></article></main>
+      <header className="flex h-16 items-center justify-between border-b border-slate-200 px-6"><div className="flex min-w-0 items-center gap-3"><button onClick={() => setFullScreen(false)} className="rounded-lg p-2 hover:bg-slate-100" aria-label="退出全屏"><X className="h-5 w-5" /></button><div><p className="text-xs text-slate-400">{projectTitle} / 科研画布</p><h2 className="font-semibold">{selected.title}</h2></div></div><div className="flex items-center gap-3"><span className="flex items-center gap-1.5 text-xs text-slate-500">{saveState === "saving" ? <><Clock3 className="h-4 w-4" />自动保存中…</> : <><Check className="h-4 w-4 text-emerald-500" />已自动保存</>}</span></div></header>
+      <main className="flex-1 overflow-auto bg-[#f8fafc] p-8"><article className="relative mx-auto min-h-full max-w-4xl rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">{NoteWorkspaceContent(true)}</article></main>
+    </div>}
+    {fullScreenAttachment && <div className="fixed inset-0 z-[1220] flex flex-col bg-white">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 px-6"><div className="flex min-w-0 items-center gap-3"><button onClick={() => setFullScreenAttachment(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="关闭附件全屏预览"><X className="h-5 w-5" /></button><span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-600 text-white"><File className="h-4 w-4" /></span><div className="min-w-0"><p className="text-[10px] text-slate-400">{selected?.title ?? "科研笔记"} / 附件</p><h2 className="truncate text-sm font-semibold">{fullScreenAttachment.title}</h2></div></div><button onClick={() => showToast(`已下载：${fullScreenAttachment.title}`)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50">下载附件</button></header>
+      <main className="min-h-0 flex-1 overflow-auto bg-slate-100 p-8"><section className="mx-auto min-h-full max-w-6xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><ProjectAttachmentPreview resource={fullScreenAttachment} /></section></main>
+    </div>}
+    {agentDialog && <div className="fixed inset-0 z-[1250] flex items-center justify-center bg-slate-950/45 p-5" onMouseDown={() => setAgentDialog(null)}>
+      <section className="relative h-[min(860px,94vh)] w-full max-w-7xl overflow-hidden rounded-3xl bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+        <iframe
+          title={`${agentDialog.name} Agent 对话`}
+          src={`/app/agent?source=research-note&embedded=1&agentName=${encodeURIComponent(agentDialog.name)}&message=${encodeURIComponent(`继续推进「${agentDialog.nodeTitle}」，核对数据许可、评测设置并记录失败分支。`)}`}
+          className="h-full w-full border-0"
+        />
+        <button onClick={() => setAgentDialog(null)} className="absolute right-3 top-3 z-20 grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-md transition hover:bg-slate-100 hover:text-slate-950" aria-label="关闭 Agent 弹窗" title="关闭"><X className="h-4 w-4" /></button>
+      </section>
     </div>}
     {toast && <div className="fixed bottom-6 left-1/2 z-[1300] -translate-x-1/2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm text-white shadow-xl">{toast}</div>}
   </div>;

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Search, MessageSquare, Library, Rss, Clock, Plus, ChevronDown, ArrowRight, FlaskConical, GraduationCap, Lightbulb, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Folder, Trash2, Bot, FolderKanban, Network, Compass, Wrench } from 'lucide-react';
+import { Search, MessageSquare, Library, Rss, Clock, Plus, ChevronDown, ArrowRight, FlaskConical, GraduationCap, Lightbulb, PanelLeftClose, PanelLeftOpen, MoreHorizontal, Folder, Trash2, Bot, FolderKanban, Compass, Wrench } from 'lucide-react';
 import { UserPanel } from './UserPanel';
 import { useLanguage } from '../contexts/LanguageContext';
 import { SettingsModal } from './SettingsModal';
@@ -38,7 +38,6 @@ const latestWorkspaceNav = [
   { id: 'academic-agent', label: 'Agent', icon: Bot },
   { id: 'my-library', label: '知识库', icon: Library },
   { id: 'research-projects', label: '项目', icon: FolderKanban },
-  { id: 'research-canvas', label: '科研画布', icon: Network },
   { id: 'tools', label: '工具', icon: Wrench },
 ];
 
@@ -390,30 +389,6 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
             {isCollapsed && (
               <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="inline-block px-2 py-1 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap shadow-lg">{t('nav.projects')}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="relative group">
-            <button
-              onClick={() => handleNavClick('research-canvas')}
-              className={`w-full flex items-center ${isCollapsed ? 'justify-center px-0 py-2' : 'gap-2.5 px-3 py-2'} rounded-md transition-colors text-sm ${
-                activeNav === 'research-canvas'
-                  ? 'bg-violet-50 text-violet-700 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <Network className="w-4 h-4" />
-              {!isCollapsed && (
-                <>
-                  <span>科研画布</span>
-                  <span className="ml-auto rounded-md border border-violet-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-violet-600">实验</span>
-                </>
-              )}
-            </button>
-            {isCollapsed && (
-              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="inline-block px-2 py-1 bg-gray-900 text-white text-xs rounded-md whitespace-nowrap shadow-lg">科研画布 · 实验</span>
               </div>
             )}
           </div>
