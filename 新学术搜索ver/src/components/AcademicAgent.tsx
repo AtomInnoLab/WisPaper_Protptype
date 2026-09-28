@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import inspirationDiscoveryImage from "../assets/agent-cases/inspiration-discovery.jpg";
+import literatureReviewImage from "../assets/agent-cases/literature-review.jpg";
+import paperReproductionImage from "../assets/agent-cases/paper-reproduction.jpg";
 import {
   ArrowUp,
   Ban,
+  BarChart3,
   BookOpen,
   Bot,
   Check,
@@ -12,6 +16,8 @@ import {
   Clock3,
   Code2,
   Cpu,
+  Dna,
+  ExternalLink,
   FileText,
   FlaskConical,
   FolderKanban,
@@ -23,6 +29,7 @@ import {
   Minus,
   Moon,
   MoreHorizontal,
+  Network,
   Orbit,
   Paperclip,
   PanelRight,
@@ -39,8 +46,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { ResearchTree } from "./ResearchTree";
 
-type WorkbenchTab = "files" | "search" | "plan" | "gpu";
+type WorkbenchTab = "files" | "search" | "plan" | "gpu" | "bio" | "note";
 type AgentTierId = "fast" | "balanced" | "primary" | "deep";
 type AgentTodoStatus = "pending" | "active" | "waiting" | "blocked" | "done" | "skipped" | "failed";
 type AgentTodoType = "agent" | "approval" | "user";
@@ -76,28 +84,195 @@ const agentTiers: {
   { id: "deep", label: "Deep", description: "长程深度研究", multiplier: "3.50x", icon: Orbit },
 ];
 
-const quickTasks = [
+interface QuickTask {
+  title: string;
+  prompt: string;
+  icon: React.ElementType;
+}
+
+interface AgentSamplePrompt {
+  title: string;
+  summary: string;
+  prompt: string;
+  credits: string;
+}
+
+interface AgentCaseStudy {
+  title: string;
+  field: string;
+  summary: string;
+  outcome: string;
+  prompt: string;
+  credits: string;
+}
+
+const quickTasks: QuickTask[] = [
   {
     title: "灵感发现",
-    prompt: "围绕多模态 Agent 的长期记忆，帮我发现 3 个有研究价值的选题。",
+    prompt: "基于我的研究兴趣和已有材料，帮我发现值得进一步探索的问题、方向与机会。",
     icon: Sparkles,
   },
   {
     title: "论文复现",
-    prompt: "帮我制定一份论文复现计划，并列出环境、数据集和验收指标。",
+    prompt: "帮我拆解一项研究的复现路径，梳理所需材料、关键步骤、潜在风险与验收标准。",
     icon: Code2,
   },
   {
     title: "文献综述",
-    prompt: "调研 RAG 评测方法，按数据、指标与常见缺陷整理一份综述。",
+    prompt: "围绕我关心的研究方向，系统检索并整理相关文献，归纳主要观点、方法、证据与研究空白。",
     icon: BookOpen,
   },
-  {
-    title: "论文解析",
-    prompt: "解析我上传的论文，提取核心假设、方法流程和实验结论。",
-    icon: FileText,
-  },
 ];
+
+const quickTaskSamplePrompts: Record<string, AgentSamplePrompt[]> = {
+  灵感发现: [
+    {
+      title: "从已有材料提炼研究机会",
+      summary: "梳理笔记、论文与阶段性想法，识别值得验证的矛盾、缺口和下一步方向。",
+      prompt: "分析我已有的研究材料，归纳关键线索，并提出若干值得继续验证的问题与探索路径。",
+      credits: "8K",
+    },
+    {
+      title: "比较相邻方向寻找突破口",
+      summary: "对照相关研究方向的目标、方法与证据，发现可迁移思路和潜在创新空间。",
+      prompt: "比较几个相邻研究方向的核心问题与常用方法，帮我识别可能的交叉机会和突破口。",
+      credits: "10K",
+    },
+    {
+      title: "把零散想法变成候选问题",
+      summary: "聚合日常记录中的反复线索，评估新颖性、可验证性与潜在影响，形成候选问题池。",
+      prompt: "整理我提供的零散想法，归纳反复出现的线索，并生成一组可比较、可验证的候选研究问题。",
+      credits: "9K",
+    },
+  ],
+  论文复现: [
+    {
+      title: "从论文到可执行复现清单",
+      summary: "拆解环境、数据、实现步骤、关键假设与验收指标，形成可跟进的执行计划。",
+      prompt: "根据我提供的论文，生成一份可执行的复现清单，并标注依赖、风险和验收标准。",
+      credits: "12K",
+    },
+    {
+      title: "定位复现差异与失败原因",
+      summary: "对照原论文和当前结果，系统排查数据、配置、实现与评估环节的偏差。",
+      prompt: "对照论文描述与我的复现过程，帮助定位结果差异的可能来源，并给出优先排查顺序。",
+      credits: "15K",
+    },
+    {
+      title: "评估复现任务的可行性",
+      summary: "在投入执行前检查代码、数据、算力、时间与评估条件，提前识别关键阻塞点。",
+      prompt: "评估我准备复现的研究是否具备执行条件，并列出资源缺口、风险和替代方案。",
+      credits: "8K",
+    },
+  ],
+  文献综述: [
+    {
+      title: "快速建立主题证据地图",
+      summary: "按研究问题、方法、数据与结论组织文献，形成结构清晰、可追溯的证据框架。",
+      prompt: "围绕我关心的研究方向检索并整理文献，建立包含问题、方法、证据和结论的主题地图。",
+      credits: "10K",
+    },
+    {
+      title: "从研究脉络识别空白",
+      summary: "追踪代表性工作的演进关系，归纳共识、争议、局限与尚未解决的问题。",
+      prompt: "梳理一个研究方向的发展脉络，归纳主要共识与争议，并指出值得继续研究的空白。",
+      credits: "14K",
+    },
+    {
+      title: "设计综述检索与纳入标准",
+      summary: "把研究目标转成可执行的检索式、筛选条件和质量评估框架，降低遗漏与偏差。",
+      prompt: "根据我的综述目标，设计检索策略、文献纳入排除标准和质量评估框架。",
+      credits: "9K",
+    },
+  ],
+};
+
+const quickTaskCaseStudies: Record<string, AgentCaseStudy[]> = {
+  灵感发现: [
+    {
+      title: "从冲突证据中找到新的研究切口",
+      field: "跨领域探索",
+      summary: "Agent 对照多组结论不一致的研究，追踪差异来自样本、方法还是假设，形成可验证的新问题。",
+      outcome: "产出 3 个候选问题与优先验证路径",
+      prompt: "参考这个案例，分析我提供的材料中有哪些冲突证据，并把它们转化为可验证的研究问题。",
+      credits: "10K",
+    },
+    {
+      title: "把相邻领域的方法迁移为新假设",
+      field: "方法创新",
+      summary: "Agent 比较相邻方向的目标与工具，识别可迁移方法，并评估迁移后的适用条件和潜在价值。",
+      outcome: "形成方法迁移矩阵与验证建议",
+      prompt: "参考这个案例，比较与我的方向相邻的研究方法，提出可迁移的新假设和最小验证方案。",
+      credits: "15K",
+    },
+    {
+      title: "从长期记录中发现隐藏模式",
+      field: "研究洞察",
+      summary: "Agent 聚合跨阶段的笔记与阅读记录，识别反复出现但尚未被明确表达的研究线索。",
+      outcome: "得到线索聚类、候选解释与验证顺序",
+      prompt: "参考这个案例，分析我的长期研究记录，找出隐藏模式，并生成可验证的解释与下一步。",
+      credits: "12K",
+    },
+  ],
+  论文复现: [
+    {
+      title: "从论文描述搭建最小可验证实验",
+      field: "复现规划",
+      summary: "Agent 将零散的方法描述转成环境、数据、实现与评估清单，优先复现决定结论的关键环节。",
+      outcome: "获得分阶段复现计划与验收标准",
+      prompt: "参考这个案例，把我提供的论文拆成最小可验证实验，并生成分阶段执行与验收清单。",
+      credits: "12K",
+    },
+    {
+      title: "系统定位复现结果偏差",
+      field: "实验诊断",
+      summary: "Agent 对照原始设置与当前日志，按数据、环境、实现和指标逐层缩小结果差异的来源。",
+      outcome: "输出偏差假设、证据与排查优先级",
+      prompt: "参考这个案例，对照论文与我的复现记录，定位结果偏差，并给出按优先级排序的排查步骤。",
+      credits: "18K",
+    },
+    {
+      title: "在资源受限条件下完成核心复现",
+      field: "资源规划",
+      summary: "Agent 识别最能支撑论文结论的核心实验，并根据现有算力和时间压缩复现范围。",
+      outcome: "获得低成本实验组合与取舍说明",
+      prompt: "参考这个案例，根据我的资源限制，设计能够验证论文核心结论的最小复现方案。",
+      credits: "14K",
+    },
+  ],
+  文献综述: [
+    {
+      title: "建立可追溯的主题证据地图",
+      field: "证据综述",
+      summary: "Agent 按问题、方法、数据和结论组织代表性研究，让每个综述判断都能追溯到原始证据。",
+      outcome: "形成主题结构、证据表与引用线索",
+      prompt: "参考这个案例，为我的研究方向建立可追溯的证据地图，并给出综述结构和文献纳入标准。",
+      credits: "14K",
+    },
+    {
+      title: "解释文献中的冲突结论",
+      field: "比较综述",
+      summary: "Agent 聚类相互矛盾的研究结论，比较研究设计与适用边界，避免把差异简单归结为方法优劣。",
+      outcome: "输出争议地图与条件化结论",
+      prompt: "参考这个案例，找出我提供文献中的冲突结论，并解释差异可能来自哪些研究条件。",
+      credits: "16K",
+    },
+    {
+      title: "把大规模检索转成清晰综述结构",
+      field: "知识组织",
+      summary: "Agent 对大量文献做主题聚类与证据分层，避免综述停留在逐篇摘要和简单罗列。",
+      outcome: "形成章节结构、主题关系与证据优先级",
+      prompt: "参考这个案例，把我检索到的大量文献组织成清晰的主题结构和可追溯的综述框架。",
+      credits: "20K",
+    },
+  ],
+};
+
+const quickTaskCaseImages: Record<string, string> = {
+  灵感发现: inspirationDiscoveryImage,
+  论文复现: paperReproductionImage,
+  文献综述: literatureReviewImage,
+};
 
 const moreTools = [
   { label: "配置 GPU", icon: Cpu },
@@ -110,10 +285,23 @@ const moreTools = [
 ];
 
 const tabs: { id: WorkbenchTab; label: string; icon: React.ElementType }[] = [
+  { id: "note", label: "科研笔记", icon: FileText },
   { id: "plan", label: "执行计划", icon: Sparkles },
   { id: "files", label: "任务文件", icon: FolderKanban },
   { id: "search", label: "检索结果", icon: Search },
+  { id: "bio", label: "生信", icon: Dna },
   { id: "gpu", label: "运行环境", icon: Cpu },
+];
+
+const bioSkills = [
+  { id: "method", name: "统计方法快速验证", detail: "根据样本量、变量数、数据类型和实验设计检查方法选择", tags: ["场景判断", "统计设计"], icon: FlaskConical },
+  { id: "de", name: "差异表达分析", detail: "RNA-seq、单细胞与蛋白组差异检验及多重校正", tags: ["DESeq2", "limma", "Wilcoxon"], icon: BarChart3 },
+  { id: "survival", name: "生存分析", detail: "Kaplan–Meier、Log-rank、Cox 回归与比例风险检验", tags: ["生存结局", "Cox"], icon: Clock3 },
+  { id: "dimension", name: "降维与可视化", detail: "PCA、UMAP、t-SNE 的选择、参数检查与解释", tags: ["PCA", "UMAP", "t-SNE"], icon: Orbit },
+  { id: "cluster", name: "聚类分析", detail: "层次聚类、K-means、图聚类与稳定性评估", tags: ["无监督", "稳定性"], icon: CircleGauge },
+  { id: "enrichment", name: "功能富集分析", detail: "ORA、GSEA、通路数据库选择与背景集校验", tags: ["GO", "KEGG", "GSEA"], icon: Library },
+  { id: "batch", name: "批次效应校正", detail: "ComBat、Harmony、混合模型及校正前后诊断", tags: ["ComBat", "Harmony"], icon: WandSparkles },
+  { id: "tests", name: "常用统计检验", detail: "参数与非参数检验、效应量、置信区间和功效分析", tags: ["假设检验", "效应量"], icon: GraduationCap },
 ];
 
 const initialAgentTodos: AgentTodo[] = [
@@ -160,6 +348,9 @@ function AgentComposer({
   onSubmit,
   selectedAgent,
   onAgentChange,
+  selectedSkill,
+  onSelectSkill,
+  onClearSkill,
   disabled = false,
   compact = false,
 }: {
@@ -168,6 +359,9 @@ function AgentComposer({
   onSubmit: () => void;
   selectedAgent: AgentTierId;
   onAgentChange: (value: AgentTierId) => void;
+  selectedSkill: string | null;
+  onSelectSkill: (task: QuickTask, includePrompt: boolean) => void;
+  onClearSkill: () => void;
   disabled?: boolean;
   compact?: boolean;
 }) {
@@ -176,6 +370,8 @@ function AgentComposer({
   const [showAgents, setShowAgents] = useState(false);
   const currentAgent = agentTiers.find((tier) => tier.id === selectedAgent) ?? agentTiers[1];
   const CurrentAgentIcon = currentAgent.icon;
+  const selectedTask = quickTasks.find((task) => task.title === selectedSkill);
+  const SelectedSkillIcon = selectedTask?.icon;
 
   return (
     <div className="relative">
@@ -193,11 +389,13 @@ function AgentComposer({
                 return (
                   <button
                     key={task.title}
+                    type="button"
                     onClick={() => {
-                      setPrompt(task.prompt);
+                      onSelectSkill(task, false);
                       setShowTools(false);
                     }}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-100"
+                    aria-label={`添加 ${task.title} Skill`}
                   >
                     <Icon className="h-4 w-4 text-slate-500" />
                     {task.title}
@@ -273,22 +471,37 @@ function AgentComposer({
           compact ? "p-2.5" : "p-3.5"
         }`}
       >
-        <textarea
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              onSubmit();
-            }
-          }}
-          placeholder="描述你的研究目标，或输入 / 选择工具"
-          className={`w-full resize-none bg-transparent px-2 text-[15px] leading-6 text-slate-900 outline-none placeholder:text-slate-400 ${
-            compact ? "h-16 py-1.5" : "h-28 py-2"
-          }`}
-        />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2 px-2">
+          {selectedTask && SelectedSkillIcon && (
+            <button
+              type="button"
+              onClick={onClearSkill}
+              className="group mt-1.5 inline-flex h-9 shrink-0 items-center gap-2 rounded-xl bg-slate-100 px-3 text-sm font-medium text-slate-800 transition hover:bg-slate-200"
+              aria-label={`移除 ${selectedTask.title} Skill`}
+              title="点击移除 Skill"
+            >
+              <SelectedSkillIcon className="h-4 w-4 text-blue-400" />
+              {selectedTask.title}
+              <X className="hidden h-3 w-3 text-slate-400 group-hover:block" />
+            </button>
+          )}
+          <textarea
+            value={prompt}
+            onChange={(event) => setPrompt(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                onSubmit();
+              }
+            }}
+            placeholder="描述你的研究目标，或输入 / 选择工具"
+            className={`min-w-0 flex-1 resize-none bg-transparent text-[15px] leading-6 text-slate-900 outline-none placeholder:text-slate-400 ${
+              compact ? "h-16 py-1.5" : "h-28 py-2"
+            }`}
+          />
+        </div>
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => {
@@ -324,26 +537,6 @@ function AgentComposer({
               {currentAgent.label}
               <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAgents ? "rotate-180" : ""}`} />
             </button>
-            {!compact && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setPrompt("调研一个研究问题，并生成可执行的研究计划。")}
-                  className="hidden items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 sm:flex"
-                >
-                  <GraduationCap className="h-4 w-4" />
-                  研究计划
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPrompt("基于我上传的论文，生成结构化的实验复现方案。")}
-                  className="hidden items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 sm:flex"
-                >
-                  <Code2 className="h-4 w-4" />
-                  论文复现
-                </button>
-              </>
-            )}
           </div>
           <button
             onClick={onSubmit}
@@ -547,6 +740,9 @@ function WorkbenchPanel({
   onToggleRunning,
   onTodoStatusChange,
   onAddTodo,
+  onStartBioSkill,
+  canvasFocusNodeId,
+  canvasFocusRequest,
 }: {
   activeTab: WorkbenchTab;
   running: boolean;
@@ -557,13 +753,63 @@ function WorkbenchPanel({
   onToggleRunning: () => void;
   onTodoStatusChange: (id: string, status: AgentTodoStatus) => void;
   onAddTodo: (title: string) => void;
+  onStartBioSkill: (prompt: string) => void;
+  canvasFocusNodeId: string | null;
+  canvasFocusRequest: number;
 }) {
   const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
   const [menuTodoId, setMenuTodoId] = useState<string | null>(null);
   const [addingTodo, setAddingTodo] = useState(false);
   const [newTodoTitle, setNewTodoTitle] = useState("");
+  const [activeBioSkill, setActiveBioSkill] = useState("method");
+  const [bioScenario, setBioScenario] = useState({
+    sampleSize: "medium",
+    variables: "few",
+    dataType: "continuous",
+    groups: "two",
+    design: "independent",
+    distribution: "unknown",
+  });
   const completedCount = todos.filter((todo) => todo.status === "done" || todo.status === "skipped").length;
   const attentionCount = todos.filter((todo) => todo.status === "waiting" || todo.status === "blocked" || todo.status === "failed").length;
+  const bioRecommendation = (() => {
+    const { sampleSize, variables, dataType, groups, design, distribution } = bioScenario;
+    if (dataType === "survival") return {
+      primary: groups === "two" ? "Kaplan–Meier + Log-rank 检验" : "Cox 比例风险回归",
+      alternative: "若比例风险假设不成立，使用分层 Cox、时间依赖 Cox 或 RMST 比较",
+      checks: ["检查删失是否独立", "报告 HR 与 95% CI", "使用 Schoenfeld 残差检验比例风险假设"],
+    };
+    if (dataType === "count") return {
+      primary: variables === "high" ? "DESeq2 / edgeR 负二项模型" : "负二项回归或 Poisson 回归",
+      alternative: "过度离散明显时避免普通 Poisson；零值过多可评估零膨胀模型",
+      checks: ["使用原始 count 而非 TPM 做差异检验", "校正测序深度与批次", "高维比较执行 BH-FDR 校正"],
+    };
+    if (dataType === "categorical") return {
+      primary: sampleSize === "small" ? "Fisher 精确检验" : "卡方检验",
+      alternative: design === "paired" ? "McNemar 检验" : "Logistic 回归（需要协变量校正时）",
+      checks: ["检查期望频数", "同时报告风险比或优势比", "多分类结局考虑多项 Logistic 回归"],
+    };
+    if (design === "repeated") return {
+      primary: "线性混合效应模型",
+      alternative: "分布明显偏态时使用广义线性混合模型或稳健标准误",
+      checks: ["个体作为随机效应", "显式建模时间与组别交互", "避免把重复测量当独立样本"],
+    };
+    if (design === "paired") return {
+      primary: distribution === "normal" ? "配对 t 检验" : "Wilcoxon 符号秩检验",
+      alternative: "存在协变量或多个时间点时使用混合效应模型",
+      checks: ["检验配对差值的分布", "报告配对效应量与置信区间", "缺失配对样本需说明处理策略"],
+    };
+    if (groups === "multiple") return {
+      primary: distribution === "normal" ? "单因素 ANOVA + Tukey 事后检验" : "Kruskal–Wallis + Dunn 事后检验",
+      alternative: "存在协变量时使用 ANCOVA 或多元回归",
+      checks: ["检查方差齐性", "总体检验显著后再做组间比较", "事后比较执行多重校正"],
+    };
+    return {
+      primary: distribution === "normal" && sampleSize !== "small" ? "独立样本 t 检验" : "Mann–Whitney U 检验",
+      alternative: "需要调整年龄、性别或批次时使用线性/广义线性回归",
+      checks: [variables === "high" ? "变量数量高，必须控制 FDR 并考虑降维" : "同时报告效应量和 95% CI", sampleSize === "small" ? "小样本优先展示原始点并谨慎解释 P 值" : "检查异常值与方差齐性", "在分析前明确主要终点"],
+    };
+  })();
 
   const statusMeta: Record<AgentTodoStatus, { label: string; icon: React.ElementType; color: string }> = {
     pending: { label: "待执行", icon: Clock3, color: "text-slate-400" },
@@ -584,7 +830,12 @@ function WorkbenchPanel({
   };
 
   return (
-    <div className="h-full overflow-y-auto p-5">
+    <div className={`relative h-full ${activeTab === "note" ? "overflow-hidden p-3" : "overflow-y-auto p-5"}`}>
+      {activeTab === "note" && (
+        <section className="h-full min-h-0">
+          <ResearchTree key={activeTab} projectId={1} projectTitle="LLM 长期记忆研究" initialTemplate="demo" focusNodeId={canvasFocusNodeId ?? "n2"} focusRequest={canvasFocusRequest} noteOnly />
+        </section>
+      )}
       {activeTab === "plan" && (
         <section>
           <div className="flex items-start justify-between gap-3">
@@ -796,6 +1047,96 @@ function WorkbenchPanel({
           </div>
         </section>
       )}
+      {activeTab === "bio" && (
+        <section>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-medium text-emerald-700">Agent Skills</p>
+              <h3 className="mt-1 text-lg font-semibold">生信分析</h3>
+              <p className="mt-1 text-xs leading-5 text-slate-500">选择常用 Skill，或先验证实验场景与统计方法是否匹配。</p>
+            </div>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">8 Skills</span>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2.5">
+            {bioSkills.map((skill) => {
+              const SkillIcon = skill.icon;
+              const active = activeBioSkill === skill.id;
+              return (
+                <button
+                  key={skill.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveBioSkill(skill.id);
+                    if (skill.id === "method") {
+                      onStartBioSkill(`请使用「统计方法快速验证」Skill 帮我确认分析方案。当前场景：样本量=${bioScenario.sampleSize}，变量规模=${bioScenario.variables}，数据类型=${bioScenario.dataType}，组数=${bioScenario.groups}，实验设计=${bioScenario.design}，分布假设=${bioScenario.distribution}。当前初步推荐为「${bioRecommendation.primary}」。请先核对关键前提，再通过对话补充缺失信息。`);
+                    } else {
+                      onStartBioSkill(`请使用「${skill.name}」生信 Skill 帮我开展分析。${skill.detail}。请先询问我的数据类型、样本信息、实验设计和预期产出，再给出可执行的分析流程。`);
+                    }
+                  }}
+                  className={`rounded-xl border p-3 text-left transition ${active ? "border-emerald-300 bg-emerald-50/80 ring-2 ring-emerald-100" : "border-slate-200 bg-white hover:border-slate-300"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`grid h-8 w-8 place-items-center rounded-lg ${active ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500"}`}><SkillIcon className="h-4 w-4" /></span>
+                    <span className="text-xs font-semibold leading-4 text-slate-800">{skill.name}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-[11px] leading-4 text-slate-500">{skill.detail}</p>
+                  <div className="mt-2 flex flex-wrap gap-1">{skill.tags.slice(0, 2).map((tag) => <span key={tag} className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">{tag}</span>)}</div>
+                </button>
+              );
+            })}
+          </div>
+
+          {activeBioSkill === "method" ? (
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-600 text-white"><FlaskConical className="h-4.5 w-4.5" /></span>
+                <div><h4 className="text-sm font-semibold">统计方法快速验证</h4><p className="mt-0.5 text-[11px] text-slate-500">填写实验条件，即时检查推荐方法</p></div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {[
+                  ["sampleSize", "样本数量", [["small", "少于 20"], ["medium", "20–100"], ["large", "大于 100"]]],
+                  ["variables", "变量数量", [["one", "单变量"], ["few", "2–10 个"], ["high", "高维（>100）"]]],
+                  ["dataType", "数据类型", [["continuous", "连续型"], ["count", "计数 / 组学"], ["categorical", "分类变量"], ["survival", "生存结局"]]],
+                  ["groups", "比较组数", [["two", "两组"], ["multiple", "三组及以上"]]],
+                  ["design", "实验设计", [["independent", "独立样本"], ["paired", "配对样本"], ["repeated", "重复测量"]]],
+                  ["distribution", "分布假设", [["normal", "近似正态"], ["non-normal", "明显偏态"], ["unknown", "暂不确定"]]],
+                ].map(([key, label, options]) => (
+                  <label key={key as string} className="block">
+                    <span className="mb-1.5 block text-[10px] font-medium text-slate-500">{label as string}</span>
+                    <select
+                      value={bioScenario[key as keyof typeof bioScenario]}
+                      onChange={(event) => setBioScenario((value) => ({ ...value, [key as string]: event.target.value }))}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-700 outline-none transition focus:border-emerald-400 focus:bg-white"
+                    >
+                      {(options as string[][]).map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+                    </select>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-4 rounded-xl bg-slate-950 p-4 text-white">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-emerald-300">推荐方法</p>
+                <p className="mt-1.5 text-sm font-semibold">{bioRecommendation.primary}</p>
+                <p className="mt-2 text-[11px] leading-5 text-white/65">{bioRecommendation.alternative}</p>
+                <div className="mt-3 border-t border-white/10 pt-3">
+                  {bioRecommendation.checks.map((check) => <p key={check} className="mt-1.5 flex gap-2 text-[10px] leading-4 text-white/70"><CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-emerald-400" />{check}</p>)}
+                </div>
+              </div>
+              <p className="mt-3 text-[10px] leading-4 text-slate-400">建议仅用于快速验证分析方向；正式分析仍需结合抽样机制、缺失数据、混杂因素与预注册方案。</p>
+            </div>
+          ) : (() => {
+            const skill = bioSkills.find((item) => item.id === activeBioSkill)!;
+            const SkillIcon = skill.icon;
+            return <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-white"><SkillIcon className="h-5 w-5" /></span>
+              <h4 className="mt-3 text-base font-semibold">{skill.name}</h4>
+              <p className="mt-2 text-xs leading-5 text-slate-500">{skill.detail}</p>
+              <div className="mt-4 flex flex-wrap gap-1.5">{skill.tags.map((tag) => <span key={tag} className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700">{tag}</span>)}</div>
+              <button type="button" onClick={() => onStartBioSkill(`请使用「${skill.name}」生信 Skill 帮我开展分析。请通过对话收集样本量、变量数量、数据类型和实验设计。`)} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"><Sparkles className="h-3.5 w-3.5" />进入对话使用 Skill</button>
+            </div>;
+          })()}
+        </section>
+      )}
       {activeTab === "gpu" && (
         <GpuConfigPanel />
       )}
@@ -803,20 +1144,46 @@ function WorkbenchPanel({
   );
 }
 
-export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }) {
+export function AcademicAgent({ onOpenProjects, initialPrompt = "" }: { onOpenProjects: () => void; initialPrompt?: string }) {
+  const linkedConversation = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("source") !== "research-note" || !params.get("agentName")) return null;
+    return { agentName: params.get("agentName")!, message: params.get("message")?.trim() || "" };
+  }, []);
   const [prompt, setPrompt] = useState("");
-  const [started, setStarted] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [started, setStarted] = useState(Boolean(linkedConversation));
   const [running, setRunning] = useState(false);
-  const [planReady, setPlanReady] = useState(false);
+  const [planReady, setPlanReady] = useState(Boolean(linkedConversation));
   const [planAccepted, setPlanAccepted] = useState(false);
   const [todos, setTodos] = useState<AgentTodo[]>(initialAgentTodos);
   const [activeTab, setActiveTab] = useState<WorkbenchTab>("plan");
   const [panelOpen, setPanelOpen] = useState(true);
-  const [taskTitle, setTaskTitle] = useState("新研究任务");
-  const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
+  const [taskTitle, setTaskTitle] = useState(linkedConversation?.agentName || "新研究任务");
+  const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>(() => linkedConversation
+    ? linkedConversation.message
+      ? [{ role: "user", text: linkedConversation.message }, { role: "agent", text: `${linkedConversation.agentName} 已收到消息，正在结合当前科研项目与笔记内容继续处理。` }]
+      : [{ role: "agent", text: `已进入 ${linkedConversation.agentName} 对话。你可以继续发送问题或补充科研笔记中的上下文。` }]
+    : []);
   const [selectedAgent, setSelectedAgent] = useState<AgentTierId>("balanced");
+  const [activeCaseTab, setActiveCaseTab] = useState(quickTasks[0].title);
+  const [canvasContextCount, setCanvasContextCount] = useState(0);
+  const [canvasFocusNodeId, setCanvasFocusNodeId] = useState<string | null>(null);
+  const [canvasFocusRequest, setCanvasFocusRequest] = useState(0);
   const taskCompleted = planAccepted && todos.every((todo) => todo.status === "done" || todo.status === "skipped");
   const taskNeedsAttention = planAccepted && todos.some((todo) => todo.status === "waiting" || todo.status === "blocked" || todo.status === "failed");
+  const activeSamplePrompts = quickTaskSamplePrompts[activeCaseTab] ?? [];
+  const activeCaseStudies = quickTaskCaseStudies[activeCaseTab] ?? [];
+  const activeCaseTask = quickTasks.find((task) => task.title === activeCaseTab) ?? quickTasks[0];
+  const activeCaseImage = quickTaskCaseImages[activeCaseTab] ?? inspirationDiscoveryImage;
+
+  const selectQuickTask = (task: QuickTask, includePrompt: boolean) => {
+    setSelectedSkill(task.title);
+    if (includePrompt) setPrompt(task.prompt);
+  };
+
+  const clearSkill = () => setSelectedSkill(null);
 
   useEffect(() => {
     if (!planAccepted) return;
@@ -825,9 +1192,36 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
     if (taskCompleted || (waitingForUser && !hasActiveTodo)) setRunning(false);
   }, [planAccepted, taskCompleted, todos]);
 
+  const accessCanvasContext = (action: "访问中" | "修改中") => {
+    try {
+      const canvasNodes = JSON.parse(window.localStorage.getItem("wispaper-research-canvas-nodes") || "[]") as Array<{ id: string; title: string }>;
+      setCanvasContextCount(canvasNodes.length);
+      if (canvasNodes.length) {
+        const current = JSON.parse(window.localStorage.getItem("wispaper-canvas-agent-activity") || "{}");
+        const agentName = `切问学术 ${agentTiers.find((tier) => tier.id === selectedAgent)?.label || "Agent"}`;
+        const activeNodeIds = canvasNodes.slice(0, action === "修改中" ? 1 : 2).map((node) => node.id);
+        const activityTimestamp = Date.now();
+        activeNodeIds.forEach((nodeId) => { current[nodeId] = { agentName, action, updatedAt: activityTimestamp }; });
+        window.localStorage.setItem("wispaper-canvas-agent-activity", JSON.stringify(current));
+        window.dispatchEvent(new Event("wispaper-canvas-agent-activity"));
+        window.setTimeout(() => {
+          try {
+            const latest = JSON.parse(window.localStorage.getItem("wispaper-canvas-agent-activity") || "{}");
+            activeNodeIds.forEach((nodeId) => { if (latest[nodeId]?.updatedAt === activityTimestamp) delete latest[nodeId]; });
+            window.localStorage.setItem("wispaper-canvas-agent-activity", JSON.stringify(latest));
+            window.dispatchEvent(new Event("wispaper-canvas-agent-activity"));
+          } catch { /* mock activity cleanup */ }
+        }, 12000);
+      }
+      return canvasNodes.length;
+    } catch { return 0; }
+  };
+
   const submit = (text = prompt) => {
     const value = text.trim();
     if (!value || running) return;
+    const modifiesCanvas = /修改|更新|改写|调整/.test(value) && /科研画布|节点|卡片/.test(value);
+    const canvasNodesRead = accessCanvasContext(modifiesCanvas ? "修改中" : "访问中");
     const startingTask = !started;
     if (startingTask) {
       setTaskTitle(value.length > 32 ? `${value.slice(0, 32)}…` : value);
@@ -837,6 +1231,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
     }
     setStarted(true);
     setPrompt("");
+    setSelectedSkill(null);
     setRunning(true);
     setActiveTab("plan");
     setMessages((items) => [...items, { role: "user", text: value }]);
@@ -846,7 +1241,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
         {
           role: "agent",
           text: startingTask
-            ? "任务已拆解为 5 个步骤。你可以在右侧调整执行计划，确认后我会开始检索与分析。"
+            ? `任务已拆解为 5 个步骤。${canvasNodesRead ? `已读取科研画布中的 ${canvasNodesRead} 个节点作为项目上下文。` : ""}你可以在右侧调整执行计划，确认后我会开始检索与分析。`
             : "已收到补充说明。我会基于当前计划继续处理，并在需要改变执行范围时请你确认。",
         },
       ]);
@@ -858,6 +1253,10 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
       }
     }, 900);
   };
+
+  useEffect(() => {
+    if (initialPrompt.trim()) submit(initialPrompt);
+  }, [initialPrompt]);
 
   const activateNextTodo = (items: AgentTodo[], afterId?: string) => {
     const startIndex = afterId ? items.findIndex((todo) => todo.id === afterId) + 1 : 0;
@@ -907,6 +1306,19 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
     ]);
   };
 
+  const handleStartBioSkill = (skillPrompt: string) => {
+    const canvasNodesRead = accessCanvasContext("访问中");
+    setPanelOpen(false);
+    setRunning(false);
+    setMessages((items) => [...items, { role: "user", text: skillPrompt }]);
+    window.setTimeout(() => {
+      setMessages((items) => [...items, {
+        role: "agent",
+        text: `已进入生信 Skill 对话流程。${canvasNodesRead ? `已读取科研画布中的 ${canvasNodesRead} 个节点。` : ""}我会先确认研究目的、样本与变量结构、实验设计、缺失值和混杂因素，再与你一起确定统计方法、检验前提与结果报告方式。请先介绍你的实验场景或上传数据说明。`,
+      }]);
+    }, 500);
+  };
+
   if (!started) {
     return (
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#f7f9fc] text-slate-950">
@@ -926,7 +1338,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
           </button>
         </header>
 
-        <main className="flex flex-1 items-center overflow-y-auto px-6 pb-14">
+        <main className="flex flex-1 items-start overflow-y-auto px-6 pb-14 pt-12">
           <div className="mx-auto w-full max-w-4xl">
             <div className="mx-auto max-w-3xl text-center">
               <p className="text-sm font-medium text-slate-500">从一个研究问题开始</p>
@@ -943,25 +1355,114 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
                   onSubmit={() => submit()}
                   selectedAgent={selectedAgent}
                   onAgentChange={setSelectedAgent}
+                  selectedSkill={selectedSkill}
+                  onSelectSkill={selectQuickTask}
+                  onClearSkill={clearSkill}
                 />
               </div>
             </div>
 
-            <section className="mx-auto mt-8 max-w-3xl">
-              <div className="flex flex-wrap justify-center gap-2.5">
+            <section className="mx-auto mt-8 max-w-3xl" aria-label="Skill 案例">
+              <div className="flex flex-wrap justify-center gap-2.5" role="tablist" aria-label="Skill 案例分类">
                 {quickTasks.map((task) => {
                   const Icon = task.icon;
+                  const isActiveCaseTab = activeCaseTab === task.title;
                   return (
                     <button
                       key={task.title}
-                      onClick={() => submit(task.prompt)}
-                      className="group inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/70 px-3.5 py-2.5 text-sm text-slate-600 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:text-slate-950 hover:shadow-sm active:translate-y-0"
+                      type="button"
+                      role="tab"
+                      id={`agent-case-tab-${task.title}`}
+                      aria-controls={`agent-case-panel-${task.title}`}
+                      onClick={() => {
+                        setActiveCaseTab(task.title);
+                        selectQuickTask(task, true);
+                      }}
+                      className={`group inline-flex items-center gap-2 rounded-full border px-3.5 py-2.5 text-sm transition hover:-translate-y-0.5 hover:shadow-sm active:translate-y-0 ${
+                        isActiveCaseTab
+                          ? "border-slate-300 bg-white text-slate-950 shadow-sm"
+                          : "border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white hover:text-slate-950"
+                      }`}
+                      aria-selected={isActiveCaseTab}
                     >
                       <Icon className="h-4 w-4 text-slate-400 transition group-hover:text-slate-700" />
                       {task.title}
                     </button>
                   );
                 })}
+              </div>
+
+              <div
+                id={`agent-case-panel-${activeCaseTab}`}
+                role="tabpanel"
+                aria-labelledby={`agent-case-tab-${activeCaseTab}`}
+                className="mt-6"
+              >
+                <h2 className="text-sm font-semibold text-slate-900">Sample Prompts</h2>
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  {activeSamplePrompts.map((item) => {
+                    return (
+                      <button
+                        key={item.title}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSkill(activeCaseTask.title);
+                          setPrompt(item.prompt);
+                        }}
+                        className="group rounded-2xl border border-slate-200 bg-white/75 p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-white hover:shadow-[0_18px_45px_-28px_rgba(15,23,42,0.35)] active:translate-y-0"
+                      >
+                        <h3 className="text-[15px] font-semibold leading-6 text-slate-900">{item.title}</h3>
+                        <p className="mt-1.5 text-xs leading-5 text-slate-500">{item.summary}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <h2 className="mt-8 text-sm font-semibold text-slate-900">案例</h2>
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  {activeCaseStudies.map((item, index) => {
+                    const StudyIcon = activeCaseTask.icon;
+                    return (
+                      <button
+                        key={item.title}
+                        type="button"
+                        onClick={() => {
+                          setSelectedSkill(activeCaseTask.title);
+                          setPrompt(item.prompt);
+                        }}
+                        className="group flex min-h-[410px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_55px_-30px_rgba(15,23,42,0.4)] active:translate-y-0"
+                      >
+                        <div className="relative h-40 overflow-hidden bg-slate-100">
+                          <img
+                            src={activeCaseImage}
+                            alt=""
+                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                            style={{ objectPosition: index === 0 ? "left center" : index === 2 ? "right center" : "center" }}
+                          />
+                          <span className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/90 text-white shadow-sm backdrop-blur">
+                            <StudyIcon className="h-4 w-4" />
+                          </span>
+                          <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs tabular-nums text-slate-600 shadow-sm backdrop-blur">
+                            <GraduationCap className="h-3.5 w-3.5" />
+                            {item.credits}
+                          </span>
+                        </div>
+                        <div className="px-4 pb-3 pt-4">
+                          <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-600">
+                            {item.field}
+                          </span>
+                        </div>
+                        <div className="flex-1 px-4 pb-4">
+                          <h3 className="text-base font-semibold leading-6 text-slate-900">{item.title}</h3>
+                          <p className="mt-3 text-xs leading-5 text-slate-500">{item.summary}</p>
+                        </div>
+                        <div className="border-t border-slate-100 bg-slate-50/80 px-4 py-3">
+                          <p className="text-xs font-medium leading-5 text-slate-600">{item.outcome}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </section>
           </div>
@@ -976,6 +1477,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-6">
           <h1 className="min-w-0 truncate pr-6 text-[15px] font-semibold">{taskTitle}</h1>
           <div className="flex shrink-0 items-center gap-2 text-xs text-slate-500">
+            {canvasContextCount > 0 && <span className="hidden items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-2.5 py-1.5 text-violet-700 sm:inline-flex"><FolderKanban className="h-3.5 w-3.5" />科研画布 · {canvasContextCount} 节点</span>}
             <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5">
               <span className={`h-2 w-2 rounded-full ${taskCompleted ? "bg-blue-500" : taskNeedsAttention ? "bg-amber-500" : running ? "bg-emerald-500" : "bg-slate-400"}`} />
               {!planReady ? "制定计划" : !planAccepted ? "待确认" : taskCompleted ? "已完成" : taskNeedsAttention ? "等待确认" : running ? "进行中" : "已暂停"}
@@ -1021,6 +1523,24 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
                       <div className="rounded-[18px] rounded-tl-md bg-slate-50 px-5 py-4 text-[15px] leading-7 text-slate-700">
                         {message.text}
                       </div>
+                      {messages.slice(0, index + 1).filter((item) => item.role === "agent").length === 1 && <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={onOpenProjects}
+                          className="group w-full rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/70 p-4 text-left transition hover:border-violet-300 hover:shadow-md"
+                        >
+                          <span className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white"><Network className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-3"><strong className="text-sm font-semibold text-slate-900">研究范围已同步到科研画布</strong><ExternalLink className="h-4 w-4 text-violet-400 transition group-hover:translate-x-0.5" /></span><span className="mt-1 block text-xs leading-5 text-slate-500">已补充“证据筛选与评测”分支，并关联向量检索基线。</span></span></span>
+                        </button>
+                      </div>}
+                      {messages.slice(0, index + 1).filter((item) => item.role === "agent").length === 2 && <div className="mt-3">
+                        <button
+                          type="button"
+                          onClick={() => { setActiveTab("note"); setPanelOpen(true); setCanvasFocusNodeId("n2"); setCanvasFocusRequest((value) => value + 1); }}
+                          className="group w-full rounded-2xl border border-blue-200 bg-gradient-to-br from-white to-blue-50/70 p-4 text-left transition hover:border-blue-300 hover:shadow-md"
+                        >
+                          <span className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white"><FileText className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-3"><strong className="text-sm font-semibold text-slate-900">实验范围笔记已写入</strong><ExternalLink className="h-4 w-4 text-blue-400 transition group-hover:translate-x-0.5" /></span><span className="mt-1 block text-xs leading-5 text-slate-500">记录 LoCoMo 数据集、BGE-M3、Top K=8 与 BM25 对照条件，待补充时间特征重排。</span></span></span>
+                        </button>
+                      </div>}
                     </div>
                   )}
                 </article>
@@ -1045,6 +1565,9 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
                 onSubmit={() => submit()}
                 selectedAgent={selectedAgent}
                 onAgentChange={setSelectedAgent}
+                selectedSkill={selectedSkill}
+                onSelectSkill={selectQuickTask}
+                onClearSkill={clearSkill}
                 disabled={running}
                 compact
               />
@@ -1055,7 +1578,7 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
       </main>
 
       {panelOpen && (
-        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "gpu" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
+        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "note" ? "w-[min(38vw,590px)]" : activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
             <span className="text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}</span>
             <button
@@ -1077,6 +1600,9 @@ export function AcademicAgent({ onOpenProjects }: { onOpenProjects: () => void }
               onToggleRunning={() => setRunning((value) => !value)}
               onTodoStatusChange={handleTodoStatusChange}
               onAddTodo={handleAddTodo}
+              onStartBioSkill={handleStartBioSkill}
+              canvasFocusNodeId={canvasFocusNodeId}
+              canvasFocusRequest={canvasFocusRequest}
             />
           </div>
         </aside>

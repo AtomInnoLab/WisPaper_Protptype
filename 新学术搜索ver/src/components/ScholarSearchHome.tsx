@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Search, ArrowRight, ChevronRight, ChevronLeft, BookOpen, GraduationCap, Infinity, ChevronDown, Bot, Lightbulb, Presentation, Bookmark, ThumbsUp, ThumbsDown, SlidersHorizontal } from 'lucide-react';
+import { Search, ArrowRight, ChevronRight, ChevronLeft, BookOpen, GraduationCap, Infinity, ChevronDown, Bot, Lightbulb, Presentation, Bookmark, ThumbsUp, ThumbsDown, SlidersHorizontal, Zap, CircleHelp, RefreshCw, Atom, Leaf, HeartPulse, Brain, ChartNoAxesCombined } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ScholarSearchHomeProps {
@@ -66,6 +66,172 @@ export const extractAcademicIdentifiers = (input: string): AcademicIdentifier[] 
 export const detectAcademicIdentifier = (input: string): AcademicIdentifier | null =>
   extractAcademicIdentifiers(input)[0] ?? null;
 
+type SearchExample = {
+  category: string;
+  query: string;
+  icon: React.ComponentType<{ className?: string }>;
+  tone: string;
+};
+
+const searchExampleSets: SearchExample[][] = [
+  [
+    { category: 'Computer Science', query: 'Find a paper using a distillation method to train models', icon: Atom, tone: 'from-[#071c77] to-[#3157d5]' },
+    { category: 'Environmental Science', query: 'Find papers on why public and stakeholder support is required for ecological restoration and rewilding', icon: Leaf, tone: 'from-[#b8edc4] to-[#5ec882]' },
+    { category: 'Medicine', query: 'Impacts of Catch-Up Growth in Children with Congenital Heart Disease', icon: HeartPulse, tone: 'from-[#ffd1df] to-[#f399b8]' },
+    { category: 'Neuroscience', query: 'Self evaluation and sleep memory consolidation', icon: Brain, tone: 'from-[#eac9ff] to-[#9c8ee9]' },
+    { category: 'Finance', query: 'Can you point me to literature about Bayesian methods for time series forecasting?', icon: ChartNoAxesCombined, tone: 'from-[#ead8b8] to-[#c2a675]' },
+  ],
+  [
+    { category: 'Artificial Intelligence', query: 'Find recent papers comparing retrieval-augmented generation evaluation methods', icon: Atom, tone: 'from-[#122181] to-[#4769e8]' },
+    { category: 'Climate Science', query: 'Find evidence on how urban greening affects heat resilience', icon: Leaf, tone: 'from-[#c8efb8] to-[#6bc18b]' },
+    { category: 'Public Health', query: 'What recent studies examine digital interventions for preventive care?', icon: HeartPulse, tone: 'from-[#ffd7c7] to-[#f28c99]' },
+    { category: 'Cognitive Science', query: 'Find papers about attention, memory, and human decision making', icon: Brain, tone: 'from-[#d9d2ff] to-[#9a8fe7]' },
+    { category: 'Economics', query: 'Show literature on causal inference methods for policy evaluation', icon: ChartNoAxesCombined, tone: 'from-[#ebd9b8] to-[#b99f70]' },
+  ],
+];
+
+export function ScholarSearchHome({ onSearch, onQuickOpen }: ScholarSearchHomeProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState<'quick' | 'deep'>('quick');
+  const [exampleSetIndex, setExampleSetIndex] = useState(0);
+  const detectedIdentifiers = extractAcademicIdentifiers(searchQuery);
+  const currentExamples = searchExampleSets[exampleSetIndex];
+
+  const handleSearch = () => {
+    const query = searchQuery.trim();
+    if (query) onSearch(query);
+  };
+
+  return (
+    <main className="flex-1 overflow-y-auto bg-[#f3f8fd] p-3 sm:p-5">
+      <section className="mx-auto flex min-h-full w-full max-w-[1480px] flex-col items-center rounded-[26px] bg-white px-5 pb-14 pt-[clamp(64px,12vh,180px)] sm:px-10 lg:px-16">
+        <header className="w-full text-center">
+          <h1 className="text-[clamp(28px,3vw,46px)] font-semibold leading-[1.15] tracking-[-0.025em] text-[#3293f6]">
+            Hi, Yue. Which paper do you want to read today?
+          </h1>
+        </header>
+
+        <div className="mt-16 w-full max-w-[1110px] sm:mt-20">
+          <div className="overflow-hidden rounded-[26px] bg-[#f4f6f9]">
+            <div className="rounded-[24px] border border-[#dce3eb] bg-white px-4 pb-4 pt-3 shadow-[0_2px_6px_rgba(31,41,55,0.03)] sm:px-5">
+              <textarea
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    handleSearch();
+                  }
+                }}
+                placeholder="e.g., Find papers using Transformer for time-series forecasting..."
+                aria-label="Search papers"
+                className="block min-h-[108px] w-full resize-none bg-transparent px-1 py-2 text-[16px] leading-7 text-slate-800 outline-none placeholder:text-[#8895a8] sm:min-h-[122px] sm:text-[18px]"
+              />
+
+              {detectedIdentifiers.length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-2 px-1" aria-label="Detected academic identifiers">
+                  {detectedIdentifiers.map((identifier) => (
+                    <button
+                      key={`${identifier.kind}-${identifier.value}`}
+                      type="button"
+                      onClick={() => onQuickOpen(identifier)}
+                      className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                    >
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {identifier.kind} · {identifier.value}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="inline-flex w-fit items-center rounded-full bg-[#f1f3f6] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode('quick')}
+                    aria-pressed={searchMode === 'quick'}
+                    className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${searchMode === 'quick' ? 'bg-white text-[#242b35] shadow-[0_1px_5px_rgba(15,23,42,0.12)]' : 'text-[#778397]'}`}
+                  >
+                    <Zap className={`h-4 w-4 ${searchMode === 'quick' ? 'text-[#2f9cff]' : ''}`} />
+                    Quick Mode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSearchMode('deep')}
+                    aria-pressed={searchMode === 'deep'}
+                    className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold transition ${searchMode === 'deep' ? 'bg-white text-[#242b35] shadow-[0_1px_5px_rgba(15,23,42,0.12)]' : 'text-[#778397]'}`}
+                  >
+                    <Atom className={`h-4 w-4 ${searchMode === 'deep' ? 'text-[#2f9cff]' : ''}`} />
+                    Deep Mode
+                    <CircleHelp className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-end gap-3">
+                  <span className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#f1f3f5] px-3 text-sm font-medium text-[#46505d]">
+                    <Infinity className="h-4 w-4" /> Unmetered
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSearch}
+                    disabled={!searchQuery.trim()}
+                    aria-label="Search"
+                    className="grid h-12 w-12 place-items-center rounded-full bg-[#20262d] text-white transition hover:-translate-y-0.5 hover:bg-[#11161c] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Search className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p className="px-5 py-3 text-center text-xs leading-5 text-[#95a0b1] sm:text-sm">
+              {searchMode === 'quick'
+                ? 'Based on keyword matching. Best suited for finding specific paper titles or performing broad searches, similar to Google Scholar.'
+                : 'Understands research intent and relationships. Best suited for complex questions, comparisons, and evidence-driven discovery.'}
+            </p>
+          </div>
+        </div>
+
+        <section className="mt-24 w-full max-w-[1230px] sm:mt-28" aria-labelledby="search-examples-heading">
+          <h2 id="search-examples-heading" className="text-center text-2xl font-semibold text-[#252b33]">Try Our Examples</h2>
+          <div className="mt-14 flex flex-col gap-5">
+            {currentExamples.map((example, index) => {
+              const ExampleIcon = example.icon;
+              const widths = ['w-[72%] self-center', 'w-[92%] self-start', 'w-[72%] self-end', 'w-[60%] self-center', 'w-[80%] self-center'];
+              return (
+                <button
+                  key={`${example.category}-${exampleSetIndex}`}
+                  type="button"
+                  onClick={() => setSearchQuery(example.query)}
+                  className={`group flex min-h-[68px] max-w-full items-center gap-3 rounded-[18px] border border-[#dfe5ec] bg-white p-2.5 pr-6 text-left shadow-[0_8px_20px_rgba(33,75,120,0.10)] transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_12px_28px_rgba(33,75,120,0.14)] max-md:!w-full ${widths[index]}`}
+                >
+                  <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${example.tone} text-white`}>
+                    <ExampleIcon className="h-6 w-6" />
+                  </span>
+                  <span className="shrink-0 rounded-xl bg-[#e8f3ff] px-3 py-2 text-sm font-semibold text-[#1485f4]">
+                    {example.category}
+                  </span>
+                  <span className="min-w-0 text-[15px] font-medium leading-6 text-[#718096] sm:text-[17px]">
+                    {example.query}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-12 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setExampleSetIndex((value) => (value + 1) % searchExampleSets.length)}
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-[#7f8b9d] transition hover:bg-slate-50 hover:text-[#258ff5]"
+            >
+              <RefreshCw className="h-4 w-4" /> Change
+            </button>
+          </div>
+        </section>
+      </section>
+    </main>
+  );
+}
+
 // Category keys for translation
 const categoryKeys = [
   'libraryCollections',
@@ -122,7 +288,7 @@ const getThesesCategoryExamples = (categoryKey: string): string[] => {
   return exampleMap[categoryKey] || [];
 };
 
-export function ScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip, onTooltipDismiss, onOpenFigureToPPTX }: ScholarSearchHomeProps) {
+function LegacyScholarSearchHome({ onSearch, onQuickOpen, showDeepSearchTooltip, onTooltipDismiss, onOpenFigureToPPTX }: ScholarSearchHomeProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState<'quick' | 'deep' | 'books' | 'theses'>('deep');
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
