@@ -43,7 +43,7 @@ const scenarios: Record<string, Scenario[]> = {
 
 export function MockConsole({ currentView, userCredits, onUserCreditsChange, onAsk, onSearch, onAgent, onReplayAgentOnboarding, onOpenBilling }: MockConsoleProps) {
   const { language } = useLanguage();
-  const { market, setMarket, outcome, setOutcome, scenario } = useBilling();
+  const { market, setMarket, subscription, outcome, setOutcome, scenario } = useBilling();
   const [open, setOpen] = React.useState(false);
   const [agentBlockEditing, setAgentBlockEditing] = React.useState(false);
   const [collaboratorBlockEditing, setCollaboratorBlockEditing] = React.useState(false);
@@ -137,6 +137,7 @@ export function MockConsole({ currentView, userCredits, onUserCreditsChange, onA
           <p className="text-xs font-semibold text-slate-200">{language === 'zh' ? '订阅与支付' : 'Billing and payment'}</p>
           <div className="grid grid-cols-2 gap-2">{(['domestic', 'overseas'] as const).map((value) => <button key={value} type="button" aria-pressed={market === value} onClick={() => setMarket(value)} className={`rounded-lg border px-2 py-2 text-xs ${market === value ? 'border-blue-400 bg-blue-500/20 text-blue-200' : 'border-slate-700 text-slate-400'}`}>{value === 'domestic' ? '国内版' : 'Overseas'}</button>)}</div>
           <div className="grid grid-cols-2 gap-2">{([['new', '新用户'], ['active', '订阅中'], ['failed', '续费失败'], ['expired', '已到期']] as const).map(([value, label]) => <button key={value} type="button" onClick={() => scenario(value)} className="rounded-lg border border-slate-700 px-2 py-2 text-xs text-slate-300 hover:bg-slate-800">{label}</button>)}</div>
+          {isAgentPage && <div><p className="mb-1.5 text-xs text-slate-400">论文容量档位</p><div className="grid grid-cols-4 gap-1">{([['Free', 'new'], ['Plus', 'upgraded-plus'], ['Pro', 'upgraded-pro'], ['Max', 'upgraded-max']] as const).map(([label, state]) => <button key={label} type="button" onClick={() => scenario(state)} className={`rounded-md border px-1 py-1.5 text-[11px] ${((!subscription.end || new Date(subscription.end).getTime() <= Date.now()) ? label === 'Free' : label === (subscription.plan === 'max' || subscription.plan === 'max5' ? 'Max' : subscription.plan === 'plus' ? 'Plus' : 'Pro')) ? 'border-blue-400 bg-blue-500/20 text-blue-200' : 'border-slate-700 text-slate-400 hover:bg-slate-800'}`}>{label}</button>)}</div></div>}
           <label className="block text-xs text-slate-400">{language === 'zh' ? '下次支付结果' : 'Next payment result'}<select value={outcome} onChange={(event) => setOutcome(event.target.value as typeof outcome)} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-slate-200"><option value="success">Success</option><option value="payment-failed">Payment failed</option><option value="sign-failed">Agreement failed</option></select></label>
           {onOpenBilling && <button type="button" onClick={onOpenBilling} className="w-full rounded-lg bg-blue-500 px-3 py-2 text-xs font-semibold text-white">{language === 'zh' ? '打开支付与订阅' : 'Open billing'}</button>}
         </section>

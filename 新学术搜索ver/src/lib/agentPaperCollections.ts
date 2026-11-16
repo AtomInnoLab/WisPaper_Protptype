@@ -13,6 +13,8 @@ export interface AgentPaper {
 }
 
 export type PaperScope = 'session' | 'project' | 'library';
+export type PaperTier = 'Free' | 'Plus' | 'Pro' | 'Max';
+export const paperTierLimit = (tier: PaperTier) => ({ Free: 5, Plus: 30, Pro: 100, Max: Infinity })[tier];
 
 export const libraryPaperKey = 'wispaper-agent-library-papers';
 export const projectPaperKey = (projectId: string) => `wispaper-agent-project-papers:${projectId}`;
@@ -55,19 +57,23 @@ const firstProjectPapers: AgentPaper[] = [
 export const paperIdentity = (paper: AgentPaper) => paper.doi?.toLowerCase().trim() || paper.title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g, '');
 export const sortAgentPapers = (papers: AgentPaper[]) => [...papers].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
-export function mergeAgentPapers(current: AgentPaper[], incoming: AgentPaper[]): { papers: AgentPaper[]; duplicates: number; updatedId: string | null } {
+export function mergeAgentPapers(current: AgentPaper[], incoming: AgentPaper[], limit = Infinity): { papers: AgentPaper[]; duplicates: number; blocked: number; updatedId: string | null } {
   const papers = [...current];
   let duplicates = 0;
+  let blocked = 0;
   let updatedId: string | null = null;
   const updatedAt = Math.max(Date.now(), ...papers.map((paper) => paper.updatedAt ?? 0)) + 1;
   incoming.forEach((paper) => {
     const index = papers.findIndex((item) => paperIdentity(item) === paperIdentity(paper));
-    if (index < 0) { papers.push({ ...paper, updatedAt }); updatedId = paper.id; return; }
+    if (index < 0) {
+      if (papers.length >= limit) { blocked += 1; return; }
+      papers.push({ ...paper, updatedAt }); updatedId = paper.id; return;
+    }
     duplicates += 1;
     updatedId = papers[index].id;
     papers[index] = { ...papers[index], ...paper, id: papers[index].id, updatedAt, sources: Array.from(new Set([...papers[index].sources, ...paper.sources])), markdownReady: papers[index].markdownReady || paper.markdownReady, pdfPath: paper.pdfPath || papers[index].pdfPath, tldr: paper.tldr || papers[index].tldr };
   });
-  return { papers: sortAgentPapers(papers), duplicates, updatedId };
+  return { papers: sortAgentPapers(papers), duplicates, blocked, updatedId };
 }
 
 function readPapers(key: string, fallback: AgentPaper[] = []): AgentPaper[] {
@@ -80,15 +86,17 @@ function readPapers(key: string, fallback: AgentPaper[] = []): AgentPaper[] {
 export const readProjectAgentPapers = (projectId: string) => readPapers(projectPaperKey(projectId), projectId === '1' ? firstProjectPapers : []);
 export const readLibraryAgentPapers = () => readPapers(libraryPaperKey);
 
-export function addProjectAgentPaper(projectId: string, paper: AgentPaper) {
-  const result = mergeAgentPapers(readProjectAgentPapers(projectId), [paper]);
+export function addProjectAgentPaper(projectId: string, paper: AgentPaper, limit = Infinity) {
+  const result = mergeAgentPapers(readProjectAgentPapers(projectId), [paper], limit);
+  if (result.blocked) return result;
   try { window.localStorage.setItem(projectPaperKey(projectId), JSON.stringify(result.papers)); } catch { /* prototype storage */ }
   window.dispatchEvent(new CustomEvent('wispaper:agent-papers-updated', { detail: { scope: 'project', projectId } }));
   return result;
 }
 
-export function addLibraryAgentPaper(paper: AgentPaper) {
-  const result = mergeAgentPapers(readLibraryAgentPapers(), [paper]);
+export function addLibraryAgentPaper(paper: AgentPaper, limit = Infinity) {
+  const result = mergeAgentPapers(readLibraryAgentPapers(), [paper], limit);
+  if (result.blocked) return result;
   try { window.localStorage.setItem(libraryPaperKey, JSON.stringify(result.papers)); } catch { /* prototype storage */ }
   window.dispatchEvent(new CustomEvent('wispaper:agent-papers-updated', { detail: { scope: 'library' } }));
   return result;

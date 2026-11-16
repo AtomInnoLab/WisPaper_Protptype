@@ -54,11 +54,12 @@ import {
 import { ResearchTree } from "./ResearchTree";
 import { usePrototypeAuth } from "../lib/usePrototypeAuth";
 import { readAgentProjects } from "../lib/agentProjects";
-import { AgentPaper, PaperScope, addLibraryAgentPaper, addProjectAgentPaper, agentPaperDirectory, agentPaperIndexCsv, agentPaperIndexPath, mergeAgentPapers, paperIdentity, paperMarkdownPath, paperPdfPath, paperTldr, readLibraryAgentPapers, readProjectAgentPapers, sortAgentPapers } from "../lib/agentPaperCollections";
+import { AgentPaper, PaperScope, PaperTier, addLibraryAgentPaper, addProjectAgentPaper, agentPaperDirectory, agentPaperIndexCsv, agentPaperIndexPath, mergeAgentPapers, paperIdentity, paperMarkdownPath, paperPdfPath, paperTierLimit, paperTldr, readLibraryAgentPapers, readProjectAgentPapers, sortAgentPapers } from "../lib/agentPaperCollections";
 import { useGlobalAskAIHistory } from "../lib/useGlobalAskAIHistory";
 import { GlobalAskAIDrawer } from "./GlobalAskAIDrawer";
 import { LogtoMockForm } from "./LogtoMockForm";
 import { useLanguage } from "../contexts/LanguageContext";
+import { useBilling } from "../contexts/BillingContext";
 
 type WorkbenchTab = "common" | "ask" | "files" | "search" | "papers" | "plan" | "gpu" | "bio" | "note";
 
@@ -1078,6 +1079,10 @@ function WorkbenchPanel({
   onPaperScopeChange,
   onAddToProject,
   onAddToLibrary,
+  paperTier,
+  paperLimit,
+  paperQuotaNotice,
+  onUpgrade,
   paperPipelineStatus,
   onDownloadPaper,
   recentPaperUpdate,
@@ -1103,14 +1108,29 @@ function WorkbenchPanel({
   onPaperScopeChange: (scope: PaperScope) => void;
   onAddToProject: (paper: AgentPaper) => void;
   onAddToLibrary: (paper: AgentPaper) => void;
+  paperTier: PaperTier;
+  paperLimit: number;
+  paperQuotaNotice: string;
+  onUpgrade: () => void;
   paperPipelineStatus: string;
   onDownloadPaper: (paper: AgentPaper) => void;
   recentPaperUpdate: { id: string; duplicate: boolean; token: number } | null;
 }) {
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
   const visiblePapers = paperScope === 'session' ? papers : paperScope === 'project' ? projectPapers : libraryPapers;
-  const promotedPapers = paperScope === 'session' ? projectPapers : libraryPapers;
-  const promotedIdentities = new Set(promotedPapers.map(paperIdentity));
+  const projectPaperIdentities = new Set(projectPapers.map(paperIdentity));
+  const libraryPaperIdentities = new Set(libraryPapers.map(paperIdentity));
+  const [openPaperAction, setOpenPaperAction] = useState<string | null>(null);
+  useEffect(() => setOpenPaperAction(null), [paperScope]);
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest('[data-paper-action]')) setOpenPaperAction(null);
+    };
+    const closeEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpenPaperAction(null); };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeEscape);
+    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeEscape); };
+  }, []);
   const { sessions: globalAskSessions, latestForScene, upsertSession } = useGlobalAskAIHistory("agent");
   const historyInitialized = React.useRef(false);
   const [expandedTodoId, setExpandedTodoId] = useState<string | null>(null);
@@ -1244,6 +1264,23 @@ function WorkbenchPanel({
     link.download = 'index.csv';
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const paperAction = (paper: AgentPaper, compact: boolean) => {
+    if (paperScope === 'library') return null;
+    const key = `${paperScope}:${paper.id}:${compact ? 'card' : 'row'}`;
+    const identity = paperIdentity(paper);
+    const actions = [
+      ...(paperScope === 'session' ? [{ label: '项目', done: projectPaperIdentities.has(identity), run: () => onAddToProject(paper) }] : []),
+      { label: '知识库', done: libraryPaperIdentities.has(identity), run: () => onAddToLibrary(paper) },
+    ];
+    const allDone = actions.every((action) => action.done);
+    return <div className="relative shrink-0" data-paper-action>
+      <button type="button" aria-label={`论文操作：${paper.title}`} aria-expanded={openPaperAction === key} onClick={() => setOpenPaperAction((current) => current === key ? null : key)} className={`inline-flex items-center justify-center gap-1 rounded-md border border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 ${compact ? 'px-2 py-1 text-[11px] font-medium' : 'h-8 w-8'}`}>{compact ? <>{allDone ? <Check className="h-3 w-3 text-emerald-600" /> : <Plus className="h-3 w-3" />}{allDone ? '已收录' : '加入到…'}<ChevronDown className="h-3 w-3" /></> : allDone ? <Check className="h-4 w-4 text-emerald-600" /> : <MoreHorizontal className="h-4 w-4" />}</button>
+      {openPaperAction === key && <div role="menu" aria-label={`论文操作：${paper.title}`} className="absolute bottom-full right-0 z-50 mb-1 min-w-36 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+        {actions.map((action) => <button key={action.label} type="button" role="menuitem" aria-label={`${action.done ? '已在' : '加入'}${action.label}：${paper.title}`} disabled={action.done} onClick={() => { action.run(); setOpenPaperAction(null); }} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs ${action.done ? 'text-emerald-700' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}>{action.done ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}{action.done ? `已在${action.label}` : `加入${action.label}`}</button>)}
+      </div>}
+    </div>;
   };
 
   const startNewAsk = () => {
@@ -1525,13 +1562,14 @@ function WorkbenchPanel({
       {activeTab === "papers" && (
         <section aria-label="Agent 论文列表" className="agent-paper-panel">
           <div role="tablist" aria-label="论文范围" className="grid grid-cols-3 rounded-lg bg-slate-200/70 p-0.5">{([['session', '会话'], ['project', '项目'], ['library', '知识库']] as const).map(([scope, label]) => <button key={scope} type="button" role="tab" aria-selected={paperScope === scope} onClick={() => onPaperScopeChange(scope)} className={`rounded-md px-2 py-1.5 text-xs font-medium transition ${paperScope === scope ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{label}</button>)}</div>
+          {(paperQuotaNotice || visiblePapers.length >= paperLimit) && <div role="alert" className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"><span>{paperQuotaNotice || `${paperScope === 'session' ? '会话' : paperScope === 'project' ? '项目' : '知识库'}论文已达到 ${paperTier} 上限（${paperLimit} 篇）。`}</span><button type="button" onClick={onUpgrade} className="shrink-0 rounded-md bg-amber-500 px-2 py-1 font-semibold text-white hover:bg-amber-600">升级</button></div>}
           {paperScope === 'session' && paperPipelineStatus && <div role="status" className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">{paperPipelineStatus}</div>}
           {visiblePapers.length ? <div className="agent-paper-compact-list mt-3 space-y-1.5">{visiblePapers.map((paper) => <article key={`${paper.id}-${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? recentPaperUpdate.token : 0}`} className={`rounded-xl border bg-white px-2.5 py-2 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'animate-in fade-in slide-in-from-top-3 border-blue-300 ring-2 ring-blue-100 duration-700' : 'border-slate-200'}`}>
             <p className="text-[13px] font-medium leading-[18px] text-slate-900">{paper.title}</p>
             <div className="mt-1 flex items-center gap-2 text-[11px] leading-4 text-slate-500">
               <span className="min-w-0 flex-1 truncate">{paper.authors || '作者待补充'} · {paper.year || '年份待补充'}</span>
               <span title={paper.authors && paper.year ? '引用检查：基本字段完整，来源待核验' : '引用检查：缺少作者或年份，待补充'} aria-label={paper.authors && paper.year ? '引用字段齐，来源待核验' : '引用待补，缺少作者或年份'} className={`shrink-0 ${paper.authors && paper.year ? 'text-emerald-600' : 'text-amber-600'}`}>{paper.authors && paper.year ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleGauge className="h-3.5 w-3.5" />}</span>
-              {paperScope !== 'library' && <button type="button" aria-label={`${promotedIdentities.has(paperIdentity(paper)) ? '已在' : '加入'}${paperScope === 'session' ? '项目' : '知识库'}：${paper.title}`} disabled={promotedIdentities.has(paperIdentity(paper))} onClick={() => paperScope === 'session' ? onAddToProject(paper) : onAddToLibrary(paper)} className={`inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition ${promotedIdentities.has(paperIdentity(paper)) ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>{promotedIdentities.has(paperIdentity(paper)) ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}{promotedIdentities.has(paperIdentity(paper)) ? (paperScope === 'session' ? '已在项目' : '已在知识库') : (paperScope === 'session' ? '加入项目' : '加入知识库')}</button>}
+              {paperAction(paper, true)}
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px]">
               {paper.match && <span className={`rounded px-1.5 py-0.5 ${paper.match === 'Perfect' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{paper.match}</span>}
@@ -1540,13 +1578,13 @@ function WorkbenchPanel({
               {paperScope === 'session' && recentPaperUpdate?.id === paper.id && <span className="rounded bg-blue-600 px-1.5 py-0.5 font-medium text-white">{recentPaperUpdate.duplicate ? '重复记录已合并' : '刚加入'}</span>}
             </div>
           </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">{paperScope === 'session' ? '当前会话暂无论文。' : paperScope === 'project' ? '当前项目暂无论文。' : '知识库暂无论文。'}</div>}
-          {visiblePapers.length > 0 && <div className="agent-paper-wide-list mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <div className="agent-paper-grid border-b border-slate-200 bg-slate-50 text-xs font-medium text-slate-500"><span className="px-3 py-2.5">标题</span><span className="px-3 py-2.5">作者</span><span className="px-3 py-2.5">TLDR</span><span className="px-2 py-2.5">操作</span></div>
+          {visiblePapers.length > 0 && <div className="agent-paper-wide-list mt-3 rounded-xl border border-slate-200 bg-white">
+            <div className="agent-paper-grid border-b border-slate-200 bg-slate-50 text-xs font-medium text-slate-500"><span className="px-3 py-2.5">标题</span><span className="px-3 py-2.5">作者</span><span className="px-3 py-2.5">TLDR</span><span className="py-2.5 text-center">操作</span></div>
             {visiblePapers.map((paper) => <div key={paper.id} className={`agent-paper-grid border-b border-slate-100 text-xs last:border-b-0 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'bg-blue-50' : ''}`}>
               <div className="min-w-0 px-3 py-3"><p className="font-medium leading-5 text-slate-900">{paper.title}</p><div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500"><span>{paper.year || '年份待补充'}</span>{paper.match && <span className={paper.match === 'Perfect' ? 'text-emerald-600' : 'text-amber-600'}>{paper.match}</span>}{paper.markdownReady && <span className="text-blue-600">Markdown</span>}</div></div>
               <div className="min-w-0 px-3 py-3 text-slate-600"><span className="break-words">{paper.authors || '作者待补充'}</span><span className={`ml-1 inline-block align-middle ${paper.authors && paper.year ? 'text-emerald-600' : 'text-amber-600'}`} title={paper.authors && paper.year ? '引用字段齐，来源待核验' : '引用待补，缺少作者或年份'}>{paper.authors && paper.year ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleGauge className="h-3.5 w-3.5" />}</span></div>
               <p className="min-w-0 px-3 py-3 leading-5 text-slate-600">{paperTldr(paper) || '—'}</p>
-              <div className="px-2 py-3">{paperScope !== 'library' && <button type="button" aria-label={`${promotedIdentities.has(paperIdentity(paper)) ? '已在' : '加入'}${paperScope === 'session' ? '项目' : '知识库'}：${paper.title}`} disabled={promotedIdentities.has(paperIdentity(paper))} onClick={() => paperScope === 'session' ? onAddToProject(paper) : onAddToLibrary(paper)} className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium ${promotedIdentities.has(paperIdentity(paper)) ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>{promotedIdentities.has(paperIdentity(paper)) ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}{promotedIdentities.has(paperIdentity(paper)) ? (paperScope === 'session' ? '已在项目' : '已在知识库') : (paperScope === 'session' ? '加入项目' : '加入知识库')}</button>}</div>
+              <div className="flex justify-center py-3">{paperAction(paper, false)}</div>
             </div>)}
           </div>}
         </section>
@@ -1659,6 +1697,9 @@ function clearOnboardingDemoParams() {
 export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade, userCredits, initialPrompt = "", initialProjectId = 'default' }: { onOpenProjects: () => void; onOpenSearch: (query: string) => void; onLogin: () => void; onUpgrade: () => void; userCredits: number; initialPrompt?: string; initialProjectId?: string }) {
   const { language } = useLanguage();
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
+  const { subscription } = useBilling();
+  const paperTier: PaperTier = !isAuthenticated || !subscription.end || new Date(subscription.end).getTime() <= Date.now() ? 'Free' : subscription.plan === 'plus' ? 'Plus' : subscription.plan === 'pro' ? 'Pro' : 'Max';
+  const paperLimit = paperTierLimit(paperTier);
   const isZh = language === "zh";
   const [loginCardMode, setLoginCardMode] = useState<"inline" | "redirect">(() => {
     try { return window.localStorage.getItem("wispaper-mock-agent-login-style") === "inline" ? "inline" : "redirect"; } catch { return "redirect"; }
@@ -1737,6 +1778,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const [projectPapers, setProjectPapers] = useState<AgentPaper[]>(() => readProjectAgentPapers(linkedAgentSession?.projectId ?? initialProjectId));
   const [libraryPapers, setLibraryPapers] = useState<AgentPaper[]>(readLibraryAgentPapers);
   const [paperPipelineStatus, setPaperPipelineStatus] = useState('');
+  const [paperQuotaNotice, setPaperQuotaNotice] = useState('');
   const [recentPaperUpdate, setRecentPaperUpdate] = useState<{ id: string; duplicate: boolean; token: number } | null>(null);
   const recentPaperTimerRef = useRef<number | null>(null);
 
@@ -1744,6 +1786,8 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     if (paperPanelWidth === null) return;
     try { window.localStorage.setItem('wispaper-agent-paper-panel-width', String(paperPanelWidth)); } catch { /* prototype storage */ }
   }, [paperPanelWidth]);
+
+  useEffect(() => setPaperQuotaNotice(''), [paperTier]);
 
   useEffect(() => () => {
     if (!paperResizeRef.current) return;
@@ -1803,9 +1847,10 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   }, [currentProjectId]);
 
   const addPapers = (incoming: AgentPaper[]) => {
-    const result = mergeAgentPapers(papersRef.current, incoming);
+    const result = mergeAgentPapers(papersRef.current, incoming, paperLimit);
     papersRef.current = result.papers;
     setPapers(result.papers);
+    if (result.blocked) setPaperQuotaNotice(`会话论文已达到 ${paperTier} 上限（${paperLimit} 篇），${result.blocked} 篇未加入。`);
     setActiveTab('papers');
     setPaperScope('session');
     setPanelOpen(true);
@@ -1813,12 +1858,19 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   };
 
   const completeDeepSearch = () => {
-    addPapers(deepSearchPapers.filter((paper) => paper.match === 'Perfect' || paper.match === 'Partial'));
+    const result = addPapers(deepSearchPapers.filter((paper) => paper.match === 'Perfect' || paper.match === 'Partial'));
     setPaperPipelineStatus('');
-    setMessages((items) => [...items, { role: 'agent', text: '深度搜索已完成。Perfect 和 Partial 论文已自动收录到右侧「论文」，并完成去重与引用字段检查。' }]);
+    setMessages((items) => [...items, { role: 'agent', text: result.blocked ? `深度搜索已完成。${result.blocked} 篇论文因达到 ${paperTier} 上限未加入；其余论文已去重并收录。` : '深度搜索已完成。Perfect 和 Partial 论文已自动收录到右侧「论文」，并完成去重与引用字段检查。' }]);
   };
 
   const convertPdf = (source: 'upload' | 'web', title: string, knownPaper?: AgentPaper, originalFileName?: string) => {
+    if (papersRef.current.length >= paperLimit && !papersRef.current.some((paper) => paperIdentity(paper) === paperIdentity(knownPaper ?? { id: '', title, sources: [source], markdownReady: false }))) {
+      setPaperQuotaNotice(`会话论文已达到 ${paperTier} 上限（${paperLimit} 篇），无法加入新论文。`);
+      setActiveTab('papers');
+      setPaperScope('session');
+      setPanelOpen(true);
+      return;
+    }
     setPaperPipelineStatus(`${source === 'upload' ? '上传' : '网页下载'} PDF：正在调用 PDF-to-Markdown…`);
     setActiveTab('papers');
     setPanelOpen(true);
@@ -1835,7 +1887,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
         if (recentPaperTimerRef.current !== null) window.clearTimeout(recentPaperTimerRef.current);
         recentPaperTimerRef.current = window.setTimeout(() => setRecentPaperUpdate(null), 1800);
       }
-      setMessages((items) => [...items, { role: 'agent', text: result.duplicates ? `PDF-to-Markdown 已完成，已更新论文列表中的「${title}」。` : `PDF-to-Markdown 已完成，「${title}」已加入论文列表。` }]);
+      setMessages((items) => [...items, { role: 'agent', text: result.blocked ? `PDF-to-Markdown 已完成，但「${title}」因达到 ${paperTier} 论文上限未加入。` : result.duplicates ? `PDF-to-Markdown 已完成，已更新论文列表中的「${title}」。` : `PDF-to-Markdown 已完成，「${title}」已加入论文列表。` }]);
     }, 900);
   };
 
@@ -1857,7 +1909,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
       window.removeEventListener('wispaper:mock-agent-deep-search-complete', deepSearch);
       window.removeEventListener('wispaper:mock-agent-web-pdf', webPdf);
     };
-  }, []);
+  }, [paperLimit, paperTier]);
 
   useEffect(() => {
     const syncSession = (event: Event) => {
@@ -2581,7 +2633,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
             setPaperPanelWidth(Math.round(Math.max(320, Math.min(paperPanelMaxWidth(), width + (event.key === 'ArrowLeft' ? 32 : -32)))));
           }} className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none outline-none" title="拖动调整论文栏宽度"><span className="absolute left-0 top-1/2 h-16 w-1 -translate-y-1/2 rounded-r bg-slate-300 transition group-hover:bg-blue-500 group-focus:bg-blue-500" /></div>}
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
-            <span className="flex items-center gap-2 text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}{activeTab === 'papers' && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">{paperScope === 'session' ? papers.length : paperScope === 'project' ? projectPapers.length : libraryPapers.length}</span>}</span>
+            <span className="flex items-center gap-2 text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}{activeTab === 'papers' && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">{paperScope === 'session' ? papers.length : paperScope === 'project' ? projectPapers.length : libraryPapers.length}{paperLimit === Infinity ? '' : ` / ${paperLimit}`}</span>}</span>
             <button
               onClick={() => setPanelOpen(false)}
               className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white hover:text-slate-950"
@@ -2611,8 +2663,18 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
               libraryPapers={libraryPapers}
               paperScope={paperScope}
               onPaperScopeChange={setPaperScope}
-              onAddToProject={(paper) => addProjectAgentPaper(currentProjectId, paper)}
-              onAddToLibrary={(paper) => addLibraryAgentPaper(paper)}
+              onAddToProject={(paper) => {
+                const result = addProjectAgentPaper(currentProjectId, paper, paperLimit);
+                setPaperQuotaNotice(result.blocked ? `项目论文已达到 ${paperTier} 上限（${paperLimit} 篇），无法加入新论文。` : '');
+              }}
+              onAddToLibrary={(paper) => {
+                const result = addLibraryAgentPaper(paper, paperLimit);
+                setPaperQuotaNotice(result.blocked ? `知识库论文已达到 ${paperTier} 上限（${paperLimit} 篇），无法加入新论文。` : '');
+              }}
+              paperTier={paperTier}
+              paperLimit={paperLimit}
+              paperQuotaNotice={paperQuotaNotice}
+              onUpgrade={onUpgrade}
               paperPipelineStatus={paperPipelineStatus}
               onDownloadPaper={(paper) => convertPdf('web', paper.title, paper)}
               recentPaperUpdate={recentPaperUpdate}
