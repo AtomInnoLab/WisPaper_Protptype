@@ -20,7 +20,6 @@ import {
   Code2,
   Cpu,
   Dna,
-  ExternalLink,
   FileText,
   FlaskConical,
   FolderKanban,
@@ -803,6 +802,14 @@ function AgentCreditGateCard({ kind, credits, isZh, onUpgrade, onSearch, onUseLi
   </div>;
 }
 
+function AgentPaperQuotaCard({ scope, tier, limit, isZh, onUpgrade, onDismiss }: { scope: PaperScope; tier: PaperTier; limit: number; isZh: boolean; onUpgrade: () => void; onDismiss: () => void }) {
+  const scopeName = scope === 'session' ? (isZh ? '会话' : 'Session') : scope === 'project' ? (isZh ? '项目' : 'Project') : (isZh ? '知识库' : 'Library');
+  return <div role="status" className="rounded-[20px] border border-amber-200 bg-amber-50/70 p-3 shadow-sm sm:p-5">
+    <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700"><BookOpen className="h-5 w-5" /></span><div><h3 className="text-sm font-semibold text-slate-900">{isZh ? `${scopeName}论文容量已达上限` : `${scopeName} paper limit reached`}</h3><p className="mt-1 text-xs leading-5 text-slate-600">{isZh ? `${tier} 套餐最多收录 ${limit} 篇${scopeName}论文。升级后可继续添加。` : `The ${tier} plan allows up to ${limit} papers in ${scopeName.toLowerCase()}. Upgrade to add more.`}</p></div></div>
+    <div className="mt-3 flex gap-2 sm:mt-4 sm:pl-12"><button type="button" onClick={onUpgrade} className="rounded-lg bg-[#3ea3ff] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#2485df]">{isZh ? '升级套餐' : 'Upgrade'}</button><button type="button" onClick={onDismiss} className="rounded-lg border border-amber-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50">{isZh ? '稍后' : 'Later'}</button></div>
+  </div>;
+}
+
 function AgentLaunchCaseArtwork({ title, task, index, isZh }: { title: string; task: string; index: number; isZh: boolean }) {
   const colors = [
     { bg: "#edf2fa", ink: "#385c95", soft: "#dbe7fa", line: "#aac0df" },
@@ -1090,7 +1097,6 @@ function WorkbenchPanel({
   paperTier,
   paperLimit,
   paperQuotaNotice,
-  onUpgrade,
   paperPipelineStatus,
   onDownloadPaper,
   recentPaperUpdate,
@@ -1124,7 +1130,6 @@ function WorkbenchPanel({
   paperTier: PaperTier;
   paperLimit: number;
   paperQuotaNotice: string;
-  onUpgrade: () => void;
   paperPipelineStatus: string;
   onDownloadPaper: (paper: AgentPaper) => void;
   recentPaperUpdate: { id: string; duplicate: boolean; token: number } | null;
@@ -1581,7 +1586,7 @@ function WorkbenchPanel({
       {activeTab === "papers" && (
         <section aria-label="Agent 论文列表" className="agent-paper-panel">
           <div role="tablist" aria-label="论文范围" className="grid grid-cols-3 rounded-lg bg-slate-200/70 p-0.5">{([['session', '会话'], ['project', '项目'], ['library', '知识库']] as const).map(([scope, label]) => <button key={scope} type="button" role="tab" aria-selected={paperScope === scope} onClick={() => onPaperScopeChange(scope)} className={`rounded-md px-2 py-1.5 text-xs font-medium transition ${paperScope === scope ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{label}</button>)}</div>
-          {(paperQuotaNotice || visiblePapers.length >= paperLimit) && <div role="alert" className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900"><span>{paperQuotaNotice || `${paperScope === 'session' ? '会话' : paperScope === 'project' ? '项目' : '知识库'}论文已达到 ${paperTier} 上限（${paperLimit} 篇）。`}</span><button type="button" onClick={onUpgrade} className="shrink-0 rounded-md bg-amber-500 px-2 py-1 font-semibold text-white hover:bg-amber-600">升级</button></div>}
+          {(paperQuotaNotice || visiblePapers.length >= paperLimit) && <div role="status" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">{paperQuotaNotice || `${paperScope === 'session' ? '会话' : paperScope === 'project' ? '项目' : '知识库'}论文已达到 ${paperTier} 上限（${paperLimit} 篇）。`}</div>}
           {paperScope === 'session' && paperPipelineStatus && <div role="status" className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">{paperPipelineStatus}</div>}
           {visiblePapers.length ? <div className="agent-paper-compact-list mt-3 space-y-1.5">{visiblePapers.map((paper) => <article key={`${paper.id}-${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? recentPaperUpdate.token : 0}`} className={`rounded-xl border bg-white px-2.5 py-2 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'animate-in fade-in slide-in-from-top-3 border-blue-300 ring-2 ring-blue-100 duration-700' : 'border-slate-200'}`}>
             <p className="text-[13px] font-medium leading-[18px] text-slate-900">{paper.title}</p>
@@ -1801,6 +1806,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const [libraryPapers, setLibraryPapers] = useState<AgentPaper[]>(readLibraryAgentPapers);
   const [paperPipelineStatus, setPaperPipelineStatus] = useState('');
   const [paperQuotaNotice, setPaperQuotaNotice] = useState('');
+  const [paperQuotaGate, setPaperQuotaGate] = useState<{ scope: PaperScope; tier: PaperTier; limit: number } | null>(null);
   const [recentPaperUpdate, setRecentPaperUpdate] = useState<{ id: string; duplicate: boolean; token: number } | null>(null);
   const recentPaperTimerRef = useRef<number | null>(null);
 
@@ -1809,7 +1815,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     try { window.localStorage.setItem('wispaper-agent-paper-panel-width', String(paperPanelWidth)); } catch { /* prototype storage */ }
   }, [paperPanelWidth]);
 
-  useEffect(() => setPaperQuotaNotice(''), [paperTier]);
+  useEffect(() => { setPaperQuotaNotice(''); setPaperQuotaGate(null); }, [paperTier]);
 
   useEffect(() => () => {
     if (!paperResizeRef.current) return;
@@ -1872,7 +1878,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     const result = mergeAgentPapers(papersRef.current, incoming, paperLimit);
     papersRef.current = result.papers;
     setPapers(result.papers);
-    if (result.blocked) setPaperQuotaNotice(`会话论文已达到 ${paperTier} 上限（${paperLimit} 篇），${result.blocked} 篇未加入。`);
+    if (result.blocked) { setPaperQuotaNotice(`会话论文已达到 ${paperTier} 上限（${paperLimit} 篇），${result.blocked} 篇未加入。`); setPaperQuotaGate({ scope: 'session', tier: paperTier, limit: paperLimit }); }
     setActiveTab('papers');
     setPaperScope('session');
     setPanelOpen(true);
@@ -1888,6 +1894,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const convertPdf = (source: 'upload' | 'web', title: string, knownPaper?: AgentPaper, originalFileName?: string) => {
     if (papersRef.current.length >= paperLimit && !papersRef.current.some((paper) => paperIdentity(paper) === paperIdentity(knownPaper ?? { id: '', title, sources: [source], markdownReady: false }))) {
       setPaperQuotaNotice(`会话论文已达到 ${paperTier} 上限（${paperLimit} 篇），无法加入新论文。`);
+      setPaperQuotaGate({ scope: 'session', tier: paperTier, limit: paperLimit });
       setActiveTab('papers');
       setPaperScope('session');
       setPanelOpen(true);
@@ -1934,6 +1941,24 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   }, [paperLimit, paperTier]);
 
   useEffect(() => {
+    const triggerPaperQuota = () => {
+      if (!Number.isFinite(paperLimit)) return;
+      const missing = Math.max(0, paperLimit - papersRef.current.length);
+      const filler: AgentPaper[] = Array.from({ length: missing }, (_, index) => ({ id: `mock-quota-${Date.now()}-${index}`, title: `Mock 论文 ${index + 1}`, authors: 'Mock Author', year: 2024, sources: ['deep-search'], markdownReady: false }));
+      const result = mergeAgentPapers(papersRef.current, filler, paperLimit);
+      papersRef.current = result.papers;
+      setPapers(result.papers);
+      setPaperQuotaNotice(`会话论文已达到 ${paperTier} 上限（${paperLimit} 篇），新论文未加入。`);
+      setPaperQuotaGate({ scope: 'session', tier: paperTier, limit: paperLimit });
+      setActiveTab('papers');
+      setPaperScope('session');
+      setPanelOpen(true);
+    };
+    window.addEventListener('wispaper:mock-agent-paper-quota', triggerPaperQuota);
+    return () => window.removeEventListener('wispaper:mock-agent-paper-quota', triggerPaperQuota);
+  }, [paperLimit, paperTier]);
+
+  useEffect(() => {
     const generateArtifact = (event: Event) => {
       const kind = (event as CustomEvent<{ kind?: AgentArtifactKind }>).detail?.kind;
       if (!kind || !['markdown', 'pdf', 'word', 'bib'].includes(kind)) return;
@@ -1975,8 +2000,6 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const caseFillTimersRef = useRef<number[]>([]);
   const replayMessagesEndRef = useRef<HTMLDivElement>(null);
   const [canvasContextCount, setCanvasContextCount] = useState(0);
-  const [canvasFocusNodeId, setCanvasFocusNodeId] = useState<string | null>(null);
-  const [canvasFocusRequest, setCanvasFocusRequest] = useState(0);
   const taskCompleted = planAccepted && todos.every((todo) => todo.status === "done" || todo.status === "skipped");
   const taskNeedsAttention = planAccepted && todos.some((todo) => todo.status === "waiting" || todo.status === "blocked" || todo.status === "failed");
   const defaultCases = useMemo<AgentCaseStudy[]>(() => ["文献综述", "灵感发现", "论文评审"].map((skill) => {
@@ -1995,7 +2018,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     window.addEventListener("wispaper:mock-agent-login-style", handleStyle);
     return () => window.removeEventListener("wispaper:mock-agent-login-style", handleStyle);
   }, []);
-  useEffect(() => { if (caseReplay || (!isAuthenticated && started)) replayMessagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [caseReplay, isAuthenticated, started, messages.length]);
+  useEffect(() => { if (caseReplay || paperQuotaGate || (!isAuthenticated && started)) replayMessagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [caseReplay, paperQuotaGate, isAuthenticated, started, messages.length]);
   useEffect(() => {
     if (!started || !messages.length) return;
     if (skipInitialSessionSave.current) { skipInitialSessionSave.current = false; return; }
@@ -2598,24 +2621,6 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
                       <div className={`rounded-[18px] rounded-tl-md bg-slate-50 px-3 py-2.5 text-sm leading-6 text-slate-700 sm:px-5 sm:py-4 sm:text-[15px] sm:leading-7 ${caseReplay ? "whitespace-pre-line" : ""}`}>
                         {message.text}
                       </div>
-                      {!caseReplay && messages.slice(0, index + 1).filter((item) => item.role === "agent").length === 1 && <div className="mt-3">
-                        <button
-                          type="button"
-                          onClick={onOpenProjects}
-                          className="group w-full rounded-2xl border border-violet-200 bg-gradient-to-br from-white to-violet-50/70 p-3 text-left transition hover:border-violet-300 hover:shadow-md sm:p-4"
-                        >
-                          <span className="flex items-start gap-2 sm:gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white sm:h-10 sm:w-10"><Network className="h-4 w-4 sm:h-5 sm:w-5" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="text-xs font-semibold text-slate-900 sm:text-sm">研究范围已同步到科研画布</strong><ExternalLink className="h-4 w-4 shrink-0 text-violet-400 transition group-hover:translate-x-0.5" /></span><span className="mt-1 block text-xs leading-5 text-slate-500">已补充“证据筛选与评测”分支，并关联向量检索基线。</span></span></span>
-                        </button>
-                      </div>}
-                      {!caseReplay && messages.slice(0, index + 1).filter((item) => item.role === "agent").length === 2 && <div className="mt-3">
-                        <button
-                          type="button"
-                          onClick={() => { setActiveTab("note"); setPanelOpen(true); setCanvasFocusNodeId("n2"); setCanvasFocusRequest((value) => value + 1); }}
-                          className="group w-full rounded-2xl border border-blue-200 bg-gradient-to-br from-white to-blue-50/70 p-3 text-left transition hover:border-blue-300 hover:shadow-md sm:p-4"
-                        >
-                          <span className="flex items-start gap-2 sm:gap-3"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white sm:h-10 sm:w-10"><FileText className="h-4 w-4 sm:h-5 sm:w-5" /></span><span className="min-w-0 flex-1"><span className="flex items-center justify-between gap-2"><strong className="text-xs font-semibold text-slate-900 sm:text-sm">实验范围笔记已写入</strong><ExternalLink className="h-4 w-4 shrink-0 text-blue-400 transition group-hover:translate-x-0.5" /></span><span className="mt-1 block text-xs leading-5 text-slate-500">记录 LoCoMo 数据集、BGE-M3、Top K=8 与 BM25 对照条件，待补充时间特征重排。</span></span></span>
-                        </button>
-                      </div>}
                     </div>
                   )}
                 </article>
@@ -2630,6 +2635,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
                 </div>
               )}
               {creditGate && isAuthenticated && <AgentCreditGateCard kind={creditGate} credits={userCredits} isZh={isZh} onUpgrade={onUpgrade} onSearch={() => onOpenSearch(prompt || messages[messages.length - 1]?.text || "")} onUseLite={() => { setShortcutModel("Lite"); setSelectedAgent("fast"); submit(prompt || messages[messages.length - 1]?.text || "", "Lite"); }} />}
+              {paperQuotaGate && <AgentPaperQuotaCard {...paperQuotaGate} isZh={isZh} onUpgrade={onUpgrade} onDismiss={() => setPaperQuotaGate(null)} />}
               {!isAuthenticated && <div ref={guestCardRef}><AgentLoginPrompt isZh={isZh} mode={loginCardMode} onLogin={openRedirectLogin} onComplete={handleAgentLogin} /></div>}
               <div ref={replayMessagesEndRef} />
             </div>
@@ -2693,8 +2699,8 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
               onStartBioSkill={handleStartBioSkill}
               onStartCommonFunction={(label, detail) => submit(`请使用「${label}」功能：${detail}`)}
               onSelectTab={setActiveTab}
-              canvasFocusNodeId={canvasFocusNodeId}
-              canvasFocusRequest={canvasFocusRequest}
+              canvasFocusNodeId={null}
+              canvasFocusRequest={0}
               papers={papers}
               projectPapers={projectPapers}
               libraryPapers={libraryPapers}
@@ -2706,17 +2712,18 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
               onAddToProject={(paper) => {
                 const result = addProjectAgentPaper(currentProjectId, paper, paperLimit);
                 setPaperQuotaNotice(result.blocked ? `项目论文已达到 ${paperTier} 上限（${paperLimit} 篇），无法加入新论文。` : '');
+                if (result.blocked) setPaperQuotaGate({ scope: 'project', tier: paperTier, limit: paperLimit });
               }}
               onAddToLibrary={(paper) => {
                 const result = addLibraryAgentPaper(paper, paperLimit);
                 setPaperQuotaNotice(result.blocked ? `知识库论文已达到 ${paperTier} 上限（${paperLimit} 篇），无法加入新论文。` : '');
+                if (result.blocked) setPaperQuotaGate({ scope: 'library', tier: paperTier, limit: paperLimit });
               }}
-              onRemoveFromProject={(paper) => { removeProjectAgentPaper(currentProjectId, paper); setPaperQuotaNotice(''); }}
-              onRemoveFromLibrary={(paper) => { removeLibraryAgentPaper(paper); setPaperQuotaNotice(''); }}
+              onRemoveFromProject={(paper) => { removeProjectAgentPaper(currentProjectId, paper); setPaperQuotaNotice(''); setPaperQuotaGate(null); }}
+              onRemoveFromLibrary={(paper) => { removeLibraryAgentPaper(paper); setPaperQuotaNotice(''); setPaperQuotaGate(null); }}
               paperTier={paperTier}
               paperLimit={paperLimit}
               paperQuotaNotice={paperQuotaNotice}
-              onUpgrade={onUpgrade}
               paperPipelineStatus={paperPipelineStatus}
               onDownloadPaper={(paper) => convertPdf('web', paper.title, paper)}
               recentPaperUpdate={recentPaperUpdate}
