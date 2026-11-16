@@ -157,6 +157,7 @@ export default function App() {
   const [showDeepSearchTooltip, setShowDeepSearchTooltip] = useState(false);
   const [scholarQAKey, setScholarQAKey] = useState(0);
   const [agentKey, setAgentKey] = useState(0);
+  const [initialAgentProjectId, setInitialAgentProjectId] = useState('default');
   const [homeLoginRequest, setHomeLoginRequest] = useState(0);
   const [homeSignedIn, setHomeSignedIn] = useState(() => readHomeSession().signedIn);
   const [agentTaskActive] = useState(false);
@@ -360,6 +361,11 @@ export default function App() {
     setViewMode('academic-agent');
   };
 
+  const handleStartAgentInProject = (projectId: string) => {
+    setInitialAgentProjectId(projectId);
+    handleWorkspaceNavigate('academic-agent');
+  };
+
   const executeSearch = (query: string, mode: 'quick' | 'deep', examplePapers?: Paper[], navigateToResults = false) => {
     const sessionId = createSearchSessionId();
     const identifiers = extractAcademicIdentifiers(query);
@@ -467,6 +473,7 @@ export default function App() {
           <LeftSidebar
             onNavigate={handleWorkspaceNavigate}
             onOpenAgentSession={handleOpenAgentSession}
+            onStartAgentInProject={handleStartAgentInProject}
             onOpenInvite={() => setShowInviteModal(true)}
             onOpenPaywall={() => setShowPaywallModal(true)}
             onOpenRecharge={() => setShowRechargeModal(true)}
@@ -670,7 +677,7 @@ export default function App() {
           ) : viewMode === "idea-discovery" ? (
             <IdeaDiscovery />
           ) : viewMode === "academic-agent" ? (
-            <AcademicAgent key={agentKey} initialPrompt={initialAgentPrompt} userCredits={mockUserCredits} onUpgrade={() => setShowPaywallModal(true)} onLogin={() => setShowPaywallModal(true)} onOpenSearch={(query) => {
+            <AcademicAgent key={agentKey} initialProjectId={initialAgentProjectId} initialPrompt={initialAgentPrompt} userCredits={mockUserCredits} onUpgrade={() => setShowPaywallModal(true)} onLogin={() => setShowPaywallModal(true)} onOpenSearch={(query) => {
               setViewMode("list");
               handleSearch(query);
             }} onOpenProjects={() => {

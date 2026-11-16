@@ -6,10 +6,12 @@ import { SettingsModal } from './SettingsModal';
 import fudanLogo from 'figma:asset/fa745d526ea9ecf0301c6464b5897d1c96cb2f95.png';
 import wisPaperLogo from 'figma:asset/3ce02a66a6df7d8cd1f86de17846e94de4e9df61.png';
 import { usePrototypeAuth } from '../lib/usePrototypeAuth';
+import { AgentProject, agentProjectAdditionsKey, readAgentProjects } from '../lib/agentProjects';
 
 interface LeftSidebarProps {
   onNavigate?: (view: string) => void;
   onOpenAgentSession?: (id: string) => void;
+  onStartAgentInProject?: (projectId: string) => void;
   onOpenInvite?: () => void;
   onOpenPaywall?: () => void;
   onOpenRecharge?: () => void;
@@ -49,10 +51,6 @@ const historyByNav: Record<string, { title: string; items: string[] }> = {
     title: '搜索历史',
     items: ['非线性多智能体编队控制', 'Multimodal reasoning benchmarks', 'RAG vs. fine-tuning'],
   },
-  'academic-agent': {
-    title: 'Agent 历史',
-    items: ['多模态 Agent 长期记忆选题', 'RAG 评测文献综述', '论文主图设计与优化'],
-  },
 };
 
 const agentHistoryPrefix = 'wispaper-agent-session:';
@@ -62,18 +60,58 @@ const demoAgentMessages: Record<string, string> = {
   '论文主图设计与优化': '请根据论文的核心贡献设计并优化主图。',
 };
 
-function readAgentHistory(): { id: string; title: string; updatedAt: number }[] {
+interface AgentHistoryItem { id: string; title: string; projectId: string; updatedAt: number }
+
+function readAgentHistory(): AgentHistoryItem[] {
   try {
+    if (!window.localStorage.getItem('wispaper-agent-demo-seeded')) {
+      const demos = [
+        { id: '00000000-0000-4000-8000-000000000001', title: '多模态 Agent 长期记忆选题', projectId: '3' },
+        { id: '00000000-0000-4000-8000-000000000002', title: 'RAG 评测文献综述', projectId: '2' },
+        { id: '00000000-0000-4000-8000-000000000003', title: '论文主图设计与优化', projectId: 'default' },
+      ];
+      demos.forEach((demo, index) => {
+        if (Object.keys(window.localStorage).some((key) => {
+          if (!key.startsWith(agentHistoryPrefix)) return false;
+          try { return JSON.parse(window.localStorage.getItem(key) || 'null')?.title === demo.title; } catch { return false; }
+        })) return;
+        window.localStorage.setItem(`${agentHistoryPrefix}${demo.id}`, JSON.stringify({ kind: 'task', title: demo.title, skill: null, projectId: demo.projectId, messages: [{ role: 'user', text: demoAgentMessages[demo.title] }, { role: 'agent', text: '已收到任务，正在整理研究计划与相关材料。' }], updatedAt: Date.now() - (index + 1) * 1000 }));
+      });
+      window.localStorage.setItem('wispaper-agent-demo-seeded', '1');
+    }
+    if (!window.localStorage.getItem('wispaper-agent-literature-demo-seeded')) {
+      const id = '00000000-0000-4000-8000-000000000004';
+      const session = {
+        kind: 'case', title: '多模态 Agent 长期记忆文献综述', skill: '文献综述', projectId: '3', model: 'Pro',
+        replay: { title: '多模态 Agent 长期记忆文献综述', summary: '检索长期记忆机制、行为模拟和评测方法', outcome: '已形成文献脉络与证据清单', model: 'Pro' },
+        messages: [
+          { role: 'user', text: '请完成一篇关于多模态 Agent 长期记忆机制的文献综述，重点比较记忆存储、检索、更新与评测方法。' },
+          { role: 'agent', text: '我会先拆解检索问题：长期记忆架构、记忆检索策略、多模态信息融合，以及跨任务评测。接着运行深度搜索并筛选证据。' },
+          { role: 'agent', text: '深度搜索已完成：共返回 24 条候选记录。按主题相关性和可用证据筛选出 2 篇 Perfect、1 篇 Partial；其余结果暂不纳入论文列表。' },
+          { role: 'agent', text: 'Perfect：MemoryBank 讨论长期记忆存储与更新；Generative Agents 展示记忆检索与反思在行为模拟中的作用。Partial：LLM-based Agents 记忆机制综述可用于补全分类，但作者信息仍需核对。' },
+          { role: 'agent', text: '已将 3 篇论文写入右侧「论文」。随后通过网页下载 Generative Agents 的 PDF，调用 PDF-to-Markdown；与已有搜索记录去重后仍为 3 篇，并标记引用字段待核验项。' },
+          { role: 'agent', text: '综述初稿脉络：先比较参数化与外部记忆，再分析检索和反思机制，最后讨论多模态记忆评测的证据缺口。后续可补充统一基准与消融实验。' },
+        ],
+        papers: [
+          { id: 'memorybank', title: 'MemoryBank: Enhancing Large Language Models with Long-Term Memory', authors: 'Zhong et al.', year: 2024, match: 'Perfect', sources: ['deep-search'], markdownReady: false },
+          { id: 'generative-agents', title: 'Generative Agents: Interactive Simulacra of Human Behavior', authors: 'Park et al.', year: 2023, match: 'Perfect', sources: ['deep-search', 'web'], markdownReady: true },
+          { id: 'memory-survey', title: 'A Survey on the Memory Mechanism of LLM-based Agents', year: 2024, match: 'Partial', sources: ['deep-search'], markdownReady: false },
+        ],
+        updatedAt: Date.now(),
+      };
+      window.localStorage.setItem(`${agentHistoryPrefix}${id}`, JSON.stringify(session));
+      window.localStorage.setItem('wispaper-agent-literature-demo-seeded', '1');
+    }
     return Object.keys(window.localStorage)
       .filter((key) => key.startsWith(agentHistoryPrefix))
       .map((key, index) => {
         try {
           const session = JSON.parse(window.localStorage.getItem(key) || 'null');
           if (!session || !Array.isArray(session.messages)) return null;
-          return { id: key.slice(agentHistoryPrefix.length), title: session.title || session.messages[0]?.text || '新研究任务', updatedAt: Number(session.updatedAt) || index };
+          return { id: key.slice(agentHistoryPrefix.length), title: session.title || session.messages[0]?.text || '新研究任务', projectId: String(session.projectId ?? 'default'), updatedAt: Number(session.updatedAt) || index };
         } catch { return null; }
       })
-      .filter((item): item is { id: string; title: string; updatedAt: number } => item !== null)
+      .filter((item): item is AgentHistoryItem => item !== null)
       .sort((a, b) => b.updatedAt - a.updatedAt);
   } catch { return []; }
 }
@@ -103,7 +141,7 @@ const llmsItems: LLMSItem[] = [
   { id: 'satellite', title: 'Satellite Programing' },
 ];
 
-export function LeftSidebar({ onNavigate, onOpenAgentSession, onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenNotifications, onNewScholarQA, onResetSearch, currentView }: LeftSidebarProps = {}) {
+export function LeftSidebar({ onNavigate, onOpenAgentSession, onStartAgentInProject, onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenNotifications, onNewScholarQA, onResetSearch, currentView }: LeftSidebarProps = {}) {
   const [activeNav, setActiveNav] = useState('academic-agent');
   const [showMyLibrary, setShowMyLibrary] = useState(false);
   const [showLLMSSection, setShowLLMSSection] = useState(false);
@@ -119,27 +157,74 @@ export function LeftSidebar({ onNavigate, onOpenAgentSession, onOpenInvite, onOp
   ]);
   const [draggedHistoryId, setDraggedHistoryId] = useState<string | null>(null);
   const [agentHistory, setAgentHistory] = useState(readAgentHistory);
+  const [agentProjects, setAgentProjects] = useState(readAgentProjects);
+  const [expandedAgentProjects, setExpandedAgentProjects] = useState<Record<string, boolean>>({});
+  const [visibleAgentCount, setVisibleAgentCount] = useState<Record<string, number>>({});
+  const [draggedAgentId, setDraggedAgentId] = useState<string | null>(null);
+  const [agentMenuId, setAgentMenuId] = useState<string | null>(null);
+  const [addingAgentProject, setAddingAgentProject] = useState(false);
+  const [agentProjectTitle, setAgentProjectTitle] = useState('');
   const historyMenuRef = useRef<HTMLDivElement>(null);
   const { t, language, setLanguage } = useLanguage();
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
 
   React.useEffect(() => {
     const refresh = () => setAgentHistory(readAgentHistory());
+    const refreshProjects = () => setAgentProjects(readAgentProjects());
     window.addEventListener('wispaper:agent-history-updated', refresh);
     window.addEventListener('storage', refresh);
+    window.addEventListener('wispaper:projects-updated', refreshProjects);
+    window.addEventListener('storage', refreshProjects);
     return () => {
       window.removeEventListener('wispaper:agent-history-updated', refresh);
       window.removeEventListener('storage', refresh);
+      window.removeEventListener('wispaper:projects-updated', refreshProjects);
+      window.removeEventListener('storage', refreshProjects);
     };
   }, []);
 
-  const openDemoAgentHistory = (title: string) => {
-    const id = crypto.randomUUID();
-    const prompt = demoAgentMessages[title] || title;
-    const session = { kind: 'task', title, skill: null, messages: [{ role: 'user', text: prompt }, { role: 'agent', text: '已收到任务，正在整理研究计划与相关材料。' }], updatedAt: Date.now() };
-    try { window.localStorage.setItem(`${agentHistoryPrefix}${id}`, JSON.stringify(session)); } catch { /* prototype storage */ }
+  const writeAgentSession = (id: string, changes: Record<string, unknown>) => {
+    try {
+      const key = `${agentHistoryPrefix}${id}`;
+      const session = JSON.parse(window.localStorage.getItem(key) || 'null');
+      if (!session) return;
+      window.localStorage.setItem(key, JSON.stringify({ ...session, ...changes, updatedAt: Date.now() }));
+      window.dispatchEvent(new Event('wispaper:agent-history-updated'));
+      window.dispatchEvent(new CustomEvent('wispaper:agent-session-changed', { detail: { id, ...changes } }));
+    } catch { /* prototype storage */ }
+  };
+
+  const createAgent = (projectId: string) => {
+    onStartAgentInProject?.(projectId);
+  };
+
+  const deleteAgent = (item: AgentHistoryItem) => {
+    if (!window.confirm(language === 'zh' ? `删除 Agent「${item.title}」及其对话？` : `Delete Agent "${item.title}" and its conversation?`)) return;
+    try { window.localStorage.removeItem(`${agentHistoryPrefix}${item.id}`); } catch { /* prototype storage */ }
+    setAgentMenuId(null);
     window.dispatchEvent(new Event('wispaper:agent-history-updated'));
-    onOpenAgentSession?.(id);
+    if (window.location.pathname === `/app/agent/${item.id}`) onNavigate?.('academic-agent');
+  };
+
+  const moveAgent = (id: string, projectId: string) => {
+    writeAgentSession(id, { projectId });
+    setDraggedAgentId(null);
+    setAgentMenuId(null);
+    setExpandedAgentProjects((current) => ({ ...current, [projectId]: true }));
+  };
+
+  const createAgentProject = () => {
+    const title = agentProjectTitle.trim();
+    if (!title) return;
+    const project = { id: Date.now(), title, description: '一个新的研究项目', updated: '刚刚', members: 1, files: 0, accent: 'from-emerald-400 to-teal-600', status: 'active', canvasTemplate: 'blank' };
+    try {
+      const previous = JSON.parse(window.localStorage.getItem(agentProjectAdditionsKey) || '[]');
+      window.localStorage.setItem(agentProjectAdditionsKey, JSON.stringify([project, ...(Array.isArray(previous) ? previous : [])]));
+    } catch { /* prototype storage */ }
+    setAgentProjects(readAgentProjects());
+    setAddingAgentProject(false);
+    setAgentProjectTitle('');
+    onNavigate?.('research-projects');
   };
 
   React.useEffect(() => {
@@ -333,16 +418,46 @@ export function LeftSidebar({ onNavigate, onOpenAgentSession, onOpenInvite, onOp
               ))}
             </div>
           </section>
+        ) : activeNav === 'academic-agent' ? (
+          <section className={`${isCollapsed ? 'px-0' : 'px-1'} pb-3`} aria-label="Agent 历史">
+            {!isCollapsed && <div className="flex items-center justify-between px-2 pb-2"><h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{language === 'zh' ? '按项目查看 Agent' : 'Agents by project'}</h2><button type="button" title={language === 'zh' ? '新建项目' : 'New project'} aria-label={language === 'zh' ? '新建项目' : 'New project'} onClick={() => setAddingAgentProject((value) => !value)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Plus className="h-3.5 w-3.5" /></button></div>}
+            {addingAgentProject && !isCollapsed && <div className="mb-2 flex items-center gap-1 px-2"><input autoFocus value={agentProjectTitle} onChange={(event) => setAgentProjectTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') createAgentProject(); if (event.key === 'Escape') setAddingAgentProject(false); }} placeholder={language === 'zh' ? '项目名称' : 'Project name'} aria-label={language === 'zh' ? '项目名称' : 'Project name'} className="min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-blue-400" /><button type="button" onClick={createAgentProject} disabled={!agentProjectTitle.trim()} aria-label={language === 'zh' ? '创建项目' : 'Create project'} className="rounded-md bg-blue-600 p-1.5 text-white disabled:opacity-40"><Plus className="h-3.5 w-3.5" /></button></div>}
+            <div className="space-y-1">
+              {agentProjects.map((project: AgentProject) => {
+                const items = agentHistory.filter((item) => item.projectId === project.id);
+                const expanded = expandedAgentProjects[project.id] !== false;
+                return <div key={project.id} onDragOver={(event) => { if (draggedAgentId) event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggedAgentId; if (id) moveAgent(id, project.id); }} className={`rounded-lg ${draggedAgentId ? 'hover:bg-blue-50' : ''}`}>
+                  <div className={`group flex items-center gap-1 rounded-lg ${isCollapsed ? 'justify-center' : ''}`}>
+                    <button type="button" title={project.title} aria-label={project.title} aria-expanded={expanded} onClick={() => setExpandedAgentProjects((current) => ({ ...current, [project.id]: !expanded }))} className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-lg py-2 text-left text-xs font-medium text-slate-600 hover:bg-slate-50 ${isCollapsed ? 'justify-center px-0' : 'px-2'}`}>
+                      {!isCollapsed && (expanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ArrowRight className="h-3 w-3 shrink-0" />)}
+                      <FolderKanban className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      {!isCollapsed && <span className="truncate">{project.title}</span>}
+                    </button>
+                    {!isCollapsed && <button type="button" title={language === 'zh' ? `在${project.title}中新建 Agent` : `New Agent in ${project.title}`} aria-label={language === 'zh' ? `在${project.title}中新建 Agent` : `New Agent in ${project.title}`} onClick={() => createAgent(project.id)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Plus className="h-3.5 w-3.5" /></button>}
+                  </div>
+                  {expanded && !isCollapsed && <div className="ml-3 space-y-0.5 border-l border-slate-100 pl-1.5">
+                    {items.slice(0, visibleAgentCount[project.id] ?? 10).map((item) => <div key={item.id} draggable onDragStart={(event) => { setDraggedAgentId(item.id); event.dataTransfer.setData('text/plain', item.id); event.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => setDraggedAgentId(null)} className="group relative flex min-w-0 items-center rounded-lg hover:bg-slate-50">
+                      <button type="button" title={item.title} onClick={() => onOpenAgentSession?.(item.id)} className={`min-w-0 flex-1 truncate rounded-lg px-2 py-2 text-left text-xs ${window.location.pathname === `/app/agent/${item.id}` ? 'bg-blue-50 font-medium text-blue-600' : 'text-slate-500 hover:text-slate-900'}`}><Bot className="mr-1.5 inline h-3.5 w-3.5 text-slate-400" />{item.title}</button>
+                      <button type="button" aria-label={`${item.title} 操作`} title="Agent 操作" onClick={() => setAgentMenuId((current) => current === item.id ? null : item.id)} className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+                      {agentMenuId === item.id && <div className="absolute right-0 top-full z-50 w-48 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+                        <button type="button" onClick={() => { const title = window.prompt(language === 'zh' ? '重命名 Agent' : 'Rename Agent', item.title); if (title?.trim()) writeAgentSession(item.id, { title: title.trim() }); setAgentMenuId(null); }} className="w-full rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50">{language === 'zh' ? '重命名' : 'Rename'}</button>
+                        <label className="block px-2 py-1.5 text-xs text-slate-700">{language === 'zh' ? '移动到项目' : 'Move to project'}<select aria-label={`${item.title} 移动到项目`} value={item.projectId} onChange={(event) => moveAgent(item.id, event.target.value)} className="mt-1 w-full rounded border border-slate-200 bg-white p-1 text-xs">{agentProjects.map((target) => <option key={target.id} value={target.id}>{target.title}</option>)}</select></label>
+                        <button type="button" onClick={() => deleteAgent(item)} className="w-full rounded px-2 py-1.5 text-left text-xs text-red-600 hover:bg-red-50">{language === 'zh' ? '删除' : 'Delete'}</button>
+                      </div>}
+                    </div>)}
+                    {items.length > (visibleAgentCount[project.id] ?? 10) && <button type="button" onClick={() => setVisibleAgentCount((current) => ({ ...current, [project.id]: (current[project.id] ?? 10) + 10 }))} className="w-full rounded-lg px-2 py-1.5 text-left text-[11px] text-blue-600 hover:bg-blue-50">{language === 'zh' ? `展开更多 · ${items.length - (visibleAgentCount[project.id] ?? 10)}` : `Show more · ${items.length - (visibleAgentCount[project.id] ?? 10)}`}</button>}
+                  </div>}
+                </div>;
+              })}
+            </div>
+          </section>
         ) : historyByNav[activeNav] ? (
           <section className={`${isCollapsed ? 'px-0' : 'px-1'} pb-3`} aria-label={historyByNav[activeNav].title}>
             {!isCollapsed ? <h2 className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{historyByNav[activeNav].title}</h2> : null}
             <div className="space-y-0.5">
-              {(activeNav === 'academic-agent' ? [
-                ...agentHistory.map((item) => ({ id: item.id, title: item.title, demo: false })),
-                ...historyByNav[activeNav].items.filter((title) => !agentHistory.some((item) => item.title === title)).map((title) => ({ id: title, title, demo: true })),
-              ] : historyByNav[activeNav].items.map((title) => ({ id: title, title, demo: false }))).map((item) => (
-                <button key={item.id} type="button" title={item.title} onClick={activeNav === 'academic-agent' ? () => item.demo ? openDemoAgentHistory(item.title) : onOpenAgentSession?.(item.id) : undefined} className={`w-full rounded-lg py-2 text-left text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-900 ${isCollapsed ? 'flex justify-center px-0' : 'truncate px-2.5'} ${activeNav === 'academic-agent' && window.location.pathname === `/app/agent/${item.id}` ? 'bg-blue-50 text-blue-600' : ''}`}>
-                  {isCollapsed ? <Clock className="h-4 w-4" /> : item.title}
+              {historyByNav[activeNav].items.map((title) => (
+                <button key={title} type="button" title={title} className={`w-full rounded-lg py-2 text-left text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-900 ${isCollapsed ? 'flex justify-center px-0' : 'truncate px-2.5'}`}>
+                  {isCollapsed ? <Clock className="h-4 w-4" /> : title}
                 </button>
               ))}
             </div>

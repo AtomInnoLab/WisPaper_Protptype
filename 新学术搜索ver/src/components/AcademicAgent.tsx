@@ -52,12 +52,44 @@ import {
 } from "lucide-react";
 import { ResearchTree } from "./ResearchTree";
 import { usePrototypeAuth } from "../lib/usePrototypeAuth";
+import { readAgentProjects } from "../lib/agentProjects";
 import { useGlobalAskAIHistory } from "../lib/useGlobalAskAIHistory";
 import { GlobalAskAIDrawer } from "./GlobalAskAIDrawer";
 import { LogtoMockForm } from "./LogtoMockForm";
 import { useLanguage } from "../contexts/LanguageContext";
 
-type WorkbenchTab = "common" | "ask" | "files" | "search" | "plan" | "gpu" | "bio" | "note";
+type WorkbenchTab = "common" | "ask" | "files" | "search" | "papers" | "plan" | "gpu" | "bio" | "note";
+
+interface AgentPaper {
+  id: string;
+  title: string;
+  authors?: string;
+  year?: number;
+  doi?: string;
+  match?: "Perfect" | "Partial";
+  sources: Array<"deep-search" | "upload" | "web">;
+  markdownReady: boolean;
+}
+
+const deepSearchPapers: AgentPaper[] = [
+  { id: 'memorybank', title: 'MemoryBank: Enhancing Large Language Models with Long-Term Memory', authors: 'Zhong et al.', year: 2024, match: 'Perfect', sources: ['deep-search'], markdownReady: false },
+  { id: 'generative-agents', title: 'Generative Agents: Interactive Simulacra of Human Behavior', authors: 'Park et al.', year: 2023, match: 'Perfect', sources: ['deep-search'], markdownReady: false },
+  { id: 'memory-survey', title: 'A Survey on the Memory Mechanism of LLM-based Agents', year: 2024, match: 'Partial', sources: ['deep-search'], markdownReady: false },
+];
+
+const paperIdentity = (paper: AgentPaper) => paper.doi?.toLowerCase().trim() || paper.title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g, '');
+
+function mergeAgentPapers(current: AgentPaper[], incoming: AgentPaper[]): { papers: AgentPaper[]; duplicates: number } {
+  const papers = [...current];
+  let duplicates = 0;
+  incoming.forEach((paper) => {
+    const index = papers.findIndex((item) => paperIdentity(item) === paperIdentity(paper));
+    if (index < 0) { papers.push(paper); return; }
+    duplicates += 1;
+    papers[index] = { ...papers[index], ...paper, id: papers[index].id, sources: Array.from(new Set([...papers[index].sources, ...paper.sources])), markdownReady: papers[index].markdownReady || paper.markdownReady };
+  });
+  return { papers, duplicates };
+}
 type AgentTierId = "fast" | "balanced" | "primary" | "deep";
 type AgentTodoStatus = "pending" | "active" | "waiting" | "blocked" | "done" | "skipped" | "failed";
 type AgentTodoType = "agent" | "approval" | "user";
@@ -131,6 +163,8 @@ interface AgentRouteSession {
   replay?: { title: string; summary: string; outcome: string; model: "Lite" | "Pro" };
   creditGate?: "agent" | "pro";
   model?: "Lite" | "Pro";
+  projectId?: string;
+  papers?: AgentPaper[];
 }
 
 const openAgentSessionRoute = (session: AgentRouteSession) => {
@@ -452,6 +486,7 @@ const tabs: { id: WorkbenchTab; label: string; icon: React.ElementType }[] = [
   { id: "plan", label: "执行计划", icon: Sparkles },
   { id: "files", label: "任务文件", icon: FolderKanban },
   { id: "search", label: "检索结果", icon: Search },
+  { id: "papers", label: "论文", icon: BookOpen },
   { id: "bio", label: "生信", icon: Dna },
   { id: "gpu", label: "运行环境", icon: Cpu },
 ];
@@ -524,6 +559,9 @@ function AgentComposer({
   replayModel,
   shortcutModel,
   onShortcutModelChange,
+  projectId,
+  onProjectChange,
+  onUploadPdf,
 }: {
   prompt: string;
   setPrompt: (value: string) => void;
@@ -543,31 +581,36 @@ function AgentComposer({
   replayModel?: "Lite" | "Pro";
   shortcutModel: "Lite" | "Pro";
   onShortcutModelChange: (model: "Lite" | "Pro") => void;
+  projectId: string;
+  onProjectChange: (id: string) => void;
+  onUploadPdf: (file: File) => void;
 }) {
   const { language } = useLanguage();
   const [showTools, setShowTools] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [showAgents, setShowAgents] = useState(false);
   const [showShortcutModels, setShowShortcutModels] = useState(false);
-  const [selectedProject, setSelectedProject] = useState("Default Project");
   const [showProjects, setShowProjects] = useState(false);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const currentAgent = agentTiers.find((tier) => tier.id === selectedAgent) ?? agentTiers[1];
   const CurrentAgentIcon = currentAgent.icon;
   const selectedTask = quickTasks.find((task) => task.title === selectedSkill)
     ?? launchShortcuts.find((shortcut) => shortcut.title === selectedSkill);
   const SelectedSkillIcon = selectedTask?.icon;
   const usesLaunchOptions = ["文献综述", "灵感发现", "论文评审", "组会 PPT"].includes(selectedSkill ?? "");
-  const projectOptions = ["Default Project", "长上下文模型位置偏差研究", "多模态 Agent 评测", "非小细胞肺癌免疫治疗"];
+  const projectOptions = readAgentProjects();
+  const selectedProject = projectOptions.find((project) => project.id === projectId)?.title ?? projectOptions[0].title;
 
   return (
     <div className="relative">
+      <input ref={pdfInputRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) onUploadPdf(file); event.target.value = ''; }} />
       {(showTools || showMore) && (
         <div className="absolute bottom-[calc(100%+12px)] left-0 z-30 flex items-end gap-2">
           {showTools && (
             <div className="w-64 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_22px_60px_-28px_rgba(15,23,42,0.42)]">
-              <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-100">
+              <button type="button" onClick={() => { pdfInputRef.current?.click(); setShowTools(false); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-slate-700 transition hover:bg-slate-100">
                 <Paperclip className="h-4 w-4 text-slate-500" />
-                上传附件
+                上传 PDF
               </button>
               <div className="my-1 border-t border-slate-100" />
               {quickTasks.slice(0, 3).map((task) => {
@@ -713,10 +756,6 @@ function AgentComposer({
                   </button>
                   {showShortcutModels && <div className="absolute bottom-11 left-0 z-40 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">{(["Lite", "Pro"] as const).map((model) => <button key={model} type="button" onClick={() => { onShortcutModelChange(model); setShowShortcutModels(false); }} className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs ${shortcutModel === model ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}><span>{model}</span><span>{model === "Lite" ? "×0.36" : "×3.6"}</span></button>)}</div>}
                 </div>
-                <div className="relative min-w-0">
-                  <button type="button" onClick={() => { setShowProjects((value) => !value); setShowShortcutModels(false); }} className="flex h-9 w-10 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:max-w-48 sm:gap-2 sm:px-3" aria-label={selectedProject} title={selectedProject}><FolderKanban className="h-4 w-4 shrink-0 text-slate-500" /><span className="hidden truncate sm:inline">{selectedProject}</span><ChevronDown className="hidden h-3.5 w-3.5 shrink-0 sm:block" /></button>
-                  {showProjects && <div className="absolute bottom-11 right-0 z-40 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl sm:left-0 sm:right-auto sm:w-64">{projectOptions.map((project) => <button key={project} type="button" onClick={() => { setSelectedProject(project); setShowProjects(false); }} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${selectedProject === project ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}><FolderKanban className="h-3.5 w-3.5" /><span className="truncate">{project}</span></button>)}</div>}
-                </div>
               </>
             ) : <button
               type="button"
@@ -737,6 +776,10 @@ function AgentComposer({
               {replayModel ?? currentAgent.label}
               <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAgents ? "rotate-180" : ""}`} />
             </button>}
+            <div className="relative min-w-0">
+              <button type="button" onClick={() => { setShowProjects((value) => !value); setShowShortcutModels(false); }} className="flex h-9 w-10 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:max-w-48 sm:gap-2 sm:px-3" aria-label={selectedProject} title={selectedProject}><FolderKanban className="h-4 w-4 shrink-0 text-slate-500" /><span className="hidden truncate sm:inline">{selectedProject}</span><ChevronDown className="hidden h-3.5 w-3.5 shrink-0 sm:block" /></button>
+              {showProjects && <div className="absolute bottom-11 right-0 z-40 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl sm:left-0 sm:right-auto sm:w-64">{projectOptions.map((project) => <button key={project.id} type="button" onClick={() => { onProjectChange(project.id); setShowProjects(false); }} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${projectId === project.id ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}><FolderKanban className="h-3.5 w-3.5" /><span className="truncate">{project.title}</span></button>)}</div>}
+            </div>
           </div>}
           <button
             ref={guideSubmitRef}
@@ -1050,6 +1093,9 @@ function WorkbenchPanel({
   onSelectTab,
   canvasFocusNodeId,
   canvasFocusRequest,
+  papers,
+  paperPipelineStatus,
+  onDownloadPaper,
 }: {
   activeTab: WorkbenchTab;
   running: boolean;
@@ -1065,6 +1111,9 @@ function WorkbenchPanel({
   onSelectTab: (tab: WorkbenchTab) => void;
   canvasFocusNodeId: string | null;
   canvasFocusRequest: number;
+  papers: AgentPaper[];
+  paperPipelineStatus: string;
+  onDownloadPaper: (paper: AgentPaper) => void;
 }) {
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
   const { sessions: globalAskSessions, latestForScene, upsertSession } = useGlobalAskAIHistory("agent");
@@ -1453,17 +1502,32 @@ function WorkbenchPanel({
           <h3 className="mt-1 text-base font-semibold">检索结果</h3>
           <p className="mt-2 text-xs text-slate-500">已找到 24 篇高相关论文</p>
           <div className="mt-4 space-y-3">
-            {[
-              "MemoryBank: Enhancing Large Language Models with Long-Term Memory",
-              "Generative Agents: Interactive Simulacra of Human Behavior",
-              "A Survey on the Memory Mechanism of LLM-based Agents",
-            ].map((paper) => (
-              <article key={paper} className="rounded-xl bg-white p-3.5 ring-1 ring-slate-200">
-                <p className="text-sm font-medium leading-5">{paper}</p>
-                <p className="mt-2 text-xs text-slate-500">高相关 · 2024</p>
+            {deepSearchPapers.map((paper) => (
+              <article key={paper.id} className="rounded-xl bg-white p-3.5 ring-1 ring-slate-200">
+                <p className="text-sm font-medium leading-5">{paper.title}</p>
+                <p className="mt-2 text-xs text-slate-500">{paper.match} · {paper.year}</p>
+                <button type="button" onClick={() => onDownloadPaper(paper)} className="mt-2 text-xs font-medium text-blue-600 hover:underline">下载 PDF 并转换为 Markdown</button>
               </article>
             ))}
           </div>
+        </section>
+      )}
+      {activeTab === "papers" && (
+        <section aria-label="Agent 论文列表">
+          <p className="text-xs font-medium text-slate-500">Agent 工作台</p>
+          <h3 className="mt-1 text-base font-semibold">论文 · {papers.length}</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">深度搜索的 Perfect / Partial 结果自动收录；PDF 转换后合并同名或同 DOI 记录。</p>
+          {paperPipelineStatus && <div role="status" className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">{paperPipelineStatus}</div>}
+          {papers.length ? <div className="mt-4 space-y-2">{papers.map((paper) => <article key={paper.id} className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-sm font-medium leading-5 text-slate-900">{paper.title}</p>
+            <p className="mt-1 text-[11px] text-slate-500">{paper.authors || '作者待补充'} · {paper.year || '年份待补充'}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+              {paper.match && <span className={`rounded px-1.5 py-0.5 ${paper.match === 'Perfect' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{paper.match}</span>}
+              {paper.sources.map((source) => <span key={source} className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{source === 'deep-search' ? '深度搜索' : source === 'upload' ? '用户上传' : '网页 PDF'}</span>)}
+              {paper.markdownReady && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">Markdown 已生成</span>}
+            </div>
+            <p className={`mt-2 text-[11px] ${paper.authors && paper.year ? 'text-emerald-700' : 'text-amber-700'}`}>引用检查：{paper.authors && paper.year ? '基本字段完整，来源待核验' : '缺少作者或年份，待补充'}</p>
+          </article>)}</div> : <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">完成深度搜索或导入 PDF 后，论文会出现在这里。</div>}
         </section>
       )}
       {activeTab === "bio" && (
@@ -1571,7 +1635,7 @@ function clearOnboardingDemoParams() {
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade, userCredits, initialPrompt = "" }: { onOpenProjects: () => void; onOpenSearch: (query: string) => void; onLogin: () => void; onUpgrade: () => void; userCredits: number; initialPrompt?: string }) {
+export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade, userCredits, initialPrompt = "", initialProjectId = 'default' }: { onOpenProjects: () => void; onOpenSearch: (query: string) => void; onLogin: () => void; onUpgrade: () => void; userCredits: number; initialPrompt?: string; initialProjectId?: string }) {
   const { language } = useLanguage();
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
   const isZh = language === "zh";
@@ -1637,14 +1701,74 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const [introProgress, setIntroProgress] = useState([0, 0]);
   const [needProgress, setNeedProgress] = useState(0);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(linkedAgentSession?.skill ?? null);
+  const [currentProjectId, setCurrentProjectId] = useState(linkedAgentSession?.projectId ?? initialProjectId);
+  const [papers, setPapers] = useState<AgentPaper[]>(linkedAgentSession?.papers ?? []);
+  const papersRef = useRef<AgentPaper[]>(linkedAgentSession?.papers ?? []);
+  const [paperPipelineStatus, setPaperPipelineStatus] = useState('');
+  const skipInitialSessionSave = useRef(Boolean(linkedAgentSession));
   const [started, setStarted] = useState(Boolean(linkedConversation || linkedAgentSession));
   const [running, setRunning] = useState(false);
   const [planReady, setPlanReady] = useState(Boolean(linkedConversation || linkedAgentSession));
   const [planAccepted, setPlanAccepted] = useState(linkedAgentSession?.kind === "case");
   const [todos, setTodos] = useState<AgentTodo[]>(() => linkedAgentSession?.kind === "case" ? initialAgentTodos.map((todo) => ({ ...todo, status: "done" as AgentTodoStatus })) : initialAgentTodos);
-  const [activeTab, setActiveTab] = useState<WorkbenchTab>("common");
+  const [activeTab, setActiveTab] = useState<WorkbenchTab>(linkedAgentSession?.papers?.length ? "papers" : "common");
   const [panelOpen, setPanelOpen] = useState(true);
   const [taskTitle, setTaskTitle] = useState(linkedAgentSession?.title || linkedConversation?.agentName || "新研究任务");
+
+  const addPapers = (incoming: AgentPaper[], source: string) => {
+    const result = mergeAgentPapers(papersRef.current, incoming);
+    papersRef.current = result.papers;
+    setPapers(result.papers);
+    setPaperPipelineStatus(`${source}：收录 ${incoming.length - result.duplicates} 篇，去重 ${result.duplicates} 篇；已检查引用基本字段。`);
+    setActiveTab('papers');
+    setPanelOpen(true);
+  };
+
+  const completeDeepSearch = () => {
+    addPapers(deepSearchPapers.filter((paper) => paper.match === 'Perfect' || paper.match === 'Partial'), '深度搜索完成');
+    setMessages((items) => [...items, { role: 'agent', text: '深度搜索已完成。Perfect 和 Partial 论文已自动收录到右侧「论文」，并完成去重与引用字段检查。' }]);
+  };
+
+  const convertPdf = (source: 'upload' | 'web', title: string, knownPaper?: AgentPaper) => {
+    setPaperPipelineStatus(`${source === 'upload' ? '上传' : '网页下载'} PDF：正在调用 PDF-to-Markdown…`);
+    setActiveTab('papers');
+    setPanelOpen(true);
+    window.setTimeout(() => {
+      const paper: AgentPaper = knownPaper
+        ? { ...knownPaper, sources: [source], markdownReady: true }
+        : { id: crypto.randomUUID(), title, sources: [source], markdownReady: true };
+      addPapers([paper], 'PDF-to-Markdown 完成');
+      setMessages((items) => [...items, { role: 'agent', text: `PDF-to-Markdown 已完成，「${title}」已进入论文列表，并完成去重与引用字段检查。` }]);
+    }, 900);
+  };
+
+  const uploadPdf = (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.pdf')) { setPaperPipelineStatus('仅支持 PDF 文件。'); return; }
+    convertPdf('upload', file.name.replace(/\.pdf$/i, ''));
+  };
+
+  useEffect(() => {
+    const deepSearch = () => completeDeepSearch();
+    const webPdf = () => convertPdf('web', 'Generative Agents: Interactive Simulacra of Human Behavior', deepSearchPapers[1]);
+    window.addEventListener('wispaper:mock-agent-deep-search-complete', deepSearch);
+    window.addEventListener('wispaper:mock-agent-web-pdf', webPdf);
+    return () => {
+      window.removeEventListener('wispaper:mock-agent-deep-search-complete', deepSearch);
+      window.removeEventListener('wispaper:mock-agent-web-pdf', webPdf);
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncSession = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: string; projectId?: string; title?: string }>).detail;
+      const match = window.location.pathname.match(/^\/app\/agent\/([0-9a-f-]+)\/?$/i);
+      if (!match || detail?.id !== match[1]) return;
+      if (detail.projectId) setCurrentProjectId(detail.projectId);
+      if (detail.title) setTaskTitle(detail.title);
+    };
+    window.addEventListener('wispaper:agent-session-changed', syncSession);
+    return () => window.removeEventListener('wispaper:agent-session-changed', syncSession);
+  }, []);
   const [messages, setMessages] = useState<{ role: "user" | "agent"; text: string }[]>(() => linkedAgentSession?.messages ?? (linkedConversation
     ? linkedConversation.message
       ? [{ role: "user", text: linkedConversation.message }, { role: "agent", text: `${linkedConversation.agentName} 已收到消息，正在结合当前科研项目与笔记内容继续处理。` }]
@@ -1684,11 +1808,12 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   useEffect(() => { if (caseReplay || (!isAuthenticated && started)) replayMessagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [caseReplay, isAuthenticated, started, messages.length]);
   useEffect(() => {
     if (!started || !messages.length) return;
+    if (skipInitialSessionSave.current) { skipInitialSessionSave.current = false; return; }
     const match = window.location.pathname.match(/^\/app\/agent\/([0-9a-f-]+)\/?$/i);
     if (!match) return;
-    const session: AgentRouteSession = { kind: caseReplay ? "case" : "task", title: taskTitle, skill: selectedSkill, messages, ...(caseReplay ? { replay: caseReplay } : {}), ...(creditGate ? { creditGate } : {}), ...(activeTaskModel ? { model: activeTaskModel } : {}) };
+    const session: AgentRouteSession = { kind: caseReplay ? "case" : "task", title: taskTitle, skill: selectedSkill, projectId: currentProjectId, papers, messages, ...(caseReplay ? { replay: caseReplay } : {}), ...(creditGate ? { creditGate } : {}), ...(activeTaskModel ? { model: activeTaskModel } : {}) };
     try { window.localStorage.setItem(`wispaper-agent-session:${match[1]}`, JSON.stringify({ ...session, updatedAt: Date.now() })); window.dispatchEvent(new Event('wispaper:agent-history-updated')); } catch { /* prototype storage */ }
-  }, [started, taskTitle, selectedSkill, messages, caseReplay, creditGate, activeTaskModel]);
+  }, [started, taskTitle, selectedSkill, currentProjectId, papers, messages, caseReplay, creditGate, activeTaskModel]);
 
   const playCase = (title: string, casePrompt: string, summary: string, outcome: string, skill: string) => {
     caseFillTimersRef.current.forEach(window.clearTimeout);
@@ -1723,7 +1848,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
       setActiveTab("common");
       setStarted(true);
       setPrompt("");
-      openAgentSessionRoute({ kind: "case", title, skill, messages: history, replay });
+      openAgentSessionRoute({ kind: "case", title, skill, projectId: currentProjectId, messages: history, replay });
     }, typingMs + 520));
   };
 
@@ -1875,7 +2000,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     if (!started) {
       setTaskTitle(title);
       setMessages([{ role: "user", text: value }]);
-      openAgentSessionRoute({ kind: "task", title, skill, messages: [{ role: "user", text: value }], creditGate: kind });
+      openAgentSessionRoute({ kind: "task", title, skill, projectId: currentProjectId, messages: [{ role: "user", text: value }], creditGate: kind });
     } else setMessages((items) => [...items, { role: "user", text: value }]);
     setOnboardingOpen(false);
     setStarted(true);
@@ -1913,7 +2038,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
       setPlanReady(false);
       setPlanAccepted(false);
       setTodos(initialAgentTodos.map((todo) => ({ ...todo })));
-      openAgentSessionRoute({ kind: "task", title, skill: selectedSkill, messages: [{ role: "user", text: value }, { role: "agent", text: "任务已接收，正在制定研究计划。" }] });
+      openAgentSessionRoute({ kind: "task", title, skill: selectedSkill, projectId: currentProjectId, messages: [{ role: "user", text: value }, { role: "agent", text: "任务已接收，正在制定研究计划。" }] });
     }
     setStarted(true);
     setPrompt("");
@@ -1938,6 +2063,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
         setRunning(false);
       }
     }, 900);
+    if (selectedSkill === '搜索文献' || /深度搜索/.test(value)) window.setTimeout(completeDeepSearch, 1400);
   };
 
   useEffect(() => {
@@ -2020,6 +2146,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   };
 
   const handleTodoStatusChange = (id: string, status: AgentTodoStatus) => {
+    if (id === 'search' && status === 'done') completeDeepSearch();
     setTodos((items) => {
       let nextItems = items.map((todo) => {
         if (todo.id === id) return { ...todo, status };
@@ -2105,6 +2232,9 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
                     onAgentChange={setSelectedAgent}
                     shortcutModel={shortcutModel}
                     onShortcutModelChange={setShortcutModel}
+                    projectId={currentProjectId}
+                    onProjectChange={setCurrentProjectId}
+                    onUploadPdf={uploadPdf}
                     selectedSkill={null}
                     onSelectSkill={selectQuickTask}
                     onClearSkill={clearSkill}
@@ -2154,6 +2284,9 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
                   onAgentChange={setSelectedAgent}
                   shortcutModel={shortcutModel}
                   onShortcutModelChange={setShortcutModel}
+                  projectId={currentProjectId}
+                  onProjectChange={setCurrentProjectId}
+                  onUploadPdf={uploadPdf}
                   selectedSkill={selectedSkill}
                   onSelectSkill={selectQuickTask}
                   onClearSkill={clearSkill}
@@ -2322,6 +2455,9 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
                 onAgentChange={setSelectedAgent}
                 shortcutModel={shortcutModel}
                 onShortcutModelChange={setShortcutModel}
+                projectId={currentProjectId}
+                onProjectChange={setCurrentProjectId}
+                onUploadPdf={uploadPdf}
                 selectedSkill={selectedSkill}
                 onSelectSkill={selectQuickTask}
                 onClearSkill={clearSkill}
@@ -2363,6 +2499,9 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
               onSelectTab={setActiveTab}
               canvasFocusNodeId={canvasFocusNodeId}
               canvasFocusRequest={canvasFocusRequest}
+              papers={papers}
+              paperPipelineStatus={paperPipelineStatus}
+              onDownloadPaper={(paper) => convertPdf('web', paper.title, paper)}
             />
           </div>
         </aside>

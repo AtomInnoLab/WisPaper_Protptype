@@ -93,10 +93,17 @@ const projectTabs: { id: ProjectSection; label: string; icon: React.ElementType 
 ];
 
 export function ResearchProjects({ onOpenAgent }: { onOpenAgent: () => void }) {
-  const [projects, setProjects] = useState(seedProjects);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem('wispaper-projects') || 'null');
+      const additions = JSON.parse(window.localStorage.getItem('wispaper-project-additions') || '[]');
+      const base = Array.isArray(saved) && saved.length ? saved : seedProjects;
+      return [...(Array.isArray(additions) ? additions.filter((item) => !base.some((project) => String(project.id) === String(item.id))) : []), ...base];
+    } catch { return seedProjects; }
+  });
   const [filter, setFilter] = useState<ProjectFilter>("active");
   const initialProjectId = typeof window !== "undefined" ? window.location.pathname.match(/^\/app\/projects\/(\d+)$/)?.[1] : undefined;
-  const [selected, setSelected] = useState<Project | null>(() => seedProjects.find((project) => String(project.id) === initialProjectId) ?? null);
+  const [selected, setSelected] = useState<Project | null>(() => projects.find((project) => String(project.id) === initialProjectId) ?? null);
   const [section, setSection] = useState<ProjectSection>("tree");
   const [showCreate, setShowCreate] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -116,6 +123,14 @@ export function ResearchProjects({ onOpenAgent }: { onOpenAgent: () => void }) {
       { id: "chen", name: "导师陈教授", email: "prof.chen@example.com", permission: "read" },
     ],
   });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('wispaper-projects', JSON.stringify(projects));
+      window.localStorage.setItem('wispaper-project-catalog', JSON.stringify(projects.map((project) => ({ id: String(project.id), title: project.title }))));
+      window.dispatchEvent(new Event('wispaper:projects-updated'));
+    } catch { /* prototype storage */ }
+  }, [projects]);
 
   const projectCollaborators = selected ? collaborators[selected.id] ?? [
     { id: "owner", name: "你", email: "you@wispaper.ai", permission: "write", owner: true },
