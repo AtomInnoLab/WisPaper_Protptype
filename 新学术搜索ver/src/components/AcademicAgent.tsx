@@ -135,7 +135,7 @@ interface AgentRouteSession {
 
 const openAgentSessionRoute = (session: AgentRouteSession) => {
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  try { window.localStorage.setItem(`wispaper-agent-session:${id}`, JSON.stringify(session)); } catch { /* prototype storage */ }
+  try { window.localStorage.setItem(`wispaper-agent-session:${id}`, JSON.stringify({ ...session, updatedAt: Date.now() })); window.dispatchEvent(new Event('wispaper:agent-history-updated')); } catch { /* prototype storage */ }
   window.history.pushState({ view: "academic-agent", agentSessionId: id }, "", `/app/agent/${id}`);
 };
 
@@ -1687,7 +1687,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     const match = window.location.pathname.match(/^\/app\/agent\/([0-9a-f-]+)\/?$/i);
     if (!match) return;
     const session: AgentRouteSession = { kind: caseReplay ? "case" : "task", title: taskTitle, skill: selectedSkill, messages, ...(caseReplay ? { replay: caseReplay } : {}), ...(creditGate ? { creditGate } : {}), ...(activeTaskModel ? { model: activeTaskModel } : {}) };
-    try { window.localStorage.setItem(`wispaper-agent-session:${match[1]}`, JSON.stringify(session)); } catch { /* prototype storage */ }
+    try { window.localStorage.setItem(`wispaper-agent-session:${match[1]}`, JSON.stringify({ ...session, updatedAt: Date.now() })); window.dispatchEvent(new Event('wispaper:agent-history-updated')); } catch { /* prototype storage */ }
   }, [started, taskTitle, selectedSkill, messages, caseReplay, creditGate, activeTaskModel]);
 
   const playCase = (title: string, casePrompt: string, summary: string, outcome: string, skill: string) => {

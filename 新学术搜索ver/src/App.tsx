@@ -353,6 +353,13 @@ export default function App() {
     setViewMode(view as any);
   };
 
+  const handleOpenAgentSession = (id: string) => {
+    window.history.pushState({ view: 'academic-agent', agentSessionId: id }, '', `/app/agent/${id}`);
+    setInitialAgentPrompt('');
+    setAgentKey((value) => value + 1);
+    setViewMode('academic-agent');
+  };
+
   const executeSearch = (query: string, mode: 'quick' | 'deep', examplePapers?: Paper[], navigateToResults = false) => {
     const sessionId = createSearchSessionId();
     const identifiers = extractAcademicIdentifiers(query);
@@ -459,6 +466,7 @@ export default function App() {
         {!embeddedAgent && (isHomeFlow || viewMode === "explore" || viewMode === "list" || viewMode === "reader" || viewMode === "library" || viewMode === "scholar-qa" || viewMode === "all-feeds" || viewMode === "paper-reproduction" || viewMode === "idea-discovery" || viewMode === "fudan-collection-search" || viewMode === "academic-agent" || viewMode === "research-projects" || viewMode === "research-canvas" || viewMode === "truecite" || viewMode === "tools" || viewMode === "figure-to-pptx" || viewMode === "figure-to-excel" || viewMode === "excel-to-figure" || viewMode === "institution-admin" || viewMode === "survey") && (
           <LeftSidebar
             onNavigate={handleWorkspaceNavigate}
+            onOpenAgentSession={handleOpenAgentSession}
             onOpenInvite={() => setShowInviteModal(true)}
             onOpenPaywall={() => setShowPaywallModal(true)}
             onOpenRecharge={() => setShowRechargeModal(true)}

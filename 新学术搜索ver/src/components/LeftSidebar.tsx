@@ -9,6 +9,7 @@ import { usePrototypeAuth } from '../lib/usePrototypeAuth';
 
 interface LeftSidebarProps {
   onNavigate?: (view: string) => void;
+  onOpenAgentSession?: (id: string) => void;
   onOpenInvite?: () => void;
   onOpenPaywall?: () => void;
   onOpenRecharge?: () => void;
@@ -54,6 +55,29 @@ const historyByNav: Record<string, { title: string; items: string[] }> = {
   },
 };
 
+const agentHistoryPrefix = 'wispaper-agent-session:';
+const demoAgentMessages: Record<string, string> = {
+  '多模态 Agent 长期记忆选题': '请调研多模态 Agent 长期记忆的研究方向，并提出值得验证的选题。',
+  'RAG 评测文献综述': '请整理 RAG 评测方法的文献综述。',
+  '论文主图设计与优化': '请根据论文的核心贡献设计并优化主图。',
+};
+
+function readAgentHistory(): { id: string; title: string; updatedAt: number }[] {
+  try {
+    return Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(agentHistoryPrefix))
+      .map((key, index) => {
+        try {
+          const session = JSON.parse(window.localStorage.getItem(key) || 'null');
+          if (!session || !Array.isArray(session.messages)) return null;
+          return { id: key.slice(agentHistoryPrefix.length), title: session.title || session.messages[0]?.text || '新研究任务', updatedAt: Number(session.updatedAt) || index };
+        } catch { return null; }
+      })
+      .filter((item): item is { id: string; title: string; updatedAt: number } => item !== null)
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  } catch { return []; }
+}
+
 interface RecentItem {
   id: string;
   title: string;
@@ -79,7 +103,7 @@ const llmsItems: LLMSItem[] = [
   { id: 'satellite', title: 'Satellite Programing' },
 ];
 
-export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenNotifications, onNewScholarQA, onResetSearch, currentView }: LeftSidebarProps = {}) {
+export function LeftSidebar({ onNavigate, onOpenAgentSession, onOpenInvite, onOpenPaywall, onOpenRecharge, onOpenNotifications, onNewScholarQA, onResetSearch, currentView }: LeftSidebarProps = {}) {
   const [activeNav, setActiveNav] = useState('academic-agent');
   const [showMyLibrary, setShowMyLibrary] = useState(false);
   const [showLLMSSection, setShowLLMSSection] = useState(false);
@@ -94,9 +118,29 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
     { id: 'qa-3', title: '如何评估 RAG 的可信度？', pinned: false },
   ]);
   const [draggedHistoryId, setDraggedHistoryId] = useState<string | null>(null);
+  const [agentHistory, setAgentHistory] = useState(readAgentHistory);
   const historyMenuRef = useRef<HTMLDivElement>(null);
   const { t, language, setLanguage } = useLanguage();
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
+
+  React.useEffect(() => {
+    const refresh = () => setAgentHistory(readAgentHistory());
+    window.addEventListener('wispaper:agent-history-updated', refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener('wispaper:agent-history-updated', refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+
+  const openDemoAgentHistory = (title: string) => {
+    const id = crypto.randomUUID();
+    const prompt = demoAgentMessages[title] || title;
+    const session = { kind: 'task', title, skill: null, messages: [{ role: 'user', text: prompt }, { role: 'agent', text: '已收到任务，正在整理研究计划与相关材料。' }], updatedAt: Date.now() };
+    try { window.localStorage.setItem(`${agentHistoryPrefix}${id}`, JSON.stringify(session)); } catch { /* prototype storage */ }
+    window.dispatchEvent(new Event('wispaper:agent-history-updated'));
+    onOpenAgentSession?.(id);
+  };
 
   React.useEffect(() => {
     if (currentView === 'explore') {
@@ -293,9 +337,12 @@ export function LeftSidebar({ onNavigate, onOpenInvite, onOpenPaywall, onOpenRec
           <section className={`${isCollapsed ? 'px-0' : 'px-1'} pb-3`} aria-label={historyByNav[activeNav].title}>
             {!isCollapsed ? <h2 className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{historyByNav[activeNav].title}</h2> : null}
             <div className="space-y-0.5">
-              {historyByNav[activeNav].items.map((item) => (
-                <button key={item} type="button" title={item} className={`w-full rounded-lg py-2 text-left text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-900 ${isCollapsed ? 'flex justify-center px-0' : 'truncate px-2.5'}`}>
-                  {isCollapsed ? <Clock className="h-4 w-4" /> : item}
+              {(activeNav === 'academic-agent' ? [
+                ...agentHistory.map((item) => ({ id: item.id, title: item.title, demo: false })),
+                ...historyByNav[activeNav].items.filter((title) => !agentHistory.some((item) => item.title === title)).map((title) => ({ id: title, title, demo: true })),
+              ] : historyByNav[activeNav].items.map((title) => ({ id: title, title, demo: false }))).map((item) => (
+                <button key={item.id} type="button" title={item.title} onClick={activeNav === 'academic-agent' ? () => item.demo ? openDemoAgentHistory(item.title) : onOpenAgentSession?.(item.id) : undefined} className={`w-full rounded-lg py-2 text-left text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-900 ${isCollapsed ? 'flex justify-center px-0' : 'truncate px-2.5'} ${activeNav === 'academic-agent' && window.location.pathname === `/app/agent/${item.id}` ? 'bg-blue-50 text-blue-600' : ''}`}>
+                  {isCollapsed ? <Clock className="h-4 w-4" /> : item.title}
                 </button>
               ))}
             </div>
