@@ -3,6 +3,85 @@
 @import 'tw-animate-css';
 @import './styles/globals.css';
 
+.blocknote-research-editor a[href^="#resource-"] {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.4rem;
+  background: #eff6ff;
+  padding: 0.08rem 0.5rem;
+  color: #1d4ed8;
+  font-size: 0.82em;
+  font-weight: 600;
+  line-height: 1.65;
+  text-decoration: none;
+}
+
+.blocknote-research-editor a[href^="#resource-"]:hover {
+  border-color: #60a5fa;
+  background: #dbeafe;
+}
+
+/* Keep BlockNote's @ suggestion menu above the research-note drawer and out of
+   scroll-container clipping. The controller itself uses fixed positioning. */
+.blocknote-research-editor,
+.blocknote-research-editor .bn-container,
+.blocknote-research-editor .bn-editor {
+  overflow: visible;
+}
+
+.blocknote-research-editor .bn-suggestion-menu,
+.blocknote-research-editor .mantine-Popover-dropdown {
+  position: relative;
+  z-index: 10050;
+}
+
+/* The canvas sidebar is narrow, so keep its editable blocks close to the note
+   card edge. Full-screen notes retain BlockNote's wider reading gutter. */
+.blocknote-research-editor--compact .bn-editor {
+  padding-inline: 4px !important;
+}
+
+.blocknote-research-editor a[href^="#agent-"] {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #ddd6fe;
+  border-radius: 0.4rem;
+  background: #f5f3ff;
+  padding: 0.08rem 0.5rem;
+  color: #6d28d9;
+  font-size: 0.82em;
+  font-weight: 600;
+  line-height: 1.65;
+  text-decoration: none;
+}
+
+.blocknote-editing-outline {
+  position: absolute;
+  z-index: 20;
+  border-width: 2px;
+  border-radius: 0.75rem;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.1);
+}
+
+.blocknote-editing-outline > span {
+  position: absolute;
+  right: -2px;
+  top: -1.45rem;
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1rem;
+  white-space: nowrap;
+}
+
+.blocknote-editing-outline[data-editor-type="agent"] {
+  background: rgba(255, 251, 235, 0.25);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12);
+}
+
 @keyframes research-agent-glow {
   0%, 100% {
     box-shadow: 0 4px 18px rgba(124, 58, 237, 0.10);

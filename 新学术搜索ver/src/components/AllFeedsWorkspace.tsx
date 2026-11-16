@@ -585,11 +585,17 @@ function InlineFeedActivationCard({
 export function AllFeedsWorkspace({
   onSearch,
   onQuickOpen,
-  onOpenFigureToPPTX,
+  onOpenFigureToPPTX = () => {},
+  showSearchHero = true,
+  researchInterests,
+  onResearchInterestsChange,
 }: {
   onSearch: (query: string) => void;
   onQuickOpen: (identifier: AcademicIdentifier) => void;
-  onOpenFigureToPPTX: () => void;
+  onOpenFigureToPPTX?: () => void;
+  showSearchHero?: boolean;
+  researchInterests?: string[] | null;
+  onResearchInterestsChange?: (interests: string[]) => void;
 }) {
   const { t } = useLanguage();
   const resolveSourceSelection = (sourceIds: string[]): FeedPreferenceState['sourceSelection'] => {
@@ -615,7 +621,10 @@ export function AllFeedsWorkspace({
   const [selectedTrendId, setSelectedTrendId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [lastDismissedTrend, setLastDismissedTrend] = useState<{ trend: AITrendItem; index: number } | null>(null);
-  const [focusTags, setFocusTags] = useState<string[]>([]);
+  const [focusTags, setFocusTags] = useState<string[]>(researchInterests ?? []);
+  useEffect(() => {
+    if (researchInterests) setFocusTags(researchInterests);
+  }, [researchInterests]);
   const [preferences, setPreferences] = useState<FeedPreferenceState>({ ...defaultPreferences, sourceSelection: demoState.firstTime ? 'both' : defaultPreferences.sourceSelection });
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(demoState.firstTime ? null : aiFeedSubjects[0]?.id ?? null);
   const [serviceStatus, setServiceStatus] = useState<'not-started' | 'running' | 'paused-user' | 'paused-system'>('not-started');
@@ -835,7 +844,9 @@ export function AllFeedsWorkspace({
   };
 
   const handleRemoveTag = (tag: string) => {
-    setFocusTags((current) => current.filter((item) => item !== tag));
+    const nextInterests = focusTags.filter((item) => item !== tag);
+    setFocusTags(nextInterests);
+    onResearchInterestsChange?.(nextInterests);
     setPreferenceNotice(t('aiFeeds.notice.interestRemoved', { interest: tag }));
   };
 
@@ -845,7 +856,9 @@ export function AllFeedsWorkspace({
   };
 
   const handleResetPreferences = () => {
-    setFocusTags(demoState.firstTime ? [] : aiFeedsFocusTags);
+    const resetInterests = demoState.firstTime ? [] : aiFeedsFocusTags;
+    setFocusTags(resetInterests);
+    onResearchInterestsChange?.(resetInterests);
     setPreferences({
       ...defaultPreferences,
       sourceSelection: demoState.firstTime ? 'both' : defaultPreferences.sourceSelection,
@@ -895,6 +908,7 @@ export function AllFeedsWorkspace({
   }) => {
     setSelectedSubjectId(next.subjectId);
     setFocusTags(next.interests);
+    onResearchInterestsChange?.(next.interests);
     setSelectedSources(next.selectedSources);
     setPushEmail(next.email);
     setVerifiedPushEmail(next.verifiedEmail);
@@ -948,7 +962,7 @@ export function AllFeedsWorkspace({
     <div className="h-full overflow-y-auto bg-muted/30">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-7 lg:px-8">
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'trends' | 'latest' | 'for-you')} className="gap-6">
-            <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} onOpenFigureToPPTX={onOpenFigureToPPTX} />
+            {showSearchHero ? <AIFeedsSearchHero onSearch={onSearch} onQuickOpen={onQuickOpen} onOpenFigureToPPTX={onOpenFigureToPPTX} /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <CardNavTabs
                 items={[
@@ -964,6 +978,7 @@ export function AllFeedsWorkspace({
                 variant="outline"
                 size="sm"
                 className={cn('bg-background', feedActionClassName)}
+                data-onboarding-anchor="interests"
                 onClick={() => handleOpenManageSetup()}
               >
                 <Settings2 className="h-4 w-4" />

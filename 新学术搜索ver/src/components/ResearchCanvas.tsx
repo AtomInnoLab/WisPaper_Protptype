@@ -34,6 +34,7 @@ import {
 import collaboratorLin from "../assets/research-canvas/collaborator-lin.webp";
 import collaboratorChen from "../assets/research-canvas/collaborator-chen.webp";
 import collaboratorZhou from "../assets/research-canvas/collaborator-zhou.webp";
+import { ResearchNoteDrawer } from "./ResearchNoteDrawer";
 
 type NodeKind = "hypothesis" | "paper" | "question" | "method" | "experiment" | "finding" | "agent" | "comment";
 type InspectorTab = "detail" | "evidence" | "comments" | "ai";
@@ -397,6 +398,7 @@ export function ResearchCanvas({ onOpenAgent }: { onOpenAgent: () => void }) {
   ]);
   const [commentDraft, setCommentDraft] = useState("");
   const [notice, setNotice] = useState("");
+  const [noteOpen, setNoteOpen] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ id: string; startX: number; startY: number; nodeX: number; nodeY: number; moved: boolean } | null>(null);
   const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
@@ -474,6 +476,7 @@ export function ResearchCanvas({ onOpenAgent }: { onOpenAgent: () => void }) {
     }
     setSelectedId(id);
     if (tab !== "comments") setTab("ai");
+    setNoteOpen(true);
     setNotice("");
   };
 
@@ -636,7 +639,7 @@ export function ResearchCanvas({ onOpenAgent }: { onOpenAgent: () => void }) {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         <main className="relative min-w-0 flex-1 overflow-hidden bg-[#f8fafc]">
           {notice && (
             <div className="absolute left-1/2 top-5 z-40 flex -translate-x-1/2 items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-white shadow-lg">
@@ -936,6 +939,7 @@ export function ResearchCanvas({ onOpenAgent }: { onOpenAgent: () => void }) {
             </div>
           </div>}
         </aside>
+        <ResearchNoteDrawer open={noteOpen} title={selectedNode.title} onClose={() => setNoteOpen(false)} />
       </div>
     </div>
   );
