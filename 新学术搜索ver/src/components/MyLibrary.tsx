@@ -34,6 +34,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { StorageUsagePanel } from './StorageUsagePanel';
 import { usePrototypeAuth } from '../lib/usePrototypeAuth';
 import { useGlobalAskAIHistory } from '../lib/useGlobalAskAIHistory';
+import { readLibraryAgentPapers } from '../lib/agentPaperCollections';
 
 interface MyLibraryProps {
   papers: Paper[];
@@ -66,6 +67,13 @@ const statusSequence: LibraryStatus[] = [
 ];
 
 export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps) {
+  const [agentPapers, setAgentPapers] = useState(readLibraryAgentPapers);
+  React.useEffect(() => {
+    const refresh = () => setAgentPapers(readLibraryAgentPapers());
+    window.addEventListener('wispaper:agent-papers-updated', refresh);
+    window.addEventListener('storage', refresh);
+    return () => { window.removeEventListener('wispaper:agent-papers-updated', refresh); window.removeEventListener('storage', refresh); };
+  }, []);
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
   const { sessions: globalAskSessions, latestForScene, upsertSession } = useGlobalAskAIHistory('library');
   const historyInitialized = React.useRef(false);
@@ -144,7 +152,14 @@ export function MyLibrary({ papers, onPaperClick, onOpenReader }: MyLibraryProps
     upsertSession({ id: assistantSessionId, scene: 'library', pageLabel: 'Library', title: firstQuestion, source: assistantScope, messages: assistantMessages });
   }, [assistantMessages, assistantScope, assistantSessionId, isAuthenticated, upsertSession]);
 
-  const rows = papers
+  const promotedPapers: Paper[] = agentPapers.map((paper) => ({
+    id: `agent-library:${paper.id}`, title: paper.title, authors: paper.authors ? [paper.authors] : [],
+    abstract: '', year: paper.year ?? 0, publishedDate: paper.year ? `${paper.year}-01-01` : '',
+    venue: 'WisPaper', citations: 0, categories: [], pdfUrl: '', doi: paper.doi,
+    relevance: paper.match,
+  }));
+  const promotedTitles = new Set(promotedPapers.map((paper) => paper.title.toLowerCase()));
+  const rows = [...promotedPapers, ...papers.filter((paper) => !promotedTitles.has(paper.title.toLowerCase()))]
     .slice(0, 15)
     .map((paper, index) => ({
       paper,

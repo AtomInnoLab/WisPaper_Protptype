@@ -1,3 +1,5 @@
+import { addProjectAgentPaper, projectPaperKey, readProjectAgentPapers } from './agentPaperCollections';
+
 export interface AgentProject {
   id: string;
   title: string;
@@ -42,6 +44,8 @@ export function updateAgentProject(id: string, title: string | null): void {
       window.localStorage.setItem(key, JSON.stringify(changed));
     }
     if (title === null) {
+      readProjectAgentPapers(id).forEach((paper) => addProjectAgentPaper(defaultAgentProject.id, paper));
+      window.localStorage.removeItem(projectPaperKey(id));
       Object.keys(window.localStorage).filter((key) => key.startsWith('wispaper-agent-session:')).forEach((key) => {
         try {
           const session = JSON.parse(window.localStorage.getItem(key) || 'null');

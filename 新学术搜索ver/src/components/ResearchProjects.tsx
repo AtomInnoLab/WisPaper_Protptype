@@ -23,6 +23,7 @@ import { StorageUsagePanel } from "./StorageUsagePanel";
 import { ResearchTree } from "./ResearchTree";
 import { AgentSettingsLauncher } from "./agent-memory/AgentMemorySettings";
 import { updateAgentProject } from "../lib/agentProjects";
+import { readProjectAgentPapers } from "../lib/agentPaperCollections";
 
 type ProjectSection = "tree" | "files" | "papers" | "surveys" | "agents";
 type ProjectFilter = "active" | "archived" | "trash";
@@ -316,16 +317,12 @@ export function ResearchProjects({ onOpenAgent }: { onOpenAgent: () => void }) {
                   <button className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-medium text-white"><Plus className="mr-1.5 inline h-4 w-4" />添加论文</button>
                 </div>
                 <div className="space-y-3">
-                  {[
-                    ["MemoryBank: Enhancing Large Language Models with Long-Term Memory", "Zhong et al. · AAAI 2024", "已精读"],
-                    ["Generative Agents: Interactive Simulacra of Human Behavior", "Park et al. · UIST 2023", "有笔记"],
-                    ["MemGPT: Towards LLMs as Operating Systems", "Packer et al. · 2024", "待读"],
-                  ].map(([title, meta, status]) => (
-                    <div key={title} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5">
-                      <div><h3 className="font-medium">{title}</h3><p className="mt-2 text-sm text-slate-500">{meta}</p></div>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">{status}</span>
+                  {readProjectAgentPapers(String(selected?.id ?? '')).map((paper) => (
+                    <div key={paper.id} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-5">
+                      <div><h3 className="font-medium">{paper.title}</h3><p className="mt-2 text-sm text-slate-500">{paper.authors || '作者待补充'} · {paper.year || '年份待补充'}</p></div>
                     </div>
                   ))}
+                  {readProjectAgentPapers(String(selected?.id ?? '')).length === 0 && <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-5 text-sm text-slate-500">暂无项目论文</p>}
                 </div>
               </div>
             )}
