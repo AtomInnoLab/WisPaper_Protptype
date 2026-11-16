@@ -1515,15 +1515,14 @@ function WorkbenchPanel({
       {activeTab === "papers" && (
         <section aria-label="Agent 论文列表">
           {paperPipelineStatus && <div role="status" className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">{paperPipelineStatus}</div>}
-          {papers.length ? <div className="mt-4 space-y-2">{papers.map((paper) => <article key={paper.id} className="rounded-xl border border-slate-200 bg-white p-3">
-            <p className="text-sm font-medium leading-5 text-slate-900">{paper.title}</p>
-            <p className="mt-1 text-[11px] text-slate-500">{paper.authors || '作者待补充'} · {paper.year || '年份待补充'}</p>
-            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
+          {papers.length ? <div className="mt-3 space-y-1.5">{papers.map((paper) => <article key={paper.id} className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+            <p className="text-[13px] font-medium leading-[18px] text-slate-900">{paper.title}</p>
+            <div className="mt-1 flex items-center justify-between gap-2 text-[11px] leading-4 text-slate-500"><span className="min-w-0 truncate">{paper.authors || '作者待补充'} · {paper.year || '年份待补充'}</span><span title={paper.authors && paper.year ? '引用检查：基本字段完整，来源待核验' : '引用检查：缺少作者或年份，待补充'} aria-label={paper.authors && paper.year ? '引用字段齐，来源待核验' : '引用待补，缺少作者或年份'} className={`shrink-0 ${paper.authors && paper.year ? 'text-emerald-600' : 'text-amber-600'}`}>{paper.authors && paper.year ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleGauge className="h-3.5 w-3.5" />}</span></div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px]">
               {paper.match && <span className={`rounded px-1.5 py-0.5 ${paper.match === 'Perfect' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{paper.match}</span>}
               {paper.sources.map((source) => <span key={source} className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{source === 'deep-search' ? '深度搜索' : source === 'upload' ? '用户上传' : '网页 PDF'}</span>)}
               {paper.markdownReady && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">Markdown 已生成</span>}
             </div>
-            <p className={`mt-2 text-[11px] ${paper.authors && paper.year ? 'text-emerald-700' : 'text-amber-700'}`}>引用检查：{paper.authors && paper.year ? '基本字段完整，来源待核验' : '缺少作者或年份，待补充'}</p>
           </article>)}</div> : <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">完成深度搜索或导入 PDF 后，论文会出现在这里。</div>}
         </section>
       )}
