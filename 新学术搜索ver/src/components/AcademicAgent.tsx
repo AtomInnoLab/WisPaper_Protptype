@@ -1514,9 +1514,6 @@ function WorkbenchPanel({
       )}
       {activeTab === "papers" && (
         <section aria-label="Agent 论文列表">
-          <p className="text-xs font-medium text-slate-500">Agent 工作台</p>
-          <h3 className="mt-1 text-base font-semibold">论文 · {papers.length}</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">深度搜索的 Perfect / Partial 结果自动收录；PDF 转换后合并同名或同 DOI 记录。</p>
           {paperPipelineStatus && <div role="status" className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">{paperPipelineStatus}</div>}
           {papers.length ? <div className="mt-4 space-y-2">{papers.map((paper) => <article key={paper.id} className="rounded-xl border border-slate-200 bg-white p-3">
             <p className="text-sm font-medium leading-5 text-slate-900">{paper.title}</p>
@@ -2474,7 +2471,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
       {panelOpen && (
         <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "note" ? "w-[min(38vw,590px)]" : activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
-            <span className="text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}</span>
+            <span className="flex items-center gap-2 text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}{activeTab === 'papers' && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">{papers.length}</span>}</span>
             <button
               onClick={() => setPanelOpen(false)}
               className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white hover:text-slate-950"
