@@ -22,6 +22,7 @@ import {
 import { StorageUsagePanel } from "./StorageUsagePanel";
 import { ResearchTree } from "./ResearchTree";
 import { AgentSettingsLauncher } from "./agent-memory/AgentMemorySettings";
+import { updateAgentProject } from "../lib/agentProjects";
 
 type ProjectSection = "tree" | "files" | "papers" | "surveys" | "agents";
 type ProjectFilter = "active" | "archived" | "trash";
@@ -97,8 +98,13 @@ export function ResearchProjects({ onOpenAgent }: { onOpenAgent: () => void }) {
     try {
       const saved = JSON.parse(window.localStorage.getItem('wispaper-projects') || 'null');
       const additions = JSON.parse(window.localStorage.getItem('wispaper-project-additions') || '[]');
-      const base = Array.isArray(saved) && saved.length ? saved : seedProjects;
-      return [...(Array.isArray(additions) ? additions.filter((item) => !base.some((project) => String(project.id) === String(item.id))) : []), ...base];
+      const catalog = JSON.parse(window.localStorage.getItem('wispaper-project-catalog') || 'null');
+      const base = Array.isArray(saved) ? saved : seedProjects;
+      const added = Array.isArray(additions) ? additions : [];
+      const combined = [...added.filter((item) => !base.some((project) => String(project.id) === String(item.id))), ...base];
+      if (!Array.isArray(catalog)) return combined;
+      const names = new Map([...catalog, ...added].map((project) => [String(project.id), project.title]));
+      return combined.filter((project) => names.has(String(project.id))).map((project) => ({ ...project, title: names.get(String(project.id)) || project.title }));
     } catch { return seedProjects; }
   });
   const [filter, setFilter] = useState<ProjectFilter>("active");
@@ -106,6 +112,7 @@ export function ResearchProjects({ onOpenAgent }: { onOpenAgent: () => void }) {
   const [selected, setSelected] = useState<Project | null>(() => projects.find((project) => String(project.id) === initialProjectId) ?? null);
   const [section, setSection] = useState<ProjectSection>("tree");
   const [showCreate, setShowCreate] = useState(false);
+  const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [canvasCreationMode, setCanvasCreationMode] = useState<"blank" | "template">("blank");
   const [selectedTemplate, setSelectedTemplate] = useState("ai-algorithm");
@@ -204,6 +211,25 @@ export function ResearchProjects({ onOpenAgent }: { onOpenAgent: () => void }) {
     window.history.pushState({ view: "research-projects", projectId: project.id }, "", `/app/projects/${project.id}`);
   };
 
+  const renameSelectedProject = () => {
+    if (!selected) return;
+    const title = window.prompt('重命名项目', selected.title)?.trim();
+    setShowProjectMenu(false);
+    if (!title || title === selected.title) return;
+    updateAgentProject(String(selected.id), title);
+    setProjects((items) => items.map((project) => project.id === selected.id ? { ...project, title } : project));
+    setSelected((project) => project ? { ...project, title } : project);
+  };
+
+  const deleteSelectedProject = () => {
+    if (!selected || !window.confirm(`删除项目「${selected.title}」？项目中的 Agent 将移到 Default Project。`)) return;
+    updateAgentProject(String(selected.id), null);
+    setProjects((items) => items.filter((project) => project.id !== selected.id));
+    setSelected(null);
+    setShowProjectMenu(false);
+    window.history.pushState({ view: 'research-projects' }, '', '/app/projects');
+  };
+
   if (selected) {
     return (
       <div className="flex h-screen min-w-0 flex-1 flex-col bg-white">
@@ -242,9 +268,7 @@ export function ResearchProjects({ onOpenAgent }: { onOpenAgent: () => void }) {
               >
                 <Sparkles className="mr-2 inline h-4 w-4" />运行 Agent
               </button>
-              <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="更多">
-                <MoreHorizontal className="h-5 w-5" />
-              </button>
+              <div className="relative"><button type="button" onClick={() => setShowProjectMenu((value) => !value)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="项目操作"><MoreHorizontal className="h-5 w-5" /></button>{showProjectMenu && <div className="absolute right-0 top-full z-50 w-36 rounded-lg border border-slate-200 bg-white p-1 shadow-lg"><button type="button" onClick={renameSelectedProject} className="w-full rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50">重命名项目</button><button type="button" onClick={deleteSelectedProject} className="w-full rounded px-2 py-1.5 text-left text-xs text-red-600 hover:bg-red-50">删除项目</button></div>}</div>
             </div>
           </div>
         </header>

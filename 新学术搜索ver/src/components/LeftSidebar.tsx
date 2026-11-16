@@ -6,7 +6,7 @@ import { SettingsModal } from './SettingsModal';
 import fudanLogo from 'figma:asset/fa745d526ea9ecf0301c6464b5897d1c96cb2f95.png';
 import wisPaperLogo from 'figma:asset/3ce02a66a6df7d8cd1f86de17846e94de4e9df61.png';
 import { usePrototypeAuth } from '../lib/usePrototypeAuth';
-import { AgentProject, agentProjectAdditionsKey, readAgentProjects } from '../lib/agentProjects';
+import { AgentProject, agentProjectAdditionsKey, readAgentProjects, updateAgentProject } from '../lib/agentProjects';
 
 interface LeftSidebarProps {
   onNavigate?: (view: string) => void;
@@ -162,6 +162,7 @@ export function LeftSidebar({ onNavigate, onOpenAgentSession, onStartAgentInProj
   const [visibleAgentCount, setVisibleAgentCount] = useState<Record<string, number>>({});
   const [draggedAgentId, setDraggedAgentId] = useState<string | null>(null);
   const [agentMenuId, setAgentMenuId] = useState<string | null>(null);
+  const [projectMenuId, setProjectMenuId] = useState<string | null>(null);
   const [addingAgentProject, setAddingAgentProject] = useState(false);
   const [agentProjectTitle, setAgentProjectTitle] = useState('');
   const historyMenuRef = useRef<HTMLDivElement>(null);
@@ -222,9 +223,25 @@ export function LeftSidebar({ onNavigate, onOpenAgentSession, onStartAgentInProj
       window.localStorage.setItem(agentProjectAdditionsKey, JSON.stringify([project, ...(Array.isArray(previous) ? previous : [])]));
     } catch { /* prototype storage */ }
     setAgentProjects(readAgentProjects());
+    setExpandedAgentProjects((current) => ({ ...current, [String(project.id)]: true }));
     setAddingAgentProject(false);
     setAgentProjectTitle('');
-    onNavigate?.('research-projects');
+  };
+
+  const renameAgentProject = (project: AgentProject) => {
+    const title = window.prompt(language === 'zh' ? '重命名项目' : 'Rename project', project.title)?.trim();
+    if (!title || title === project.title) { setProjectMenuId(null); return; }
+    updateAgentProject(project.id, title);
+    setAgentProjects(readAgentProjects());
+    setProjectMenuId(null);
+  };
+
+  const deleteAgentProject = (project: AgentProject) => {
+    if (!window.confirm(language === 'zh' ? `删除项目「${project.title}」？项目中的 Agent 将移到 Default Project。` : `Delete "${project.title}"? Its Agents will move to Default Project.`)) return;
+    updateAgentProject(project.id, null);
+    setAgentProjects(readAgentProjects());
+    setAgentHistory(readAgentHistory());
+    setProjectMenuId(null);
   };
 
   React.useEffect(() => {
@@ -420,25 +437,27 @@ export function LeftSidebar({ onNavigate, onOpenAgentSession, onStartAgentInProj
           </section>
         ) : activeNav === 'academic-agent' ? (
           <section className={`${isCollapsed ? 'px-0' : 'px-1'} pb-3`} aria-label="Agent 历史">
-            {!isCollapsed && <div className="flex items-center justify-between px-2 pb-2"><h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{language === 'zh' ? '按项目查看 Agent' : 'Agents by project'}</h2><button type="button" title={language === 'zh' ? '新建项目' : 'New project'} aria-label={language === 'zh' ? '新建项目' : 'New project'} onClick={() => setAddingAgentProject((value) => !value)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Plus className="h-3.5 w-3.5" /></button></div>}
+            {!isCollapsed && <div className="group flex items-center justify-between px-2 pb-2"><h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-400">{language === 'zh' ? '按项目查看 Agent' : 'Agents by project'}</h2><button type="button" title={language === 'zh' ? '新建项目' : 'New project'} aria-label={language === 'zh' ? '新建项目' : 'New project'} onClick={() => setAddingAgentProject((value) => !value)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><Plus className="h-3.5 w-3.5" /></button></div>}
             {addingAgentProject && !isCollapsed && <div className="mb-2 flex items-center gap-1 px-2"><input autoFocus value={agentProjectTitle} onChange={(event) => setAgentProjectTitle(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') createAgentProject(); if (event.key === 'Escape') setAddingAgentProject(false); }} placeholder={language === 'zh' ? '项目名称' : 'Project name'} aria-label={language === 'zh' ? '项目名称' : 'Project name'} className="min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-blue-400" /><button type="button" onClick={createAgentProject} disabled={!agentProjectTitle.trim()} aria-label={language === 'zh' ? '创建项目' : 'Create project'} className="rounded-md bg-blue-600 p-1.5 text-white disabled:opacity-40"><Plus className="h-3.5 w-3.5" /></button></div>}
             <div className="space-y-1">
               {agentProjects.map((project: AgentProject) => {
                 const items = agentHistory.filter((item) => item.projectId === project.id);
                 const expanded = expandedAgentProjects[project.id] !== false;
                 return <div key={project.id} onDragOver={(event) => { if (draggedAgentId) event.preventDefault(); }} onDrop={(event) => { event.preventDefault(); const id = event.dataTransfer.getData('text/plain') || draggedAgentId; if (id) moveAgent(id, project.id); }} className={`rounded-lg ${draggedAgentId ? 'hover:bg-blue-50' : ''}`}>
-                  <div className={`group flex items-center gap-1 rounded-lg ${isCollapsed ? 'justify-center' : ''}`}>
+                  <div className={`group relative flex items-center gap-1 rounded-lg ${isCollapsed ? 'justify-center' : ''}`}>
                     <button type="button" title={project.title} aria-label={project.title} aria-expanded={expanded} onClick={() => setExpandedAgentProjects((current) => ({ ...current, [project.id]: !expanded }))} className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-lg py-2 text-left text-xs font-medium text-slate-600 hover:bg-slate-50 ${isCollapsed ? 'justify-center px-0' : 'px-2'}`}>
                       {!isCollapsed && (expanded ? <ChevronDown className="h-3 w-3 shrink-0" /> : <ArrowRight className="h-3 w-3 shrink-0" />)}
                       <FolderKanban className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       {!isCollapsed && <span className="truncate">{project.title}</span>}
                     </button>
-                    {!isCollapsed && <button type="button" title={language === 'zh' ? `在${project.title}中新建 Agent` : `New Agent in ${project.title}`} aria-label={language === 'zh' ? `在${project.title}中新建 Agent` : `New Agent in ${project.title}`} onClick={() => createAgent(project.id)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600"><Plus className="h-3.5 w-3.5" /></button>}
+                    {!isCollapsed && project.id !== 'default' && <button type="button" title={language === 'zh' ? `${project.title} 项目操作` : `${project.title} project actions`} aria-label={language === 'zh' ? `${project.title} 项目操作` : `${project.title} project actions`} onClick={() => setProjectMenuId((current) => current === project.id ? null : project.id)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><MoreHorizontal className="h-3.5 w-3.5" /></button>}
+                    {!isCollapsed && <button type="button" title={language === 'zh' ? `在${project.title}中新建 Agent` : `New Agent in ${project.title}`} aria-label={language === 'zh' ? `在${project.title}中新建 Agent` : `New Agent in ${project.title}`} onClick={() => createAgent(project.id)} className="rounded p-1 text-slate-400 hover:bg-blue-50 hover:text-blue-600 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><Plus className="h-3.5 w-3.5" /></button>}
+                    {projectMenuId === project.id && <div className="absolute right-0 top-full z-50 w-36 rounded-lg border border-slate-200 bg-white p-1 shadow-lg"><button type="button" onClick={() => renameAgentProject(project)} className="w-full rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50">{language === 'zh' ? '重命名项目' : 'Rename project'}</button><button type="button" onClick={() => deleteAgentProject(project)} className="w-full rounded px-2 py-1.5 text-left text-xs text-red-600 hover:bg-red-50">{language === 'zh' ? '删除项目' : 'Delete project'}</button></div>}
                   </div>
                   {expanded && !isCollapsed && <div className="ml-3 space-y-0.5 border-l border-slate-100 pl-1.5">
                     {items.slice(0, visibleAgentCount[project.id] ?? 10).map((item) => <div key={item.id} draggable onDragStart={(event) => { setDraggedAgentId(item.id); event.dataTransfer.setData('text/plain', item.id); event.dataTransfer.effectAllowed = 'move'; }} onDragEnd={() => setDraggedAgentId(null)} className="group relative flex min-w-0 items-center rounded-lg hover:bg-slate-50">
                       <button type="button" title={item.title} onClick={() => onOpenAgentSession?.(item.id)} className={`min-w-0 flex-1 truncate rounded-lg px-2 py-2 text-left text-xs ${window.location.pathname === `/app/agent/${item.id}` ? 'bg-blue-50 font-medium text-blue-600' : 'text-slate-500 hover:text-slate-900'}`}><Bot className="mr-1.5 inline h-3.5 w-3.5 text-slate-400" />{item.title}</button>
-                      <button type="button" aria-label={`${item.title} 操作`} title="Agent 操作" onClick={() => setAgentMenuId((current) => current === item.id ? null : item.id)} className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+                      <button type="button" aria-label={`${item.title} 操作`} title="Agent 操作" onClick={() => setAgentMenuId((current) => current === item.id ? null : item.id)} className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"><MoreHorizontal className="h-3.5 w-3.5" /></button>
                       {agentMenuId === item.id && <div className="absolute right-0 top-full z-50 w-48 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
                         <button type="button" onClick={() => { const title = window.prompt(language === 'zh' ? '重命名 Agent' : 'Rename Agent', item.title); if (title?.trim()) writeAgentSession(item.id, { title: title.trim() }); setAgentMenuId(null); }} className="w-full rounded px-2 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-50">{language === 'zh' ? '重命名' : 'Rename'}</button>
                         <label className="block px-2 py-1.5 text-xs text-slate-700">{language === 'zh' ? '移动到项目' : 'Move to project'}<select aria-label={`${item.title} 移动到项目`} value={item.projectId} onChange={(event) => moveAgent(item.id, event.target.value)} className="mt-1 w-full rounded border border-slate-200 bg-white p-1 text-xs">{agentProjects.map((target) => <option key={target.id} value={target.id}>{target.title}</option>)}</select></label>

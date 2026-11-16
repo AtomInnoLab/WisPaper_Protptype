@@ -69,6 +69,7 @@ interface AgentPaper {
   match?: "Perfect" | "Partial";
   sources: Array<"deep-search" | "upload" | "web">;
   markdownReady: boolean;
+  updatedAt?: number;
 }
 
 const deepSearchPapers: AgentPaper[] = [
@@ -78,17 +79,21 @@ const deepSearchPapers: AgentPaper[] = [
 ];
 
 const paperIdentity = (paper: AgentPaper) => paper.doi?.toLowerCase().trim() || paper.title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]/g, '');
+const sortAgentPapers = (papers: AgentPaper[]) => [...papers].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
-function mergeAgentPapers(current: AgentPaper[], incoming: AgentPaper[]): { papers: AgentPaper[]; duplicates: number } {
+function mergeAgentPapers(current: AgentPaper[], incoming: AgentPaper[]): { papers: AgentPaper[]; duplicates: number; updatedId: string | null } {
   const papers = [...current];
   let duplicates = 0;
+  let updatedId: string | null = null;
+  const updatedAt = Math.max(Date.now(), ...papers.map((paper) => paper.updatedAt ?? 0)) + 1;
   incoming.forEach((paper) => {
     const index = papers.findIndex((item) => paperIdentity(item) === paperIdentity(paper));
-    if (index < 0) { papers.push(paper); return; }
+    if (index < 0) { papers.push({ ...paper, updatedAt }); updatedId = paper.id; return; }
     duplicates += 1;
-    papers[index] = { ...papers[index], ...paper, id: papers[index].id, sources: Array.from(new Set([...papers[index].sources, ...paper.sources])), markdownReady: papers[index].markdownReady || paper.markdownReady };
+    updatedId = papers[index].id;
+    papers[index] = { ...papers[index], ...paper, id: papers[index].id, updatedAt, sources: Array.from(new Set([...papers[index].sources, ...paper.sources])), markdownReady: papers[index].markdownReady || paper.markdownReady };
   });
-  return { papers, duplicates };
+  return { papers: sortAgentPapers(papers), duplicates, updatedId };
 }
 type AgentTierId = "fast" | "balanced" | "primary" | "deep";
 type AgentTodoStatus = "pending" | "active" | "waiting" | "blocked" | "done" | "skipped" | "failed";
@@ -1096,6 +1101,7 @@ function WorkbenchPanel({
   papers,
   paperPipelineStatus,
   onDownloadPaper,
+  recentPaperUpdate,
 }: {
   activeTab: WorkbenchTab;
   running: boolean;
@@ -1114,6 +1120,7 @@ function WorkbenchPanel({
   papers: AgentPaper[];
   paperPipelineStatus: string;
   onDownloadPaper: (paper: AgentPaper) => void;
+  recentPaperUpdate: { id: string; duplicate: boolean; token: number } | null;
 }) {
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
   const { sessions: globalAskSessions, latestForScene, upsertSession } = useGlobalAskAIHistory("agent");
@@ -1515,13 +1522,14 @@ function WorkbenchPanel({
       {activeTab === "papers" && (
         <section aria-label="Agent 论文列表">
           {paperPipelineStatus && <div role="status" className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">{paperPipelineStatus}</div>}
-          {papers.length ? <div className="mt-3 space-y-1.5">{papers.map((paper) => <article key={paper.id} className="rounded-xl border border-slate-200 bg-white px-2.5 py-2">
+          {papers.length ? <div className="mt-3 space-y-1.5">{papers.map((paper) => <article key={`${paper.id}-${recentPaperUpdate?.id === paper.id ? recentPaperUpdate.token : 0}`} className={`rounded-xl border bg-white px-2.5 py-2 ${recentPaperUpdate?.id === paper.id ? 'animate-in fade-in slide-in-from-top-3 border-blue-300 ring-2 ring-blue-100 duration-700' : 'border-slate-200'}`}>
             <p className="text-[13px] font-medium leading-[18px] text-slate-900">{paper.title}</p>
             <div className="mt-1 flex items-center justify-between gap-2 text-[11px] leading-4 text-slate-500"><span className="min-w-0 truncate">{paper.authors || '作者待补充'} · {paper.year || '年份待补充'}</span><span title={paper.authors && paper.year ? '引用检查：基本字段完整，来源待核验' : '引用检查：缺少作者或年份，待补充'} aria-label={paper.authors && paper.year ? '引用字段齐，来源待核验' : '引用待补，缺少作者或年份'} className={`shrink-0 ${paper.authors && paper.year ? 'text-emerald-600' : 'text-amber-600'}`}>{paper.authors && paper.year ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleGauge className="h-3.5 w-3.5" />}</span></div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px]">
               {paper.match && <span className={`rounded px-1.5 py-0.5 ${paper.match === 'Perfect' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{paper.match}</span>}
               {paper.sources.map((source) => <span key={source} className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{source === 'deep-search' ? '深度搜索' : source === 'upload' ? '用户上传' : '网页 PDF'}</span>)}
               {paper.markdownReady && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">Markdown 已生成</span>}
+              {recentPaperUpdate?.id === paper.id && <span className="rounded bg-blue-600 px-1.5 py-0.5 font-medium text-white">{recentPaperUpdate.duplicate ? '重复记录已合并' : '刚加入'}</span>}
             </div>
           </article>)}</div> : <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">完成深度搜索或导入 PDF 后，论文会出现在这里。</div>}
         </section>
@@ -1698,9 +1706,11 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const [needProgress, setNeedProgress] = useState(0);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(linkedAgentSession?.skill ?? null);
   const [currentProjectId, setCurrentProjectId] = useState(linkedAgentSession?.projectId ?? initialProjectId);
-  const [papers, setPapers] = useState<AgentPaper[]>(linkedAgentSession?.papers ?? []);
-  const papersRef = useRef<AgentPaper[]>(linkedAgentSession?.papers ?? []);
+  const [papers, setPapers] = useState<AgentPaper[]>(() => sortAgentPapers(linkedAgentSession?.papers ?? []));
+  const papersRef = useRef<AgentPaper[]>(sortAgentPapers(linkedAgentSession?.papers ?? []));
   const [paperPipelineStatus, setPaperPipelineStatus] = useState('');
+  const [recentPaperUpdate, setRecentPaperUpdate] = useState<{ id: string; duplicate: boolean; token: number } | null>(null);
+  const recentPaperTimerRef = useRef<number | null>(null);
   const skipInitialSessionSave = useRef(Boolean(linkedAgentSession));
   const [started, setStarted] = useState(Boolean(linkedConversation || linkedAgentSession));
   const [running, setRunning] = useState(false);
@@ -1711,17 +1721,18 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const [panelOpen, setPanelOpen] = useState(true);
   const [taskTitle, setTaskTitle] = useState(linkedAgentSession?.title || linkedConversation?.agentName || "新研究任务");
 
-  const addPapers = (incoming: AgentPaper[], source: string) => {
+  const addPapers = (incoming: AgentPaper[]) => {
     const result = mergeAgentPapers(papersRef.current, incoming);
     papersRef.current = result.papers;
     setPapers(result.papers);
-    setPaperPipelineStatus(`${source}：收录 ${incoming.length - result.duplicates} 篇，去重 ${result.duplicates} 篇；已检查引用基本字段。`);
     setActiveTab('papers');
     setPanelOpen(true);
+    return result;
   };
 
   const completeDeepSearch = () => {
-    addPapers(deepSearchPapers.filter((paper) => paper.match === 'Perfect' || paper.match === 'Partial'), '深度搜索完成');
+    addPapers(deepSearchPapers.filter((paper) => paper.match === 'Perfect' || paper.match === 'Partial'));
+    setPaperPipelineStatus('');
     setMessages((items) => [...items, { role: 'agent', text: '深度搜索已完成。Perfect 和 Partial 论文已自动收录到右侧「论文」，并完成去重与引用字段检查。' }]);
   };
 
@@ -1733,8 +1744,14 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
       const paper: AgentPaper = knownPaper
         ? { ...knownPaper, sources: [source], markdownReady: true }
         : { id: crypto.randomUUID(), title, sources: [source], markdownReady: true };
-      addPapers([paper], 'PDF-to-Markdown 完成');
-      setMessages((items) => [...items, { role: 'agent', text: `PDF-to-Markdown 已完成，「${title}」已进入论文列表，并完成去重与引用字段检查。` }]);
+      const result = addPapers([paper]);
+      setPaperPipelineStatus('');
+      if (result.updatedId) {
+        setRecentPaperUpdate((current) => ({ id: result.updatedId!, duplicate: result.duplicates > 0, token: (current?.token ?? 0) + 1 }));
+        if (recentPaperTimerRef.current !== null) window.clearTimeout(recentPaperTimerRef.current);
+        recentPaperTimerRef.current = window.setTimeout(() => setRecentPaperUpdate(null), 1800);
+      }
+      setMessages((items) => [...items, { role: 'agent', text: result.duplicates ? `PDF-to-Markdown 已完成，已更新论文列表中的「${title}」。` : `PDF-to-Markdown 已完成，「${title}」已加入论文列表。` }]);
     }, 900);
   };
 
@@ -1742,6 +1759,10 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     if (!file.name.toLowerCase().endsWith('.pdf')) { setPaperPipelineStatus('仅支持 PDF 文件。'); return; }
     convertPdf('upload', file.name.replace(/\.pdf$/i, ''));
   };
+
+  useEffect(() => {
+    return () => { if (recentPaperTimerRef.current !== null) window.clearTimeout(recentPaperTimerRef.current); };
+  }, []);
 
   useEffect(() => {
     const deepSearch = () => completeDeepSearch();
@@ -2498,6 +2519,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
               papers={papers}
               paperPipelineStatus={paperPipelineStatus}
               onDownloadPaper={(paper) => convertPdf('web', paper.title, paper)}
+              recentPaperUpdate={recentPaperUpdate}
             />
           </div>
         </aside>

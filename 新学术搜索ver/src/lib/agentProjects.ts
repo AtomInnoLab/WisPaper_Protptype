@@ -28,3 +28,31 @@ export function readAgentProjects(): AgentProject[] {
   } catch { /* prototype storage */ }
   return [defaultAgentProject, ...seedAgentProjects];
 }
+
+export function updateAgentProject(id: string, title: string | null): void {
+  if (id === defaultAgentProject.id) return;
+  try {
+    const projects = readAgentProjects().slice(1);
+    const next = title === null ? projects.filter((project) => project.id !== id) : projects.map((project) => project.id === id ? { ...project, title } : project);
+    window.localStorage.setItem(agentProjectCatalogKey, JSON.stringify(next));
+    for (const key of [agentProjectAdditionsKey, 'wispaper-projects']) {
+      const saved = JSON.parse(window.localStorage.getItem(key) || 'null');
+      if (!Array.isArray(saved)) continue;
+      const changed = title === null ? saved.filter((project) => String(project.id) !== id) : saved.map((project) => String(project.id) === id ? { ...project, title } : project);
+      window.localStorage.setItem(key, JSON.stringify(changed));
+    }
+    if (title === null) {
+      Object.keys(window.localStorage).filter((key) => key.startsWith('wispaper-agent-session:')).forEach((key) => {
+        try {
+          const session = JSON.parse(window.localStorage.getItem(key) || 'null');
+          if (String(session?.projectId) === id) {
+            window.localStorage.setItem(key, JSON.stringify({ ...session, projectId: defaultAgentProject.id, updatedAt: Date.now() }));
+            window.dispatchEvent(new CustomEvent('wispaper:agent-session-changed', { detail: { id: key.slice('wispaper-agent-session:'.length), projectId: defaultAgentProject.id } }));
+          }
+        } catch { /* ignore malformed mock session */ }
+      });
+      window.dispatchEvent(new Event('wispaper:agent-history-updated'));
+    }
+    window.dispatchEvent(new Event('wispaper:projects-updated'));
+  } catch { /* prototype storage */ }
+}
