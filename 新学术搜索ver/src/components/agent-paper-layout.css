@@ -6,7 +6,7 @@
   display: none;
 }
 
-@container (min-width: 760px) {
+@container (min-width: 600px) {
   .agent-paper-compact-list {
     display: none;
   }
@@ -18,6 +18,6 @@
 
 .agent-paper-grid {
   display: grid;
-  grid-template-columns: minmax(210px, 2.2fr) minmax(110px, 1fr) minmax(160px, 1.4fr) minmax(155px, 1.4fr) 104px;
+  grid-template-columns: minmax(200px, 2.2fr) minmax(100px, 1fr) minmax(160px, 1.7fr) 100px;
   align-items: center;
 }

@@ -1541,11 +1541,10 @@ function WorkbenchPanel({
             </div>
           </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">{paperScope === 'session' ? '当前会话暂无论文。' : paperScope === 'project' ? '当前项目暂无论文。' : '知识库暂无论文。'}</div>}
           {visiblePapers.length > 0 && <div className="agent-paper-wide-list mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <div className="agent-paper-grid border-b border-slate-200 bg-slate-50 text-xs font-medium text-slate-500"><span className="px-3 py-2.5">标题</span><span className="px-3 py-2.5">作者</span><span className="px-3 py-2.5">文件</span><span className="px-3 py-2.5">TLDR</span><span className="px-2 py-2.5">操作</span></div>
+            <div className="agent-paper-grid border-b border-slate-200 bg-slate-50 text-xs font-medium text-slate-500"><span className="px-3 py-2.5">标题</span><span className="px-3 py-2.5">作者</span><span className="px-3 py-2.5">TLDR</span><span className="px-2 py-2.5">操作</span></div>
             {visiblePapers.map((paper) => <div key={paper.id} className={`agent-paper-grid border-b border-slate-100 text-xs last:border-b-0 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'bg-blue-50' : ''}`}>
               <div className="min-w-0 px-3 py-3"><p className="font-medium leading-5 text-slate-900">{paper.title}</p><div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500"><span>{paper.year || '年份待补充'}</span>{paper.match && <span className={paper.match === 'Perfect' ? 'text-emerald-600' : 'text-amber-600'}>{paper.match}</span>}{paper.markdownReady && <span className="text-blue-600">Markdown</span>}</div></div>
               <div className="min-w-0 px-3 py-3 text-slate-600"><span className="break-words">{paper.authors || '作者待补充'}</span><span className={`ml-1 inline-block align-middle ${paper.authors && paper.year ? 'text-emerald-600' : 'text-amber-600'}`} title={paper.authors && paper.year ? '引用字段齐，来源待核验' : '引用待补，缺少作者或年份'}>{paper.authors && paper.year ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleGauge className="h-3.5 w-3.5" />}</span></div>
-              <div className="min-w-0 px-3 py-3 text-[11px] text-slate-600">{paperPdfPath(paper) ? <><p className="break-all" title={paperPdfPath(paper)}>{paperPdfPath(paper)}</p>{paperMarkdownPath(paper) && <p className="mt-1 break-all text-blue-600" title={paperMarkdownPath(paper)}>{paperMarkdownPath(paper)}</p>}</> : <span className="text-slate-400">尚无 PDF</span>}</div>
               <p className="min-w-0 px-3 py-3 leading-5 text-slate-600">{paperTldr(paper) || '—'}</p>
               <div className="px-2 py-3">{paperScope !== 'library' && <button type="button" aria-label={`${promotedIdentities.has(paperIdentity(paper)) ? '已在' : '加入'}${paperScope === 'session' ? '项目' : '知识库'}：${paper.title}`} disabled={promotedIdentities.has(paperIdentity(paper))} onClick={() => paperScope === 'session' ? onAddToProject(paper) : onAddToLibrary(paper)} className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium ${promotedIdentities.has(paperIdentity(paper)) ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>{promotedIdentities.has(paperIdentity(paper)) ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}{promotedIdentities.has(paperIdentity(paper)) ? (paperScope === 'session' ? '已在项目' : '已在知识库') : (paperScope === 'session' ? '加入项目' : '加入知识库')}</button>}</div>
             </div>)}
@@ -1727,11 +1726,58 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const [papers, setPapers] = useState<AgentPaper[]>(() => sortAgentPapers(linkedAgentSession?.papers ?? []));
   const papersRef = useRef<AgentPaper[]>(sortAgentPapers(linkedAgentSession?.papers ?? []));
   const [paperScope, setPaperScope] = useState<PaperScope>('session');
+  const [paperPanelWidth, setPaperPanelWidth] = useState<number | null>(() => {
+    try {
+      const saved = Number(window.localStorage.getItem('wispaper-agent-paper-panel-width'));
+      return saved >= 320 && saved <= 1100 ? saved : null;
+    } catch { return null; }
+  });
+  const paperPanelRef = useRef<HTMLElement>(null);
+  const paperResizeRef = useRef<{ startX: number; startWidth: number; maxWidth: number; cursor: string; userSelect: string } | null>(null);
   const [projectPapers, setProjectPapers] = useState<AgentPaper[]>(() => readProjectAgentPapers(linkedAgentSession?.projectId ?? initialProjectId));
   const [libraryPapers, setLibraryPapers] = useState<AgentPaper[]>(readLibraryAgentPapers);
   const [paperPipelineStatus, setPaperPipelineStatus] = useState('');
   const [recentPaperUpdate, setRecentPaperUpdate] = useState<{ id: string; duplicate: boolean; token: number } | null>(null);
   const recentPaperTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (paperPanelWidth === null) return;
+    try { window.localStorage.setItem('wispaper-agent-paper-panel-width', String(paperPanelWidth)); } catch { /* prototype storage */ }
+  }, [paperPanelWidth]);
+
+  useEffect(() => () => {
+    if (!paperResizeRef.current) return;
+    document.body.style.cursor = paperResizeRef.current.cursor;
+    document.body.style.userSelect = paperResizeRef.current.userSelect;
+  }, []);
+
+  const paperPanelMaxWidth = () => {
+    const panel = paperPanelRef.current;
+    const parentWidth = panel?.parentElement?.getBoundingClientRect().width ?? window.innerWidth;
+    return Math.max(panel?.getBoundingClientRect().width ?? 320, Math.min(1100, parentWidth - 320));
+  };
+
+  const beginPaperResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || !paperPanelRef.current) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    paperResizeRef.current = { startX: event.clientX, startWidth: paperPanelRef.current.getBoundingClientRect().width, maxWidth: paperPanelMaxWidth(), cursor: document.body.style.cursor, userSelect: document.body.style.userSelect };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const movePaperResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const drag = paperResizeRef.current;
+    if (!drag) return;
+    setPaperPanelWidth(Math.round(Math.max(320, Math.min(drag.maxWidth, drag.startWidth + drag.startX - event.clientX))));
+  };
+
+  const endPaperResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!paperResizeRef.current) return;
+    document.body.style.cursor = paperResizeRef.current.cursor;
+    document.body.style.userSelect = paperResizeRef.current.userSelect;
+    paperResizeRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+  };
   const skipInitialSessionSave = useRef(Boolean(linkedAgentSession));
   const [started, setStarted] = useState(Boolean(linkedConversation || linkedAgentSession));
   const [running, setRunning] = useState(false);
@@ -2527,7 +2573,13 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
       </main>
 
       {panelOpen && (
-        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "note" ? "w-[min(38vw,590px)]" : activeTab === "papers" ? "w-[min(56vw,920px)]" : activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
+        <aside ref={paperPanelRef} style={activeTab === 'papers' ? { width: paperPanelWidth ?? undefined, maxWidth: 'calc(100% - 320px)' } : undefined} className={`relative hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "note" ? "w-[min(38vw,590px)]" : activeTab === "papers" ? "w-[min(56vw,920px)]" : activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
+          {activeTab === 'papers' && <div role="separator" aria-label="调整论文栏宽度" aria-orientation="vertical" aria-valuemin={320} aria-valuemax={1100} aria-valuenow={paperPanelWidth ?? undefined} tabIndex={0} onPointerDown={beginPaperResize} onPointerMove={movePaperResize} onPointerUp={endPaperResize} onPointerCancel={endPaperResize} onKeyDown={(event) => {
+            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+            event.preventDefault();
+            const width = paperPanelRef.current?.getBoundingClientRect().width ?? 920;
+            setPaperPanelWidth(Math.round(Math.max(320, Math.min(paperPanelMaxWidth(), width + (event.key === 'ArrowLeft' ? 32 : -32)))));
+          }} className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none outline-none" title="拖动调整论文栏宽度"><span className="absolute left-0 top-1/2 h-16 w-1 -translate-y-1/2 rounded-r bg-slate-300 transition group-hover:bg-blue-500 group-focus:bg-blue-500" /></div>}
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
             <span className="flex items-center gap-2 text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}{activeTab === 'papers' && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">{paperScope === 'session' ? papers.length : paperScope === 'project' ? projectPapers.length : libraryPapers.length}</span>}</span>
             <button
