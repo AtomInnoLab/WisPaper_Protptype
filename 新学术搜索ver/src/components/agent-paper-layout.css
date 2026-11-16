@@ -1,0 +1,23 @@
+.agent-paper-panel {
+  container-type: inline-size;
+}
+
+.agent-paper-wide-list {
+  display: none;
+}
+
+@container (min-width: 760px) {
+  .agent-paper-compact-list {
+    display: none;
+  }
+
+  .agent-paper-wide-list {
+    display: block;
+  }
+}
+
+.agent-paper-grid {
+  display: grid;
+  grid-template-columns: minmax(210px, 2.2fr) minmax(110px, 1fr) minmax(160px, 1.4fr) minmax(155px, 1.4fr) 104px;
+  align-items: center;
+}

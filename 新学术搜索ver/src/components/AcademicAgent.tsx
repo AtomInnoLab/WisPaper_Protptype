@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { flushSync } from "react-dom";
 import "./agent-case-preview.css";
 import "./agent-launch-cases.css";
+import "./agent-paper-layout.css";
 import {
   ArrowUp,
   ArrowUpRight,
@@ -53,7 +54,7 @@ import {
 import { ResearchTree } from "./ResearchTree";
 import { usePrototypeAuth } from "../lib/usePrototypeAuth";
 import { readAgentProjects } from "../lib/agentProjects";
-import { AgentPaper, PaperScope, addLibraryAgentPaper, addProjectAgentPaper, mergeAgentPapers, paperIdentity, readLibraryAgentPapers, readProjectAgentPapers, sortAgentPapers } from "../lib/agentPaperCollections";
+import { AgentPaper, PaperScope, addLibraryAgentPaper, addProjectAgentPaper, agentPaperDirectory, agentPaperIndexCsv, agentPaperIndexPath, mergeAgentPapers, paperIdentity, paperMarkdownPath, paperPdfPath, paperTldr, readLibraryAgentPapers, readProjectAgentPapers, sortAgentPapers } from "../lib/agentPaperCollections";
 import { useGlobalAskAIHistory } from "../lib/useGlobalAskAIHistory";
 import { GlobalAskAIDrawer } from "./GlobalAskAIDrawer";
 import { LogtoMockForm } from "./LogtoMockForm";
@@ -62,9 +63,9 @@ import { useLanguage } from "../contexts/LanguageContext";
 type WorkbenchTab = "common" | "ask" | "files" | "search" | "papers" | "plan" | "gpu" | "bio" | "note";
 
 const deepSearchPapers: AgentPaper[] = [
-  { id: 'memorybank', title: 'MemoryBank: Enhancing Large Language Models with Long-Term Memory', authors: 'Zhong et al.', year: 2024, match: 'Perfect', sources: ['deep-search'], markdownReady: false },
-  { id: 'generative-agents', title: 'Generative Agents: Interactive Simulacra of Human Behavior', authors: 'Park et al.', year: 2023, match: 'Perfect', sources: ['deep-search'], markdownReady: false },
-  { id: 'memory-survey', title: 'A Survey on the Memory Mechanism of LLM-based Agents', year: 2024, match: 'Partial', sources: ['deep-search'], markdownReady: false },
+  { id: 'memorybank', title: 'MemoryBank: Enhancing Large Language Models with Long-Term Memory', authors: 'Zhong et al.', year: 2024, match: 'Perfect', sources: ['deep-search'], markdownReady: false, tldr: '使用记忆库增强大语言模型的长期交互记忆能力。' },
+  { id: 'generative-agents', title: 'Generative Agents: Interactive Simulacra of Human Behavior', authors: 'Park et al.', year: 2023, match: 'Perfect', sources: ['deep-search'], markdownReady: false, tldr: '通过记忆、反思和规划模拟可信的生成式智能体行为。' },
+  { id: 'memory-survey', title: 'A Survey on the Memory Mechanism of LLM-based Agents', year: 2024, match: 'Partial', sources: ['deep-search'], markdownReady: false, tldr: '梳理基于大语言模型的智能体记忆机制与研究方向。' },
 ];
 
 type AgentTierId = "fast" | "balanced" | "primary" | "deep";
@@ -1235,6 +1236,16 @@ function WorkbenchPanel({
     setAskInput("");
   };
 
+  const downloadPaperIndex = () => {
+    const blob = new Blob(['\ufeff', agentPaperIndexCsv(papers)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'index.csv';
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const startNewAsk = () => {
     const firstQuestion = askMessages.find((message) => message.role === "user")?.text;
     if (firstQuestion) setAskSessions((sessions) => [{ id: `agent-ask-${Date.now()}`, title: firstQuestion, time: "刚刚", messages: askMessages }, ...sessions]);
@@ -1481,13 +1492,18 @@ function WorkbenchPanel({
       )}
       {activeTab === "files" && (
         <section>
-          <p className="text-xs font-medium text-slate-500">Agent 工作台</p>
-          <h3 className="mt-1 text-base font-semibold">任务文件</h3>
-          <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-white p-7 text-center">
-            <FileText className="mx-auto h-7 w-7 text-slate-400" />
-            <p className="mt-3 text-sm font-medium">产物将在这里生成</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">支持 PDF、Markdown、代码和数据文件</p>
+          <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <div className="flex items-center gap-2 text-sm font-semibold"><FolderKanban className="h-4 w-4 text-blue-600" />{agentPaperDirectory}</div>
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs">
+              <span className="flex items-center gap-2 font-medium" title={agentPaperIndexPath}><FileText className="h-4 w-4 text-slate-500" />index.csv</span>
+              <button type="button" onClick={downloadPaperIndex} className="font-medium text-blue-600 hover:underline">下载</button>
+            </div>
+            {papers.map((paper) => paperPdfPath(paper) && <React.Fragment key={paper.id}>
+              <div className="mt-1 truncate px-2.5 py-1 text-xs text-slate-600" title={paperPdfPath(paper)}>{paperPdfPath(paper).slice(agentPaperDirectory.length)}</div>
+              {paperMarkdownPath(paper) && <div className="truncate px-2.5 py-1 text-xs text-slate-600" title={paperMarkdownPath(paper)}>{paperMarkdownPath(paper).slice(agentPaperDirectory.length)}</div>}
+            </React.Fragment>)}
           </div>
+          <details className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-xs"><summary className="cursor-pointer font-medium text-slate-700">预览 index.csv</summary><pre className="mt-3 overflow-x-auto whitespace-pre text-[11px] leading-5 text-slate-600">{agentPaperIndexCsv(papers)}</pre></details>
         </section>
       )}
       {activeTab === "search" && (
@@ -1507,10 +1523,10 @@ function WorkbenchPanel({
         </section>
       )}
       {activeTab === "papers" && (
-        <section aria-label="Agent 论文列表">
+        <section aria-label="Agent 论文列表" className="agent-paper-panel">
           <div role="tablist" aria-label="论文范围" className="grid grid-cols-3 rounded-lg bg-slate-200/70 p-0.5">{([['session', '会话'], ['project', '项目'], ['library', '知识库']] as const).map(([scope, label]) => <button key={scope} type="button" role="tab" aria-selected={paperScope === scope} onClick={() => onPaperScopeChange(scope)} className={`rounded-md px-2 py-1.5 text-xs font-medium transition ${paperScope === scope ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}>{label}</button>)}</div>
           {paperScope === 'session' && paperPipelineStatus && <div role="status" className="mt-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">{paperPipelineStatus}</div>}
-          {visiblePapers.length ? <div className="mt-3 space-y-1.5">{visiblePapers.map((paper) => <article key={`${paper.id}-${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? recentPaperUpdate.token : 0}`} className={`rounded-xl border bg-white px-2.5 py-2 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'animate-in fade-in slide-in-from-top-3 border-blue-300 ring-2 ring-blue-100 duration-700' : 'border-slate-200'}`}>
+          {visiblePapers.length ? <div className="agent-paper-compact-list mt-3 space-y-1.5">{visiblePapers.map((paper) => <article key={`${paper.id}-${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? recentPaperUpdate.token : 0}`} className={`rounded-xl border bg-white px-2.5 py-2 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'animate-in fade-in slide-in-from-top-3 border-blue-300 ring-2 ring-blue-100 duration-700' : 'border-slate-200'}`}>
             <p className="text-[13px] font-medium leading-[18px] text-slate-900">{paper.title}</p>
             <div className="mt-1 flex items-center gap-2 text-[11px] leading-4 text-slate-500">
               <span className="min-w-0 flex-1 truncate">{paper.authors || '作者待补充'} · {paper.year || '年份待补充'}</span>
@@ -1524,6 +1540,16 @@ function WorkbenchPanel({
               {paperScope === 'session' && recentPaperUpdate?.id === paper.id && <span className="rounded bg-blue-600 px-1.5 py-0.5 font-medium text-white">{recentPaperUpdate.duplicate ? '重复记录已合并' : '刚加入'}</span>}
             </div>
           </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">{paperScope === 'session' ? '当前会话暂无论文。' : paperScope === 'project' ? '当前项目暂无论文。' : '知识库暂无论文。'}</div>}
+          {visiblePapers.length > 0 && <div className="agent-paper-wide-list mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="agent-paper-grid border-b border-slate-200 bg-slate-50 text-xs font-medium text-slate-500"><span className="px-3 py-2.5">标题</span><span className="px-3 py-2.5">作者</span><span className="px-3 py-2.5">文件</span><span className="px-3 py-2.5">TLDR</span><span className="px-2 py-2.5">操作</span></div>
+            {visiblePapers.map((paper) => <div key={paper.id} className={`agent-paper-grid border-b border-slate-100 text-xs last:border-b-0 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'bg-blue-50' : ''}`}>
+              <div className="min-w-0 px-3 py-3"><p className="font-medium leading-5 text-slate-900">{paper.title}</p><div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500"><span>{paper.year || '年份待补充'}</span>{paper.match && <span className={paper.match === 'Perfect' ? 'text-emerald-600' : 'text-amber-600'}>{paper.match}</span>}{paper.markdownReady && <span className="text-blue-600">Markdown</span>}</div></div>
+              <div className="min-w-0 px-3 py-3 text-slate-600"><span className="break-words">{paper.authors || '作者待补充'}</span><span className={`ml-1 inline-block align-middle ${paper.authors && paper.year ? 'text-emerald-600' : 'text-amber-600'}`} title={paper.authors && paper.year ? '引用字段齐，来源待核验' : '引用待补，缺少作者或年份'}>{paper.authors && paper.year ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleGauge className="h-3.5 w-3.5" />}</span></div>
+              <div className="min-w-0 px-3 py-3 text-[11px] text-slate-600">{paperPdfPath(paper) ? <><p className="break-all" title={paperPdfPath(paper)}>{paperPdfPath(paper)}</p>{paperMarkdownPath(paper) && <p className="mt-1 break-all text-blue-600" title={paperMarkdownPath(paper)}>{paperMarkdownPath(paper)}</p>}</> : <span className="text-slate-400">尚无 PDF</span>}</div>
+              <p className="min-w-0 px-3 py-3 leading-5 text-slate-600">{paperTldr(paper) || '—'}</p>
+              <div className="px-2 py-3">{paperScope !== 'library' && <button type="button" aria-label={`${promotedIdentities.has(paperIdentity(paper)) ? '已在' : '加入'}${paperScope === 'session' ? '项目' : '知识库'}：${paper.title}`} disabled={promotedIdentities.has(paperIdentity(paper))} onClick={() => paperScope === 'session' ? onAddToProject(paper) : onAddToLibrary(paper)} className={`inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11px] font-medium ${promotedIdentities.has(paperIdentity(paper)) ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>{promotedIdentities.has(paperIdentity(paper)) ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}{promotedIdentities.has(paperIdentity(paper)) ? (paperScope === 'session' ? '已在项目' : '已在知识库') : (paperScope === 'session' ? '加入项目' : '加入知识库')}</button>}</div>
+            </div>)}
+          </div>}
         </section>
       )}
       {activeTab === "bio" && (
@@ -1746,14 +1772,16 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     setMessages((items) => [...items, { role: 'agent', text: '深度搜索已完成。Perfect 和 Partial 论文已自动收录到右侧「论文」，并完成去重与引用字段检查。' }]);
   };
 
-  const convertPdf = (source: 'upload' | 'web', title: string, knownPaper?: AgentPaper) => {
+  const convertPdf = (source: 'upload' | 'web', title: string, knownPaper?: AgentPaper, originalFileName?: string) => {
     setPaperPipelineStatus(`${source === 'upload' ? '上传' : '网页下载'} PDF：正在调用 PDF-to-Markdown…`);
     setActiveTab('papers');
     setPanelOpen(true);
     window.setTimeout(() => {
+      const fileName = (originalFileName || `${title}.pdf`).replace(/[\\/:*?"<>|]/g, '_');
+      const pdfPath = `${agentPaperDirectory}${fileName}`;
       const paper: AgentPaper = knownPaper
-        ? { ...knownPaper, sources: [source], markdownReady: true }
-        : { id: crypto.randomUUID(), title, sources: [source], markdownReady: true };
+        ? { ...knownPaper, sources: [source], markdownReady: true, pdfPath }
+        : { id: crypto.randomUUID(), title, sources: [source], markdownReady: true, pdfPath };
       const result = addPapers([paper]);
       setPaperPipelineStatus('');
       if (result.updatedId) {
@@ -1767,7 +1795,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
 
   const uploadPdf = (file: File) => {
     if (!file.name.toLowerCase().endsWith('.pdf')) { setPaperPipelineStatus('仅支持 PDF 文件。'); return; }
-    convertPdf('upload', file.name.replace(/\.pdf$/i, ''));
+    convertPdf('upload', file.name.replace(/\.pdf$/i, ''), undefined, file.name);
   };
 
   useEffect(() => {
@@ -2499,7 +2527,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
       </main>
 
       {panelOpen && (
-        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "note" ? "w-[min(38vw,590px)]" : activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
+        <aside className={`hidden shrink-0 border-l border-slate-200 bg-[#f7f9fc] lg:block ${activeTab === "note" ? "w-[min(38vw,590px)]" : activeTab === "papers" ? "w-[min(56vw,920px)]" : activeTab === "gpu" || activeTab === "bio" ? "w-[520px] xl:w-[600px]" : "w-[360px]"}`}>
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
             <span className="flex items-center gap-2 text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}{activeTab === 'papers' && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">{paperScope === 'session' ? papers.length : paperScope === 'project' ? projectPapers.length : libraryPapers.length}</span>}</span>
             <button

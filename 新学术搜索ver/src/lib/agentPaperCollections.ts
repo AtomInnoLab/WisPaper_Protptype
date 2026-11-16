@@ -7,6 +7,8 @@ export interface AgentPaper {
   match?: 'Perfect' | 'Partial';
   sources: Array<'deep-search' | 'upload' | 'web'>;
   markdownReady: boolean;
+  pdfPath?: string;
+  tldr?: string;
   updatedAt?: number;
 }
 
@@ -14,6 +16,35 @@ export type PaperScope = 'session' | 'project' | 'library';
 
 export const libraryPaperKey = 'wispaper-agent-library-papers';
 export const projectPaperKey = (projectId: string) => `wispaper-agent-project-papers:${projectId}`;
+export const agentPaperDirectory = 'papers/';
+export const agentPaperIndexPath = `${agentPaperDirectory}index.csv`;
+
+const sampleTldrs: Record<string, string> = {
+  memorybank: '使用记忆库增强大语言模型的长期交互记忆能力。',
+  'generative-agents': '通过记忆、反思和规划模拟可信的生成式智能体行为。',
+  'memory-survey': '梳理基于大语言模型的智能体记忆机制与研究方向。',
+};
+export const paperTldr = (paper: AgentPaper) => paper.tldr || sampleTldrs[paper.id] || '';
+
+export function paperPdfPath(paper: AgentPaper): string {
+  if (paper.pdfPath) return paper.pdfPath;
+  if (!paper.markdownReady) return '';
+  const name = paper.title.replace(/[\\/:*?"<>|]/g, '_').trim() || paper.id;
+  return `${agentPaperDirectory}${name}.pdf`;
+}
+
+export function paperMarkdownPath(paper: AgentPaper): string {
+  const pdfPath = paperPdfPath(paper);
+  return paper.markdownReady && pdfPath ? pdfPath.replace(/\.pdf$/i, '.md') : '';
+}
+
+const csvField = (value: string) => `"${value.replace(/"/g, '""')}"`;
+export function agentPaperIndexCsv(papers: AgentPaper[]): string {
+  return [
+    'title,authors,pdf_path,tldr',
+    ...papers.map((paper) => [paper.title, paper.authors ?? '', paperPdfPath(paper), paperTldr(paper)].map(csvField).join(',')),
+  ].join('\r\n') + '\r\n';
+}
 
 const firstProjectPapers: AgentPaper[] = [
   { id: 'project-memorybank', title: 'MemoryBank: Enhancing Large Language Models with Long-Term Memory', authors: 'Zhong et al.', year: 2024, sources: ['deep-search'], markdownReady: true },
@@ -34,7 +65,7 @@ export function mergeAgentPapers(current: AgentPaper[], incoming: AgentPaper[]):
     if (index < 0) { papers.push({ ...paper, updatedAt }); updatedId = paper.id; return; }
     duplicates += 1;
     updatedId = papers[index].id;
-    papers[index] = { ...papers[index], ...paper, id: papers[index].id, updatedAt, sources: Array.from(new Set([...papers[index].sources, ...paper.sources])), markdownReady: papers[index].markdownReady || paper.markdownReady };
+    papers[index] = { ...papers[index], ...paper, id: papers[index].id, updatedAt, sources: Array.from(new Set([...papers[index].sources, ...paper.sources])), markdownReady: papers[index].markdownReady || paper.markdownReady, pdfPath: paper.pdfPath || papers[index].pdfPath, tldr: paper.tldr || papers[index].tldr };
   });
   return { papers: sortAgentPapers(papers), duplicates, updatedId };
 }
