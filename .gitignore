@@ -1,6 +1,9 @@
 *.DS_Store
 
 node_modules/
+vendor/
+dist/
+build/
 新学术搜索ver/node_modules/
 新学术搜索ver/build/
 新学术搜索ver/.vite/

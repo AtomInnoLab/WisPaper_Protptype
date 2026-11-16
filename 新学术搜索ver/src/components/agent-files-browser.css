@@ -1,0 +1,28 @@
+.agent-files-table {
+  container-type: inline-size;
+}
+
+.agent-files-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 80px;
+  align-items: center;
+}
+
+.agent-files-attribute-column {
+  display: none;
+}
+
+@container (max-width: 530px) {
+  .agent-files-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 0.8fr);
+  }
+
+  .agent-files-time-column,
+  .agent-files-size-column {
+    display: none;
+  }
+
+  .agent-files-attribute-column {
+    display: block;
+  }
+}

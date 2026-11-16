@@ -6,6 +6,7 @@ export interface AgentArtifact {
   name: string;
   kind: AgentArtifactKind;
   content: string;
+  createdAt?: number;
 }
 
 interface CitationReference {
@@ -66,5 +67,6 @@ export function mockAgentArtifact(kind: AgentArtifactKind): AgentArtifact {
     word: { name: '长期记忆实验记录.docx', content: 'Word 提取文本：行为模拟参考 (Park et al., 2023)；实验扩展引用 (Chen et al., 2026) 待核验。' },
     bib: { name: '长期记忆参考文献.bib', content: '@article{memorybank2024,\n  title={MemoryBank: Enhancing Large Language Models with Long-Term Memory},\n  author={Zhong et al.},\n  year={2024}\n}\n@article{unknown2025,\n  title={Imaginary Memory Benchmark},\n  author={Smith et al.},\n  year={2025}\n}' },
   };
-  return { id: `${kind}-${Date.now()}`, kind, ...examples[kind] };
+  const createdAt = Date.now();
+  return { id: `${kind}-${createdAt}`, createdAt, kind, ...examples[kind] };
 }
