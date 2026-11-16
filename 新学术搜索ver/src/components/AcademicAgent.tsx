@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import "./agent-case-preview.css";
 import "./agent-launch-cases.css";
 import "./agent-paper-layout.css";
+import "./agent-prompt-layout.css";
 import {
   ArrowUp,
   ArrowUpRight,
@@ -54,7 +55,8 @@ import {
 import { ResearchTree } from "./ResearchTree";
 import { usePrototypeAuth } from "../lib/usePrototypeAuth";
 import { readAgentProjects } from "../lib/agentProjects";
-import { AgentPaper, PaperScope, PaperTier, addLibraryAgentPaper, addProjectAgentPaper, agentPaperDirectory, agentPaperIndexCsv, agentPaperIndexPath, mergeAgentPapers, paperIdentity, paperMarkdownPath, paperPdfPath, paperTierLimit, paperTldr, readLibraryAgentPapers, readProjectAgentPapers, sortAgentPapers } from "../lib/agentPaperCollections";
+import { AgentPaper, PaperScope, PaperTier, addLibraryAgentPaper, addProjectAgentPaper, agentPaperDirectory, agentPaperIndexCsv, agentPaperIndexPath, mergeAgentPapers, paperIdentity, paperMarkdownPath, paperPdfPath, paperTierLimit, paperTldr, readLibraryAgentPapers, readProjectAgentPapers, removeLibraryAgentPaper, removeProjectAgentPaper, sortAgentPapers } from "../lib/agentPaperCollections";
+import { AgentArtifact, AgentArtifactKind, analyzeArtifactCitations, artifactsForPaper, mockAgentArtifact } from "../lib/agentPaperArtifacts";
 import { useGlobalAskAIHistory } from "../lib/useGlobalAskAIHistory";
 import { GlobalAskAIDrawer } from "./GlobalAskAIDrawer";
 import { LogtoMockForm } from "./LogtoMockForm";
@@ -144,6 +146,7 @@ interface AgentRouteSession {
   model?: "Lite" | "Pro";
   projectId?: string;
   papers?: AgentPaper[];
+  artifacts?: AgentArtifact[];
 }
 
 const openAgentSessionRoute = (session: AgentRouteSession) => {
@@ -675,7 +678,7 @@ function AgentComposer({
       )}
 
       <div
-        className={`rounded-[22px] border border-slate-200 bg-white text-left shadow-[0_18px_55px_-30px_rgba(15,23,42,0.38)] transition focus-within:border-slate-300 focus-within:shadow-[0_22px_65px_-28px_rgba(15,23,42,0.44)] ${
+        className={`agent-prompt-box rounded-[22px] border border-slate-200 bg-white text-left shadow-[0_18px_55px_-30px_rgba(15,23,42,0.38)] transition focus-within:border-slate-300 focus-within:shadow-[0_22px_65px_-28px_rgba(15,23,42,0.44)] ${
           compact ? "p-2.5" : "p-2.5 sm:p-3.5"
         }`}
       >
@@ -710,7 +713,7 @@ function AgentComposer({
           />
         </div>
         <div className="flex items-end justify-between gap-2 sm:gap-3">
-          {!onboardingMode && <div className="flex min-w-0 max-w-full flex-1 translate-y-0 flex-nowrap items-center gap-1.5 opacity-100 transition-all duration-300 sm:flex-wrap sm:gap-2">
+          {!onboardingMode && <div className="agent-prompt-controls flex min-w-0 max-w-full flex-1 translate-y-0 flex-nowrap items-center gap-1.5 opacity-100 transition-all duration-300 sm:gap-2">
             <button
               type="button"
               onClick={() => {
@@ -730,8 +733,8 @@ function AgentComposer({
             {usesLaunchOptions ? (
               <>
                 <div className="relative">
-                  <button type="button" onClick={() => { setShowShortcutModels((value) => !value); setShowProjects(false); }} className="flex h-9 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-3">
-                    {shortcutModel} <span className="text-slate-400">{shortcutModel === "Lite" ? "×0.36" : "×3.6"}</span><ChevronDown className="h-3.5 w-3.5" />
+                  <button type="button" onClick={() => { setShowShortcutModels((value) => !value); setShowProjects(false); }} className="flex h-9 shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:gap-2 sm:px-3">
+                    {shortcutModel} <span className="agent-prompt-model-rate text-slate-400">{shortcutModel === "Lite" ? "×0.36" : "×3.6"}</span><ChevronDown className="h-3.5 w-3.5" />
                   </button>
                   {showShortcutModels && <div className="absolute bottom-11 left-0 z-40 w-36 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">{(["Lite", "Pro"] as const).map((model) => <button key={model} type="button" onClick={() => { onShortcutModelChange(model); setShowShortcutModels(false); }} className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs ${shortcutModel === model ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}><span>{model}</span><span>{model === "Lite" ? "×0.36" : "×3.6"}</span></button>)}</div>}
                 </div>
@@ -743,7 +746,7 @@ function AgentComposer({
                 setShowTools(false);
                 setShowMore(false);
               }}
-              className={`flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-medium transition active:scale-[0.98] ${
+              className={`agent-prompt-agent-button flex h-9 shrink-0 items-center gap-2 rounded-full border px-3 text-xs font-medium transition active:scale-[0.98] ${
                 showAgents
                   ? "border-slate-300 bg-slate-100 text-slate-950"
                   : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
@@ -756,7 +759,7 @@ function AgentComposer({
               <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAgents ? "rotate-180" : ""}`} />
             </button>}
             <div className="relative min-w-0">
-              <button type="button" onClick={() => { setShowProjects((value) => !value); setShowShortcutModels(false); }} className="flex h-9 w-10 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:max-w-48 sm:gap-2 sm:px-3" aria-label={selectedProject} title={selectedProject}><FolderKanban className="h-4 w-4 shrink-0 text-slate-500" /><span className="hidden truncate sm:inline">{selectedProject}</span><ChevronDown className="hidden h-3.5 w-3.5 shrink-0 sm:block" /></button>
+              <button type="button" onClick={() => { setShowProjects((value) => !value); setShowShortcutModels(false); }} className="agent-prompt-project-button flex h-9 w-10 items-center justify-center gap-1 rounded-full border border-slate-200 bg-white text-xs font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:w-auto sm:max-w-48 sm:gap-2 sm:px-3" aria-label={selectedProject} title={selectedProject}><FolderKanban className="h-4 w-4 shrink-0 text-slate-500" /><span className="agent-prompt-project-name hidden truncate sm:inline">{selectedProject}</span><ChevronDown className="agent-prompt-project-chevron hidden h-3.5 w-3.5 shrink-0 sm:block" /></button>
               {showProjects && <div className="absolute bottom-11 right-0 z-40 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl sm:left-0 sm:right-auto sm:w-64">{projectOptions.map((project) => <button key={project.id} type="button" onClick={() => { onProjectChange(project.id); setShowProjects(false); }} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs ${projectId === project.id ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}><FolderKanban className="h-3.5 w-3.5" /><span className="truncate">{project.title}</span></button>)}</div>}
             </div>
           </div>}
@@ -764,7 +767,7 @@ function AgentComposer({
             ref={guideSubmitRef}
             onClick={onSubmit}
             disabled={!prompt.trim() || disabled || submittingEffect}
-            className={`flex h-10 w-10 items-center justify-center rounded-full text-white transition active:scale-95 disabled:cursor-not-allowed ${submittingEffect ? "scale-110 bg-[#3ea3ff] ring-4 ring-[#3ea3ff]/30" : "bg-slate-950 hover:bg-slate-800 disabled:bg-slate-200"}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition active:scale-95 disabled:cursor-not-allowed ${submittingEffect ? "scale-110 bg-[#3ea3ff] ring-4 ring-[#3ea3ff]/30" : "bg-slate-950 hover:bg-slate-800 disabled:bg-slate-200"}`}
             aria-label={submittingEffect ? (language === "zh" ? "提交中" : "Submitting") : (language === "zh" ? "提交" : "Submit")}
           >
             {disabled || submittingEffect ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-5 w-5" />}
@@ -1075,10 +1078,15 @@ function WorkbenchPanel({
   papers,
   projectPapers,
   libraryPapers,
+  artifacts,
+  focusedArtifactId,
+  onOpenArtifact,
   paperScope,
   onPaperScopeChange,
   onAddToProject,
   onAddToLibrary,
+  onRemoveFromProject,
+  onRemoveFromLibrary,
   paperTier,
   paperLimit,
   paperQuotaNotice,
@@ -1104,10 +1112,15 @@ function WorkbenchPanel({
   papers: AgentPaper[];
   projectPapers: AgentPaper[];
   libraryPapers: AgentPaper[];
+  artifacts: AgentArtifact[];
+  focusedArtifactId: string | null;
+  onOpenArtifact: (id: string) => void;
   paperScope: PaperScope;
   onPaperScopeChange: (scope: PaperScope) => void;
   onAddToProject: (paper: AgentPaper) => void;
   onAddToLibrary: (paper: AgentPaper) => void;
+  onRemoveFromProject: (paper: AgentPaper) => void;
+  onRemoveFromLibrary: (paper: AgentPaper) => void;
   paperTier: PaperTier;
   paperLimit: number;
   paperQuotaNotice: string;
@@ -1118,6 +1131,7 @@ function WorkbenchPanel({
 }) {
   const { isAuthenticated, setAuthenticated } = usePrototypeAuth();
   const visiblePapers = paperScope === 'session' ? papers : paperScope === 'project' ? projectPapers : libraryPapers;
+  const evidencePapers = [...papers, ...projectPapers, ...libraryPapers].filter((paper, index, items) => items.findIndex((item) => paperIdentity(item) === paperIdentity(paper)) === index);
   const projectPaperIdentities = new Set(projectPapers.map(paperIdentity));
   const libraryPaperIdentities = new Set(libraryPapers.map(paperIdentity));
   const [openPaperAction, setOpenPaperAction] = useState<string | null>(null);
@@ -1267,18 +1281,19 @@ function WorkbenchPanel({
   };
 
   const paperAction = (paper: AgentPaper, compact: boolean) => {
-    if (paperScope === 'library') return null;
     const key = `${paperScope}:${paper.id}:${compact ? 'card' : 'row'}`;
     const identity = paperIdentity(paper);
+    const inProject = projectPaperIdentities.has(identity);
+    const inLibrary = libraryPaperIdentities.has(identity);
     const actions = [
-      ...(paperScope === 'session' ? [{ label: '项目', done: projectPaperIdentities.has(identity), run: () => onAddToProject(paper) }] : []),
-      { label: '知识库', done: libraryPaperIdentities.has(identity), run: () => onAddToLibrary(paper) },
+      ...(paperScope !== 'library' ? [{ label: '项目', done: inProject, run: () => inProject ? onRemoveFromProject(paper) : onAddToProject(paper) }] : []),
+      { label: '知识库', done: inLibrary, run: () => inLibrary ? onRemoveFromLibrary(paper) : onAddToLibrary(paper) },
     ];
     const allDone = actions.every((action) => action.done);
     return <div className="relative shrink-0" data-paper-action>
-      <button type="button" aria-label={`论文操作：${paper.title}`} aria-expanded={openPaperAction === key} onClick={() => setOpenPaperAction((current) => current === key ? null : key)} className={`inline-flex items-center justify-center gap-1 rounded-md border border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 ${compact ? 'px-2 py-1 text-[11px] font-medium' : 'h-8 w-8'}`}>{compact ? <>{allDone ? <Check className="h-3 w-3 text-emerald-600" /> : <Plus className="h-3 w-3" />}{allDone ? '已收录' : '加入到…'}<ChevronDown className="h-3 w-3" /></> : allDone ? <Check className="h-4 w-4 text-emerald-600" /> : <MoreHorizontal className="h-4 w-4" />}</button>
+      <button type="button" aria-label={`论文操作：${paper.title}`} aria-expanded={openPaperAction === key} onClick={() => setOpenPaperAction((current) => current === key ? null : key)} className={`inline-flex items-center justify-center gap-1 rounded-md border border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 ${compact ? 'px-2 py-1 text-[11px] font-medium' : 'h-8 w-8'}`}>{compact ? <>{allDone ? <Check className="h-3 w-3 text-emerald-600" /> : <Plus className="h-3 w-3" />}{allDone ? '管理收录' : '加入到…'}<ChevronDown className="h-3 w-3" /></> : allDone ? <Check className="h-4 w-4 text-emerald-600" /> : <MoreHorizontal className="h-4 w-4" />}</button>
       {openPaperAction === key && <div role="menu" aria-label={`论文操作：${paper.title}`} className="absolute bottom-full right-0 z-50 mb-1 min-w-36 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
-        {actions.map((action) => <button key={action.label} type="button" role="menuitem" aria-label={`${action.done ? '已在' : '加入'}${action.label}：${paper.title}`} disabled={action.done} onClick={() => { action.run(); setOpenPaperAction(null); }} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs ${action.done ? 'text-emerald-700' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}>{action.done ? <Check className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}{action.done ? `已在${action.label}` : `加入${action.label}`}</button>)}
+        {actions.map((action) => <button key={action.label} type="button" role="menuitem" aria-label={`${action.done ? '从' : '加入'}${action.label}${action.done ? '移除' : ''}：${paper.title}`} onClick={() => { action.run(); setOpenPaperAction(null); }} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs ${action.done ? 'text-slate-700 hover:bg-red-50 hover:text-red-600' : 'text-slate-700 hover:bg-blue-50 hover:text-blue-700'}`}>{action.done ? <Minus className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}{action.done ? `从${action.label}移除` : `加入${action.label}`}</button>)}
       </div>}
     </div>;
   };
@@ -1541,6 +1556,10 @@ function WorkbenchPanel({
             </React.Fragment>)}
           </div>
           <details className="mt-3 rounded-xl border border-slate-200 bg-white p-3 text-xs"><summary className="cursor-pointer font-medium text-slate-700">预览 index.csv</summary><pre className="mt-3 overflow-x-auto whitespace-pre text-[11px] leading-5 text-slate-600">{agentPaperIndexCsv(papers)}</pre></details>
+          {artifacts.length > 0 && <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3"><div className="flex items-center gap-2 text-sm font-semibold"><FolderKanban className="h-4 w-4 text-blue-600" />outputs/</div><div className="mt-2 space-y-1">{artifacts.map((artifact) => {
+            const analysis = analyzeArtifactCitations(artifact, evidencePapers);
+            return <div key={artifact.id} className="rounded-lg border border-slate-100 p-2"><button type="button" onClick={() => onOpenArtifact(artifact.id)} className="flex w-full items-center gap-2 text-left text-xs font-medium text-blue-700 hover:underline"><FileText className="h-4 w-4 shrink-0" /><span className="min-w-0 truncate">{artifact.name}</span></button><p className="mt-1 text-[11px] text-slate-500">关联 {analysis.matched.length} 篇论文</p>{analysis.unmatched.length > 0 && <p role="alert" className="mt-1 text-[11px] text-amber-700">疑似幻觉引用：{analysis.unmatched.map((item) => item.key).join('、')}</p>}{focusedArtifactId === artifact.id && <div className="mt-2 border-t border-slate-100 pt-2"><pre className="max-h-44 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-5 text-slate-600">{artifact.content}</pre>{analysis.matched.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{analysis.matched.map(({ reference, paper }) => <button key={reference.key} type="button" onClick={() => { onPaperScopeChange(papers.some((item) => paperIdentity(item) === paperIdentity(paper)) ? 'session' : projectPapers.some((item) => paperIdentity(item) === paperIdentity(paper)) ? 'project' : 'library'); onSelectTab('papers'); }} className="rounded bg-blue-50 px-2 py-1 text-[11px] text-blue-700 hover:bg-blue-100">{paper.title}</button>)}</div>}</div>}</div>;
+          })}</div></div>}
         </section>
       )}
       {activeTab === "search" && (
@@ -1577,11 +1596,12 @@ function WorkbenchPanel({
               {paper.markdownReady && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-blue-700">Markdown 已生成</span>}
               {paperScope === 'session' && recentPaperUpdate?.id === paper.id && <span className="rounded bg-blue-600 px-1.5 py-0.5 font-medium text-white">{recentPaperUpdate.duplicate ? '重复记录已合并' : '刚加入'}</span>}
             </div>
+            {artifactsForPaper(paper, artifacts, evidencePapers).length > 0 && <div className="mt-1.5 flex flex-wrap gap-1">{artifactsForPaper(paper, artifacts, evidencePapers).map((artifact) => <button key={artifact.id} type="button" onClick={() => onOpenArtifact(artifact.id)} className="inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700 hover:bg-blue-100"><FileText className="h-3 w-3" />{artifact.name}</button>)}</div>}
           </article>)}</div> : <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-xs text-slate-500">{paperScope === 'session' ? '当前会话暂无论文。' : paperScope === 'project' ? '当前项目暂无论文。' : '知识库暂无论文。'}</div>}
           {visiblePapers.length > 0 && <div className="agent-paper-wide-list mt-3 rounded-xl border border-slate-200 bg-white">
             <div className="agent-paper-grid border-b border-slate-200 bg-slate-50 text-xs font-medium text-slate-500"><span className="px-3 py-2.5">标题</span><span className="px-3 py-2.5">作者</span><span className="px-3 py-2.5">TLDR</span><span className="py-2.5 text-center">操作</span></div>
             {visiblePapers.map((paper) => <div key={paper.id} className={`agent-paper-grid border-b border-slate-100 text-xs last:border-b-0 ${paperScope === 'session' && recentPaperUpdate?.id === paper.id ? 'bg-blue-50' : ''}`}>
-              <div className="min-w-0 px-3 py-3"><p className="font-medium leading-5 text-slate-900">{paper.title}</p><div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500"><span>{paper.year || '年份待补充'}</span>{paper.match && <span className={paper.match === 'Perfect' ? 'text-emerald-600' : 'text-amber-600'}>{paper.match}</span>}{paper.markdownReady && <span className="text-blue-600">Markdown</span>}</div></div>
+              <div className="min-w-0 px-3 py-3"><p className="font-medium leading-5 text-slate-900">{paper.title}</p><div className="mt-1 flex flex-wrap items-center gap-1 text-[10px] text-slate-500"><span>{paper.year || '年份待补充'}</span>{paper.match && <span className={paper.match === 'Perfect' ? 'text-emerald-600' : 'text-amber-600'}>{paper.match}</span>}{paper.markdownReady && <span className="text-blue-600">Markdown</span>}</div>{artifactsForPaper(paper, artifacts, evidencePapers).length > 0 && <div className="mt-1 flex flex-wrap gap-1">{artifactsForPaper(paper, artifacts, evidencePapers).map((artifact) => <button key={artifact.id} type="button" onClick={() => onOpenArtifact(artifact.id)} className="inline-flex items-center gap-1 text-[10px] text-blue-700 hover:underline"><FileText className="h-3 w-3" />{artifact.name}</button>)}</div>}</div>
               <div className="min-w-0 px-3 py-3 text-slate-600"><span className="break-words">{paper.authors || '作者待补充'}</span><span className={`ml-1 inline-block align-middle ${paper.authors && paper.year ? 'text-emerald-600' : 'text-amber-600'}`} title={paper.authors && paper.year ? '引用字段齐，来源待核验' : '引用待补，缺少作者或年份'}>{paper.authors && paper.year ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleGauge className="h-3.5 w-3.5" />}</span></div>
               <p className="min-w-0 px-3 py-3 leading-5 text-slate-600">{paperTldr(paper) || '—'}</p>
               <div className="flex justify-center py-3">{paperAction(paper, false)}</div>
@@ -1766,6 +1786,8 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   const [currentProjectId, setCurrentProjectId] = useState(linkedAgentSession?.projectId ?? initialProjectId);
   const [papers, setPapers] = useState<AgentPaper[]>(() => sortAgentPapers(linkedAgentSession?.papers ?? []));
   const papersRef = useRef<AgentPaper[]>(sortAgentPapers(linkedAgentSession?.papers ?? []));
+  const [artifacts, setArtifacts] = useState<AgentArtifact[]>(() => linkedAgentSession?.artifacts ?? (linkedAgentSession?.title === '多模态 Agent 长期记忆文献综述' ? [mockAgentArtifact('markdown')] : []));
+  const [focusedArtifactId, setFocusedArtifactId] = useState<string | null>(null);
   const [paperScope, setPaperScope] = useState<PaperScope>('session');
   const [paperPanelWidth, setPaperPanelWidth] = useState<number | null>(() => {
     try {
@@ -1912,6 +1934,21 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
   }, [paperLimit, paperTier]);
 
   useEffect(() => {
+    const generateArtifact = (event: Event) => {
+      const kind = (event as CustomEvent<{ kind?: AgentArtifactKind }>).detail?.kind;
+      if (!kind || !['markdown', 'pdf', 'word', 'bib'].includes(kind)) return;
+      const artifact = mockAgentArtifact(kind);
+      setArtifacts((items) => [...items, artifact]);
+      setFocusedArtifactId(artifact.id);
+      setActiveTab('files');
+      setPanelOpen(true);
+      setMessages((items) => [...items, { role: 'agent', text: `已生成「${artifact.name}」，正在核对其中的引用与论文列表。` }]);
+    };
+    window.addEventListener('wispaper:mock-agent-artifact', generateArtifact);
+    return () => window.removeEventListener('wispaper:mock-agent-artifact', generateArtifact);
+  }, []);
+
+  useEffect(() => {
     const syncSession = (event: Event) => {
       const detail = (event as CustomEvent<{ id?: string; projectId?: string; title?: string }>).detail;
       const match = window.location.pathname.match(/^\/app\/agent\/([0-9a-f-]+)\/?$/i);
@@ -1964,9 +2001,9 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
     if (skipInitialSessionSave.current) { skipInitialSessionSave.current = false; return; }
     const match = window.location.pathname.match(/^\/app\/agent\/([0-9a-f-]+)\/?$/i);
     if (!match) return;
-    const session: AgentRouteSession = { kind: caseReplay ? "case" : "task", title: taskTitle, skill: selectedSkill, projectId: currentProjectId, papers, messages, ...(caseReplay ? { replay: caseReplay } : {}), ...(creditGate ? { creditGate } : {}), ...(activeTaskModel ? { model: activeTaskModel } : {}) };
+    const session: AgentRouteSession = { kind: caseReplay ? "case" : "task", title: taskTitle, skill: selectedSkill, projectId: currentProjectId, papers, artifacts, messages, ...(caseReplay ? { replay: caseReplay } : {}), ...(creditGate ? { creditGate } : {}), ...(activeTaskModel ? { model: activeTaskModel } : {}) };
     try { window.localStorage.setItem(`wispaper-agent-session:${match[1]}`, JSON.stringify({ ...session, updatedAt: Date.now() })); window.dispatchEvent(new Event('wispaper:agent-history-updated')); } catch { /* prototype storage */ }
-  }, [started, taskTitle, selectedSkill, currentProjectId, papers, messages, caseReplay, creditGate, activeTaskModel]);
+  }, [started, taskTitle, selectedSkill, currentProjectId, papers, artifacts, messages, caseReplay, creditGate, activeTaskModel]);
 
   const playCase = (title: string, casePrompt: string, summary: string, outcome: string, skill: string) => {
     caseFillTimersRef.current.forEach(window.clearTimeout);
@@ -2633,7 +2670,7 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
             setPaperPanelWidth(Math.round(Math.max(320, Math.min(paperPanelMaxWidth(), width + (event.key === 'ArrowLeft' ? 32 : -32)))));
           }} className="group absolute inset-y-0 left-0 z-20 w-3 cursor-col-resize touch-none outline-none" title="拖动调整论文栏宽度"><span className="absolute left-0 top-1/2 h-16 w-1 -translate-y-1/2 rounded-r bg-slate-300 transition group-hover:bg-blue-500 group-focus:bg-blue-500" /></div>}
           <div className="flex h-16 items-center justify-between border-b border-slate-200 px-5">
-            <span className="flex items-center gap-2 text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}{activeTab === 'papers' && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">{paperScope === 'session' ? papers.length : paperScope === 'project' ? projectPapers.length : libraryPapers.length}{paperLimit === Infinity ? '' : ` / ${paperLimit}`}</span>}</span>
+            <span className="flex items-center gap-2 text-sm font-semibold">{tabs.find((tab) => tab.id === activeTab)?.label}{activeTab === 'papers' && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-600">当前 {paperScope === 'session' ? papers.length : paperScope === 'project' ? projectPapers.length : libraryPapers.length}{paperLimit === Infinity ? ' 篇' : ` · 上限 ${paperLimit}`}</span>}</span>
             <button
               onClick={() => setPanelOpen(false)}
               className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white hover:text-slate-950"
@@ -2661,6 +2698,9 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
               papers={papers}
               projectPapers={projectPapers}
               libraryPapers={libraryPapers}
+              artifacts={artifacts}
+              focusedArtifactId={focusedArtifactId}
+              onOpenArtifact={(id) => { setFocusedArtifactId(id); setActiveTab('files'); setPanelOpen(true); }}
               paperScope={paperScope}
               onPaperScopeChange={setPaperScope}
               onAddToProject={(paper) => {
@@ -2671,6 +2711,8 @@ export function AcademicAgent({ onOpenProjects, onOpenSearch, onLogin, onUpgrade
                 const result = addLibraryAgentPaper(paper, paperLimit);
                 setPaperQuotaNotice(result.blocked ? `知识库论文已达到 ${paperTier} 上限（${paperLimit} 篇），无法加入新论文。` : '');
               }}
+              onRemoveFromProject={(paper) => { removeProjectAgentPaper(currentProjectId, paper); setPaperQuotaNotice(''); }}
+              onRemoveFromLibrary={(paper) => { removeLibraryAgentPaper(paper); setPaperQuotaNotice(''); }}
               paperTier={paperTier}
               paperLimit={paperLimit}
               paperQuotaNotice={paperQuotaNotice}

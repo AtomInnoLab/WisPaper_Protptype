@@ -1,0 +1,21 @@
+.agent-prompt-box {
+  container-type: inline-size;
+}
+
+@container (max-width: 520px) {
+  .agent-prompt-model-rate,
+  .agent-prompt-project-name,
+  .agent-prompt-project-chevron {
+    display: none !important;
+  }
+
+  .agent-prompt-project-button {
+    width: 40px !important;
+    padding-inline: 0 !important;
+  }
+
+  .agent-prompt-agent-button {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+}

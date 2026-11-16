@@ -101,3 +101,15 @@ export function addLibraryAgentPaper(paper: AgentPaper, limit = Infinity) {
   window.dispatchEvent(new CustomEvent('wispaper:agent-papers-updated', { detail: { scope: 'library' } }));
   return result;
 }
+
+export function removeProjectAgentPaper(projectId: string, paper: AgentPaper) {
+  const remaining = readProjectAgentPapers(projectId).filter((item) => paperIdentity(item) !== paperIdentity(paper));
+  try { window.localStorage.setItem(projectPaperKey(projectId), JSON.stringify(remaining)); } catch { /* prototype storage */ }
+  window.dispatchEvent(new CustomEvent('wispaper:agent-papers-updated', { detail: { scope: 'project', projectId } }));
+}
+
+export function removeLibraryAgentPaper(paper: AgentPaper) {
+  const remaining = readLibraryAgentPapers().filter((item) => paperIdentity(item) !== paperIdentity(paper));
+  try { window.localStorage.setItem(libraryPaperKey, JSON.stringify(remaining)); } catch { /* prototype storage */ }
+  window.dispatchEvent(new CustomEvent('wispaper:agent-papers-updated', { detail: { scope: 'library' } }));
+}
